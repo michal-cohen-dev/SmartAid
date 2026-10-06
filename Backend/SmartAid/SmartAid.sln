@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36603.0 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartAid.API", "SmartAid.API\SmartAid.API.csproj", "{352AFA9B-5317-4391-9D18-19F576CD4471}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DAL", "DAL\DAL.csproj", "{9F3D7D45-6FE4-46F8-BD39-08AEC7994B82}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{352AFA9B-5317-4391-9D18-19F576CD4471}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{352AFA9B-5317-4391-9D18-19F576CD4471}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{352AFA9B-5317-4391-9D18-19F576CD4471}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{352AFA9B-5317-4391-9D18-19F576CD4471}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9F3D7D45-6FE4-46F8-BD39-08AEC7994B82}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F3D7D45-6FE4-46F8-BD39-08AEC7994B82}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F3D7D45-6FE4-46F8-BD39-08AEC7994B82}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F3D7D45-6FE4-46F8-BD39-08AEC7994B82}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CC6BD5BE-8157-4B6A-9E9E-19AADB2A2CBC}
+	EndGlobalSection
+EndGlobal
