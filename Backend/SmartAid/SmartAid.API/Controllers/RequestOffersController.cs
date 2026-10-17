@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿
 using Microsoft.AspNetCore.Mvc;
-using BLL.Repositories.Interfaces;
+using BLL.Services;
 using DTO;
 
 namespace SmartAid.API.Controllers
@@ -9,27 +9,32 @@ namespace SmartAid.API.Controllers
     [ApiController]
     public class RequestOffersController : ControllerBase
     {
-        private readonly IRequestOfferRepository _requestOfferRepository;
+        private readonly IRequestOfferService _requestOfferService;
 
-        public RequestOffersController(IRequestOfferRepository requestOfferRepository)
+        public RequestOffersController(IRequestOfferService requestOfferService)
         {
-            _requestOfferRepository = requestOfferRepository;
+            _requestOfferService = requestOfferService;
         }
 
         [HttpGet]
         public ActionResult<IEnumerable<RequestOfferDto>> GetAll()
         {
-            return Ok(_requestOfferRepository.GetAll());
+            return Ok(_requestOfferService.GetAll());
         }
 
         [HttpGet("{id}")]
         public ActionResult<RequestOfferDto> GetById(int id)
         {
-            var offer = _requestOfferRepository.GetById(id);
+            var offer = _requestOfferService.GetById(id);
+
             if (offer == null)
             {
-                return NotFound(new { message = $"Request offer with ID {id} not found." });
+                return NotFound(new
+                {
+                    message = $"Request offer with ID {id} not found."
+                });
             }
+
             return Ok(offer);
         }
 
@@ -41,34 +46,59 @@ namespace SmartAid.API.Controllers
                 return BadRequest(ModelState);
             }
 
-            _requestOfferRepository.Add(requestOfferDto);
-            return Ok(new { message = "Request offer added successfully." });
+            _requestOfferService.Add(requestOfferDto);
+
+            return Ok(new
+            {
+                message = "Request offer added successfully."
+            });
         }
 
         [HttpPut("{id}")]
         public ActionResult Update(int id, [FromBody] RequestOfferDto requestOfferDto)
         {
-            var existing = _requestOfferRepository.GetById(id);
-            if (existing == null)
+            if (requestOfferDto == null)
             {
-                return NotFound(new { message = $"Request offer with ID {id} not found." });
+                return BadRequest("Invalid request data.");
             }
 
-            _requestOfferRepository.Update(requestOfferDto);
-            return Ok(new { message = "Request offer updated successfully." });
+            var existing = _requestOfferService.GetById(id);
+
+            if (existing == null)
+            {
+                return NotFound(new
+                {
+                    message = $"Request offer with ID {id} not found."
+                });
+            }
+
+            _requestOfferService.Update(id, requestOfferDto);
+
+            return Ok(new
+            {
+                message = "Request offer updated successfully."
+            });
         }
 
         [HttpDelete("{id}")]
         public ActionResult Delete(int id)
         {
-            var existing = _requestOfferRepository.GetById(id);
+            var existing = _requestOfferService.GetById(id);
+
             if (existing == null)
             {
-                return NotFound(new { message = $"Request offer with ID {id} not found." });
+                return NotFound(new
+                {
+                    message = $"Request offer with ID {id} not found."
+                });
             }
 
-            _requestOfferRepository.Delete(id);
-            return Ok(new { message = "Request offer deleted successfully." });
+            _requestOfferService.Delete(id);
+
+            return Ok(new
+            {
+                message = "Request offer deleted successfully."
+            });
         }
     }
 }

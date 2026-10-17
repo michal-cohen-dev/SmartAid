@@ -1,9 +1,10 @@
 using BLL.MappingProfiles;
-using BLL.Repositories;
-using BLL.Repositories.Interfaces;
+using DAL.Repositories;
+using DAL.Repositories.Interfaces;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using BLL.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +25,13 @@ builder.Services.AddScoped<IVolunteerEquipmentRepository, VolunteerEquipmentRepo
 builder.Services.AddScoped<IHelpRequestRepository, HelpRequestRepository>();
 builder.Services.AddScoped<IRequestEquipmentRepository, RequestEquipmentRepository>();
 builder.Services.AddScoped<IRequestOfferRepository, RequestOfferRepository>();
+builder.Services.AddScoped<IVolunteerService, VolunteerService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IHelpRequestService, HelpRequestService>();
+builder.Services.AddScoped<IRequestEquipmentService, RequestEquipmentService>();
+builder.Services.AddScoped<IRequestOfferService, RequestOfferService>();
+builder.Services.AddScoped<IEquipmentTypeService, EquipmentTypeService>();
+builder.Services.AddScoped<IVolunteerEquipmentService, VolunteerEquipmentService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
