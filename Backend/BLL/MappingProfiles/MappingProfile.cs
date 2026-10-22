@@ -18,6 +18,7 @@ namespace BLL.MappingProfiles
             CreateMap<HelpRequest, HelpRequestDto>().ReverseMap();
             CreateMap<EquipmentType, EquipmentTypeDto>().ReverseMap();
             CreateMap<VolunteerEquipment, VolunteerEquipmentDto>().ReverseMap();
+            CreateMap<RequestEquipment, RequestEquipmentDto>().ReverseMap();
             CreateMap<RequestOffer, RequestOfferDto>().ReverseMap();
         }
     }

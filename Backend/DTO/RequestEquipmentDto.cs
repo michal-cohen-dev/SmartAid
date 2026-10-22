@@ -11,6 +11,6 @@ namespace DTO
         public int Id { get; set; }
         public int HelpRequestId { get; set; }
         public int EquipmentTypeId { get; set; }
-        public int Quantity { get; set; }
+       
     }
 }

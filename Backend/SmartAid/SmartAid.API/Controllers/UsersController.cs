@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿
 using Microsoft.AspNetCore.Mvc;
-using BLL.Repositories.Interfaces;
+using BLL.Services;
 using DTO;
 
 namespace SmartAid.API.Controllers
@@ -9,27 +9,32 @@ namespace SmartAid.API.Controllers
     [ApiController]
     public class UsersController : ControllerBase
     {
-        private readonly IUserRepository _userRepository;
+        private readonly IUserService _userService;
 
-        public UsersController(IUserRepository userRepository)
+        public UsersController(IUserService userService)
         {
-            _userRepository = userRepository;
+            _userService = userService;
         }
 
         [HttpGet]
         public ActionResult<IEnumerable<UserDto>> GetAll()
         {
-            return Ok(_userRepository.GetAll());
+            return Ok(_userService.GetAll());
         }
 
         [HttpGet("{id}")]
         public ActionResult<UserDto> GetById(int id)
         {
-            var user = _userRepository.GetById(id);
+            var user = _userService.GetById(id);
+
             if (user == null)
             {
-                return NotFound(new { message = $"User with ID {id} not found." });
+                return NotFound(new
+                {
+                    message = $"User with ID {id} not found."
+                });
             }
+
             return Ok(user);
         }
 
@@ -41,34 +46,54 @@ namespace SmartAid.API.Controllers
                 return BadRequest(ModelState);
             }
 
-            _userRepository.Add(userDto);
-            return Ok(new { message = "User added successfully." });
+            _userService.Add(userDto);
+
+            return Ok(new
+            {
+                message = "User added successfully."
+            });
         }
 
         [HttpPut("{id}")]
         public ActionResult Update(int id, [FromBody] UserDto userDto)
         {
-            var existing = _userRepository.GetById(id);
+            var existing = _userService.GetById(id);
+
             if (existing == null)
             {
-                return NotFound(new { message = $"User with ID {id} not found." });
+                return NotFound(new
+                {
+                    message = $"User with ID {id} not found."
+                });
             }
 
-            _userRepository.Update(userDto);
-            return Ok(new { message = "User updated successfully." });
+            _userService.Update(id, userDto);
+
+            return Ok(new
+            {
+                message = "User updated successfully."
+            });
         }
 
         [HttpDelete("{id}")]
         public ActionResult Delete(int id)
         {
-            var existing = _userRepository.GetById(id);
+            var existing = _userService.GetById(id);
+
             if (existing == null)
             {
-                return NotFound(new { message = $"User with ID {id} not found." });
+                return NotFound(new
+                {
+                    message = $"User with ID {id} not found."
+                });
             }
 
-            _userRepository.Delete(id);
-            return Ok(new { message = "User deleted successfully." });
+            _userService.Delete(id);
+
+            return Ok(new
+            {
+                message = "User deleted successfully."
+            });
         }
     }
 }

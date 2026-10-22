@@ -1,7 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿
 using Microsoft.AspNetCore.Mvc;
-using BLL.Repositories.Interfaces;
-using DAL.Entities;
+using BLL.Services;
 using DTO;
 
 namespace SmartAid.API.Controllers
@@ -10,28 +9,32 @@ namespace SmartAid.API.Controllers
     [ApiController]
     public class VolunteersController : ControllerBase
     {
-        private readonly IVolunteerRepository _volunteerRepository;
+        private readonly IVolunteerService _volunteerService;
 
-        public VolunteersController(IVolunteerRepository volunteerRepository)
+        public VolunteersController(IVolunteerService volunteerService)
         {
-            _volunteerRepository = volunteerRepository;
+            _volunteerService = volunteerService;
         }
 
         [HttpGet]
         public ActionResult<IEnumerable<VolunteerDto>> GetAll()
         {
-            var volunteers = _volunteerRepository.GetAll();
-            return Ok(volunteers);
+            return Ok(_volunteerService.GetAll());
         }
 
         [HttpGet("{id}")]
         public ActionResult<VolunteerDto> GetById(int id)
         {
-            var volunteer = _volunteerRepository.GetById(id);
+            var volunteer = _volunteerService.GetById(id);
+
             if (volunteer == null)
             {
-                return NotFound(new { message = $"Volunteer with ID {id} not found." });
+                return NotFound(new
+                {
+                    message = $"Volunteer with ID {id} not found."
+                });
             }
+
             return Ok(volunteer);
         }
 
@@ -43,34 +46,59 @@ namespace SmartAid.API.Controllers
                 return BadRequest(ModelState);
             }
 
-            _volunteerRepository.Add(volunteerDto);
-            return Ok(new { message = "Volunteer added successfully." });
+            _volunteerService.Add(volunteerDto);
+
+            return Ok(new
+            {
+                message = "Volunteer added successfully."
+            });
         }
 
         [HttpPut("{id}")]
         public ActionResult Update(int id, [FromBody] VolunteerDto volunteerDto)
         {
-            var existing = _volunteerRepository.GetById(id);
-            if (existing == null)
+            if (volunteerDto == null)
             {
-                return NotFound(new { message = $"Volunteer with ID {id} not found." });
+                return BadRequest("Invalid request data.");
             }
 
-            _volunteerRepository.Update(volunteerDto);
-            return Ok(new { message = "Volunteer updated successfully." });
+            var existing = _volunteerService.GetById(id);
+
+            if (existing == null)
+            {
+                return NotFound(new
+                {
+                    message = $"Volunteer with ID {id} not found."
+                });
+            }
+
+            _volunteerService.Update(id, volunteerDto);
+
+            return Ok(new
+            {
+                message = "Volunteer updated successfully."
+            });
         }
 
         [HttpDelete("{id}")]
         public ActionResult Delete(int id)
         {
-            var existing = _volunteerRepository.GetById(id);
+            var existing = _volunteerService.GetById(id);
+
             if (existing == null)
             {
-                return NotFound(new { message = $"Volunteer with ID {id} not found." });
+                return NotFound(new
+                {
+                    message = $"Volunteer with ID {id} not found."
+                });
             }
 
-            _volunteerRepository.Delete(id);
-            return Ok(new { message = "Volunteer deleted successfully." });
+            _volunteerService.Delete(id);
+
+            return Ok(new
+            {
+                message = "Volunteer deleted successfully."
+            });
         }
     }
 }

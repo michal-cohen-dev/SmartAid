@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿
 using Microsoft.AspNetCore.Mvc;
-using BLL.Repositories.Interfaces;
+using BLL.Services;
 using DTO;
 
 namespace SmartAid.API.Controllers
@@ -9,46 +9,90 @@ namespace SmartAid.API.Controllers
     [ApiController]
     public class EquipmentTypesController : ControllerBase
     {
-        private readonly IEquipmentTypeRepository _equipmentTypeRepository;
+        private readonly IEquipmentTypeService _equipmentTypeService;
 
-        public EquipmentTypesController(IEquipmentTypeRepository equipmentTypeRepository)
+        public EquipmentTypesController(IEquipmentTypeService equipmentTypeService)
         {
-            _equipmentTypeRepository = equipmentTypeRepository;
+            _equipmentTypeService = equipmentTypeService;
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<EquipmentTypeDto>> GetAll() => Ok(_equipmentTypeRepository.GetAll());
+        public ActionResult<IEnumerable<EquipmentTypeDto>> GetAll()
+        {
+            return Ok(_equipmentTypeService.GetAll());
+        }
 
         [HttpGet("{id}")]
         public ActionResult<EquipmentTypeDto> GetById(int id)
         {
-            var item = _equipmentTypeRepository.GetById(id);
-            if (item == null) return NotFound(new { message = $"EquipmentType with ID {id} not found." });
-            return Ok(item);
+            var equipmentType = _equipmentTypeService.GetById(id);
+
+            if (equipmentType == null)
+            {
+                return NotFound(new
+                {
+                    message = $"EquipmentType with ID {id} not found."
+                });
+            }
+
+            return Ok(equipmentType);
         }
 
         [HttpPost]
         public ActionResult Add([FromBody] EquipmentTypeDto dto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            _equipmentTypeRepository.Add(dto);
-            return Ok(new { message = "EquipmentType added successfully." });
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            _equipmentTypeService.Add(dto);
+
+            return Ok(new
+            {
+                message = "EquipmentType added successfully."
+            });
         }
 
         [HttpPut("{id}")]
         public ActionResult Update(int id, [FromBody] EquipmentTypeDto dto)
         {
-            if (_equipmentTypeRepository.GetById(id) == null) return NotFound();
-            _equipmentTypeRepository.Update(dto);
-            return Ok(new { message = "EquipmentType updated successfully." });
+            if (dto == null)
+            {
+                return BadRequest("Invalid request data.");
+            }
+
+            var existing = _equipmentTypeService.GetById(id);
+
+            if (existing == null)
+            {
+                return NotFound();
+            }
+
+            _equipmentTypeService.Update(id, dto);
+
+            return Ok(new
+            {
+                message = "EquipmentType updated successfully."
+            });
         }
 
         [HttpDelete("{id}")]
         public ActionResult Delete(int id)
         {
-            if (_equipmentTypeRepository.GetById(id) == null) return NotFound();
-            _equipmentTypeRepository.Delete(id);
-            return Ok(new { message = "EquipmentType deleted successfully." });
+            var existing = _equipmentTypeService.GetById(id);
+
+            if (existing == null)
+            {
+                return NotFound();
+            }
+
+            _equipmentTypeService.Delete(id);
+
+            return Ok(new
+            {
+                message = "EquipmentType deleted successfully."
+            });
         }
     }
 }
