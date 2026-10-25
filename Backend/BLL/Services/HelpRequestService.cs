@@ -10,13 +10,16 @@ namespace BLL.Services
     {
         private readonly IHelpRequestRepository _helpRequestRepository;
         private readonly IMapper _mapper;
+        private readonly IImageService _imageService;
 
         public HelpRequestService(
-            IHelpRequestRepository helpRequestRepository,
-            IMapper mapper)
+     IHelpRequestRepository helpRequestRepository,
+     IMapper mapper,
+     IImageService imageService)
         {
             _helpRequestRepository = helpRequestRepository;
             _mapper = mapper;
+            _imageService = imageService;
         }
 
         public List<HelpRequestDto> GetAll()
@@ -35,9 +38,16 @@ namespace BLL.Services
             return _mapper.Map<HelpRequestDto>(request);
         }
 
-        public void Add(HelpRequestDto helpRequestDto)
+        public void Add(HelpRequestPostDto helpRequestDto)
         {
             var request = _mapper.Map<HelpRequest>(helpRequestDto);
+
+            if (helpRequestDto.ImageFile != null)
+            {
+                var imageName = _imageService.Save(helpRequestDto.ImageFile);
+                request.ImageName = imageName;
+            }
+
             _helpRequestRepository.Add(request);
         }
 

@@ -39,17 +39,24 @@ namespace SmartAid.API.Controllers
         }
 
         [HttpPost]
-        public ActionResult Add([FromBody] HelpRequestDto helpRequestDto)
+        public ActionResult Add([FromForm] HelpRequestPostDto helpRequestDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            _helpRequestService.Add(helpRequestDto);
-
-            return Ok(new { message = "Help request added successfully." });
+            try
+            {
+                _helpRequestService.Add(helpRequestDto);
+                return Ok(new { message = "Help request added successfully." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
+
 
         [HttpPut("{id}")]
         public ActionResult Update(int id, [FromBody] HelpRequestDto helpRequestDto)

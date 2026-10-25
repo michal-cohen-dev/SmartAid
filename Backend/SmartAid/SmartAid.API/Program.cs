@@ -5,8 +5,16 @@ using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using BLL.Services;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// הגדרת תיקיית התמונות
+var imagesFolder = Path.GetFullPath(Path.Combine(
+    builder.Environment.ContentRootPath,
+    builder.Configuration["ImagesFolder"] ?? "../Images"));
+
+Directory.CreateDirectory(imagesFolder);
 
 // רישום ה-DbContext למסד הנתונים
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -32,6 +40,8 @@ builder.Services.AddScoped<IRequestEquipmentService, RequestEquipmentService>();
 builder.Services.AddScoped<IRequestOfferService, RequestOfferService>();
 builder.Services.AddScoped<IEquipmentTypeService, EquipmentTypeService>();
 builder.Services.AddScoped<IVolunteerEquipmentService, VolunteerEquipmentService>();
+builder.Services.AddSingleton<IImageService>(
+    new ImageService(imagesFolder));
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -44,7 +54,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(imagesFolder),
+    RequestPath = "/images"
+});
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();

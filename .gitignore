@@ -16,3 +16,5 @@ dist/
 # OS Files
 .DS_Store
 Thumbs.db
+
+Backend/SmartAid/Images/
