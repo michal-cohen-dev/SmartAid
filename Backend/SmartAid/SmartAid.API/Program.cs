@@ -17,8 +17,17 @@ var imagesFolder = Path.GetFullPath(Path.Combine(
 Directory.CreateDirectory(imagesFolder);
 
 // רישום ה-DbContext למסד הנתונים
+var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
+
+if (string.IsNullOrWhiteSpace(connStr))
+{
+    throw new InvalidOperationException(
+        "Connection string 'DefaultConnection' is missing. " +
+        "Set it with an environment variable.");
+}
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(connStr));
 
 // רישום ה-AutoMapper בצורה נפרדת ותקינה
 builder.Services.AddAutoMapper(cfg => {
