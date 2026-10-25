@@ -33,6 +33,15 @@ namespace DAL.Repositories
                 .FirstOrDefault(hr => hr.Id == id);
         }
 
+        public HelpRequest? GetOwned(int id, int userId)
+        {
+            return _context.HelpRequests
+                .Include(hr => hr.User)
+                .Include(hr => hr.AssignedVolunteer)
+                .FirstOrDefault(hr =>
+                    hr.Id == id && hr.UserId == userId);
+        }
+
         public void Add(HelpRequest entity)
         {
             entity.CreatedAt = DateTime.UtcNow;

@@ -10,6 +10,10 @@ namespace DAL.Repositories.Interfaces
     {
         List<HelpRequest> GetAll();
         HelpRequest? GetById(int id);
+
+        // שליפה רק אם הבקשה שייכת למשתמש
+        HelpRequest? GetOwned(int id, int userId);
+
         void Add(HelpRequest helpRequest);
         void Update(HelpRequest helpRequest);
         void Delete(int id);

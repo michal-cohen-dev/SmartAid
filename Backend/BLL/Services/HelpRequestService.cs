@@ -51,22 +51,32 @@ namespace BLL.Services
             _helpRequestRepository.Add(request);
         }
 
-        public void Update(int id, HelpRequestDto helpRequestDto)
+        public bool Update(int id, HelpRequestDto helpRequestDto, int userId)
         {
-            var existingRequest = _helpRequestRepository.GetById(id);
+            var existingRequest = _helpRequestRepository.GetOwned(id, userId);
 
             if (existingRequest == null)
-                return;
+                return false;
 
-            var request = _mapper.Map<HelpRequest>(helpRequestDto);
-            request.Id = id;
+            _mapper.Map(helpRequestDto, existingRequest);
 
-            _helpRequestRepository.Update(request);
+            // מוודאים שהבקשה נשארת בבעלות המשתמש המקורי
+            existingRequest.UserId = userId;
+
+            _helpRequestRepository.Update(existingRequest);
+
+            return true;
         }
-
-        public void Delete(int id)
+        public bool Delete(int id, int userId)
         {
+            var existingRequest = _helpRequestRepository.GetOwned(id, userId);
+
+            if (existingRequest == null)
+                return false;
+
             _helpRequestRepository.Delete(id);
+
+            return true;
         }
     }
 }

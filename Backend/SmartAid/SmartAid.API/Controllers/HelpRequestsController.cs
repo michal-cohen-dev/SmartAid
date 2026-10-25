@@ -2,9 +2,14 @@
 using Microsoft.AspNetCore.Mvc;
 using DTO;
 using BLL.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+
 
 namespace SmartAid.API.Controllers
 {
+
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class HelpRequestsController : ControllerBase
@@ -37,24 +42,22 @@ namespace SmartAid.API.Controllers
 
             return Ok(request);
         }
-
         [HttpPost]
-        public ActionResult Add([FromForm] HelpRequestPostDto helpRequestDto)
+        public ActionResult Add([FromBody] HelpRequestPostDto helpRequestDto)
         {
             if (!ModelState.IsValid)
-            {
                 return BadRequest(ModelState);
-            }
 
-            try
-            {
-                _helpRequestService.Add(helpRequestDto);
-                return Ok(new { message = "Help request added successfully." });
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            helpRequestDto.UserId = userId;
+
+            _helpRequestService.Add(helpRequestDto);
+
+            return Ok(new { message = "Help request added successfully." });
         }
 
 
@@ -62,39 +65,38 @@ namespace SmartAid.API.Controllers
         public ActionResult Update(int id, [FromBody] HelpRequestDto helpRequestDto)
         {
             if (helpRequestDto == null)
-            {
                 return BadRequest("Invalid request data.");
-            }
 
-            var existing = _helpRequestService.GetById(id);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            if (existing == null)
-            {
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var updated = _helpRequestService.Update(id, helpRequestDto, userId);
+
+            if (!updated)
                 return NotFound(new
                 {
-                    message = $"Help request with ID {id} not found."
+                    message = "Help request not found."
                 });
-            }
-
-            _helpRequestService.Update(id, helpRequestDto);
 
             return Ok(new { message = "Help request updated successfully." });
         }
-
         [HttpDelete("{id}")]
         public ActionResult Delete(int id)
         {
-            var existing = _helpRequestService.GetById(id);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            if (existing == null)
-            {
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var deleted = _helpRequestService.Delete(id, userId);
+
+            if (!deleted)
                 return NotFound(new
                 {
-                    message = $"Help request with ID {id} not found."
+                    message = "Help request not found."
                 });
-            }
-
-            _helpRequestService.Delete(id);
 
             return Ok(new { message = "Help request deleted successfully." });
         }
