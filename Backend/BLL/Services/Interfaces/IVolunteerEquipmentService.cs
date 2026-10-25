@@ -3,9 +3,8 @@ using AutoMapper;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
-using BLL.Services;
 
-namespace BLL.Services
+namespace BLL.Services.Interfaces
 {
     public interface IVolunteerEquipmentService
     {

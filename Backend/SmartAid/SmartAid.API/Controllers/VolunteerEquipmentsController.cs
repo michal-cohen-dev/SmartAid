@@ -1,7 +1,7 @@
 ﻿
 using Microsoft.AspNetCore.Mvc;
-using BLL.Services;
 using DTO;
+using BLL.Services.Interfaces;
 
 namespace SmartAid.API.Controllers
 {

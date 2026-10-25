@@ -1,13 +1,52 @@
 using BLL.MappingProfiles;
+using BLL.Services;
+using BLL.Services.Interfaces;
+using DAL;
 using DAL.Repositories;
 using DAL.Repositories.Interfaces;
-using DAL;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using BLL.Services;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var jwtSettings = builder.Configuration.GetSection("Jwt");
+var jwtKey = builder.Configuration["Jwt:Key"];
+
+if (string.IsNullOrWhiteSpace(jwtKey) ||
+    Encoding.UTF8.GetByteCount(jwtKey) < 32)
+{
+    throw new InvalidOperationException(
+        "JWT Key is missing or too short. Configure Jwt__Key.");
+}
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtSettings["Issuer"],
+
+            ValidateAudience = true,
+            ValidAudience = jwtSettings["Audience"],
+
+            ValidateLifetime = true,
+
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtKey)),
+
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 // הגדרת תיקיית התמונות
 var imagesFolder = Path.GetFullPath(Path.Combine(
@@ -51,6 +90,10 @@ builder.Services.AddScoped<IEquipmentTypeService, EquipmentTypeService>();
 builder.Services.AddScoped<IVolunteerEquipmentService, VolunteerEquipmentService>();
 builder.Services.AddSingleton<IImageService>(
     new ImageService(imagesFolder));
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IPasswordHasher<DAL.Entities.User>,
+    PasswordHasher<DAL.Entities.User>>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -69,6 +112,7 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/images"
 });
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

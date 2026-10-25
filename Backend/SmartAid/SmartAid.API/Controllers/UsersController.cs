@@ -1,10 +1,12 @@
 ﻿
 using Microsoft.AspNetCore.Mvc;
-using BLL.Services;
 using DTO;
+using BLL.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SmartAid.API.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class UsersController : ControllerBase
