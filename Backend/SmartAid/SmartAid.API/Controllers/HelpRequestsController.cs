@@ -42,8 +42,10 @@ namespace SmartAid.API.Controllers
 
             return Ok(request);
         }
+
         [HttpPost]
-        public ActionResult Add([FromBody] HelpRequestPostDto helpRequestDto)
+        [Consumes("multipart/form-data")]
+        public ActionResult Add([FromForm] HelpRequestPostDto helpRequestDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -53,12 +55,14 @@ namespace SmartAid.API.Controllers
             if (!int.TryParse(userIdClaim, out var userId))
                 return Unauthorized();
 
+            // מזהה המשתמש נלקח מה-Token ולא מהבקשה
             helpRequestDto.UserId = userId;
 
             _helpRequestService.Add(helpRequestDto);
 
             return Ok(new { message = "Help request added successfully." });
         }
+
 
 
         [HttpPut("{id}")]
