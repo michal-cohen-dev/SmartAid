@@ -5,7 +5,7 @@ using DAL.Repositories.Interfaces;
 using DTO;
 using Microsoft.AspNetCore.Http;
 
-namespace BLL.Services.Interfaces
+namespace BLL.Services
 {
     public interface IImageService
     {

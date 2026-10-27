@@ -41,6 +41,7 @@ namespace SmartAid.API.Controllers
             return Ok(item);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public ActionResult Add([FromBody] RequestEquipmentDto dto)
         {

@@ -2,9 +2,11 @@
 using Microsoft.AspNetCore.Mvc;
 using DTO;
 using BLL.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SmartAid.API.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class VolunteerEquipmentsController : ControllerBase
@@ -38,6 +40,7 @@ namespace SmartAid.API.Controllers
             return Ok(item);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public ActionResult Add([FromBody] VolunteerEquipmentDto dto)
         {
@@ -54,6 +57,7 @@ namespace SmartAid.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public ActionResult Update(int id, [FromBody] VolunteerEquipmentDto dto)
         {
@@ -77,6 +81,7 @@ namespace SmartAid.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public ActionResult Delete(int id)
         {

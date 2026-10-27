@@ -33,6 +33,14 @@ namespace DAL.Repositories
                 .FirstOrDefault(re => re.Id == id);
         }
 
+        public List<RequestEquipment> GetByHelpRequestId(int helpRequestId)
+        {
+            return _context.RequestEquipments
+                .Include(re => re.EquipmentType)
+                .Where(re => re.HelpRequestId == helpRequestId)
+                .ToList();
+        }
+
         public void Add(RequestEquipment requestEquipment)
         {
             _context.RequestEquipments.Add(requestEquipment);

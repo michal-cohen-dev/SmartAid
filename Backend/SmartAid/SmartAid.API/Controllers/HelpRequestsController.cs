@@ -54,11 +54,9 @@ namespace SmartAid.API.Controllers
 
             if (!int.TryParse(userIdClaim, out var userId))
                 return Unauthorized();
-
             // מזהה המשתמש נלקח מה-Token ולא מהבקשה
-            helpRequestDto.UserId = userId;
+            _helpRequestService.Add(helpRequestDto, userId);
 
-            _helpRequestService.Add(helpRequestDto);
 
             return Ok(new { message = "Help request added successfully." });
         }
@@ -66,11 +64,13 @@ namespace SmartAid.API.Controllers
 
 
         [HttpPut("{id}")]
-        public ActionResult Update(int id, [FromBody] HelpRequestDto helpRequestDto)
+        public ActionResult Update(int id, [FromBody] HelpRequestUpdateDto helpRequestDto)
         {
             if (helpRequestDto == null)
                 return BadRequest("Invalid request data.");
 
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             if (!int.TryParse(userIdClaim, out var userId))
@@ -86,6 +86,9 @@ namespace SmartAid.API.Controllers
 
             return Ok(new { message = "Help request updated successfully." });
         }
+
+
+
         [HttpDelete("{id}")]
         public ActionResult Delete(int id)
         {

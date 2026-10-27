@@ -11,15 +11,21 @@ namespace BLL.Services
         private readonly IHelpRequestRepository _helpRequestRepository;
         private readonly IMapper _mapper;
         private readonly IImageService _imageService;
+        private readonly IRequestEquipmentRepository _requestEquipmentRepository;
+        private readonly IEquipmentTypeRepository _equipmentTypeRepository;
 
         public HelpRequestService(
-     IHelpRequestRepository helpRequestRepository,
-     IMapper mapper,
-     IImageService imageService)
+    IHelpRequestRepository helpRequestRepository,
+    IMapper mapper,
+    IImageService imageService,
+    IRequestEquipmentRepository requestEquipmentRepository,
+    IEquipmentTypeRepository equipmentTypeRepository)
         {
             _helpRequestRepository = helpRequestRepository;
             _mapper = mapper;
             _imageService = imageService;
+            _requestEquipmentRepository = requestEquipmentRepository;
+            _equipmentTypeRepository = equipmentTypeRepository;
         }
 
         public List<HelpRequestDto> GetAll()
@@ -38,10 +44,10 @@ namespace BLL.Services
             return _mapper.Map<HelpRequestDto>(request);
         }
 
-        public void Add(HelpRequestPostDto helpRequestDto)
+        public void Add(HelpRequestPostDto helpRequestDto, int userId)
         {
             var request = _mapper.Map<HelpRequest>(helpRequestDto);
-
+            request.UserId = userId;
             if (helpRequestDto.ImageFile != null)
             {
                 var imageName = _imageService.Save(helpRequestDto.ImageFile);
@@ -51,17 +57,47 @@ namespace BLL.Services
             _helpRequestRepository.Add(request);
         }
 
-        public bool Update(int id, HelpRequestDto helpRequestDto, int userId)
+        public bool Update(  int id,  HelpRequestUpdateDto helpRequestDto,int userId)
         {
-            var existingRequest = _helpRequestRepository.GetOwned(id, userId);
+            var existingRequest =
+                _helpRequestRepository.GetOwned(id, userId);
 
             if (existingRequest == null)
                 return false;
 
-            _mapper.Map(helpRequestDto, existingRequest);
+            // מעדכנים רק שדות שהמשתמש רשאי לשנות
+            existingRequest.Latitude = helpRequestDto.Latitude;
+            existingRequest.Longitude = helpRequestDto.Longitude;
+            existingRequest.Address = helpRequestDto.Address;
+            existingRequest.AddressNotes = helpRequestDto.AddressNotes;
 
-            // מוודאים שהבקשה נשארת בבעלות המשתמש המקורי
-            existingRequest.UserId = userId;
+            // עדכון סוגי הציוד הנדרשים
+            var existingEquipments =
+                _requestEquipmentRepository.GetByHelpRequestId(id);
+
+            var equipmentTypeIds =  helpRequestDto.RequiredEquipmentTypeIds.Distinct().ToList();
+
+            foreach (var equipmentTypeId in equipmentTypeIds)
+            {
+                if (_equipmentTypeRepository.GetById(equipmentTypeId) == null)
+                {
+                    return false;
+                }
+            }
+
+            foreach (var equipment in existingEquipments)
+            {
+                _requestEquipmentRepository.Delete(equipment.Id);
+            }
+
+            foreach (var equipmentTypeId in equipmentTypeIds)
+            {
+                _requestEquipmentRepository.Add(new RequestEquipment
+                {
+                    HelpRequestId = id,
+                    EquipmentTypeId = equipmentTypeId
+                });
+            }
 
             _helpRequestRepository.Update(existingRequest);
 

@@ -9,8 +9,8 @@ namespace BLL.Services.Interfaces
     {
         List<HelpRequestDto> GetAll();
         HelpRequestDto? GetById(int id);
-        void Add(HelpRequestPostDto helpRequestDto);
-        bool Update(int id, HelpRequestDto helpRequestDto, int userId);
+        void Add(HelpRequestPostDto helpRequestDto, int userId);
+        bool Update(  int id, HelpRequestUpdateDto helpRequestDto, int userId);
         bool Delete(int id, int userId);
     }
 }
