@@ -38,7 +38,15 @@ namespace BLL.Services
 
             return _mapper.Map<VolunteerDto>(volunteer);
         }
+        public VolunteerDto? GetByUserId(int userId)
+        {
+            var volunteer = _volunteerRepository.GetByUserId(userId);
 
+            if (volunteer == null)
+                return null;
+
+            return _mapper.Map<VolunteerDto>(volunteer);
+        }
         public void Add(VolunteerDto volunteerDto, int currentUserId)
         {
             // בדיקה אם כבר קיים פרופיל מתנדב למשתמש

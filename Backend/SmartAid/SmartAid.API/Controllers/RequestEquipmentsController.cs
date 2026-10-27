@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace SmartAid.API.Controllers
 {
+
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class RequestEquipmentsController : ControllerBase
