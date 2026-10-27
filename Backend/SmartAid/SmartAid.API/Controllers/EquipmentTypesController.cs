@@ -1,7 +1,8 @@
 ﻿
-using Microsoft.AspNetCore.Mvc;
-using DTO;
 using BLL.Services.Interfaces;
+using DTO;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace SmartAid.API.Controllers
 {
@@ -22,6 +23,7 @@ namespace SmartAid.API.Controllers
             return Ok(_equipmentTypeService.GetAll());
         }
 
+
         [HttpGet("{id}")]
         public ActionResult<EquipmentTypeDto> GetById(int id)
         {
@@ -38,6 +40,7 @@ namespace SmartAid.API.Controllers
             return Ok(equipmentType);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public ActionResult Add([FromBody] EquipmentTypeDto dto)
         {
@@ -54,6 +57,7 @@ namespace SmartAid.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public ActionResult Update(int id, [FromBody] EquipmentTypeDto dto)
         {
@@ -77,6 +81,7 @@ namespace SmartAid.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public ActionResult Delete(int id)
         {
