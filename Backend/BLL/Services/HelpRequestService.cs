@@ -57,13 +57,28 @@ namespace BLL.Services
             _helpRequestRepository.Add(request);
         }
 
-        public bool Update(  int id,  HelpRequestUpdateDto helpRequestDto,int userId)
+
+        public bool Update(
+            int id,
+            HelpRequestUpdateDto helpRequestDto,
+            int userId)
         {
-            var existingRequest =
-                _helpRequestRepository.GetOwned(id, userId);
+            // מוודאים שהבקשה קיימת ושייכת למשתמש המחובר
+            var existingRequest = _helpRequestRepository.GetOwned(id, userId);
 
             if (existingRequest == null)
                 return false;
+
+            // בודקים את כל סוגי הציוד לפני ביצוע שינויים
+            var equipmentTypeIds = helpRequestDto.RequiredEquipmentTypeIds
+                .Distinct()
+                .ToList();
+
+            foreach (var equipmentTypeId in equipmentTypeIds)
+            {
+                if (_equipmentTypeRepository.GetById(equipmentTypeId) == null)
+                    return false;
+            }
 
             // מעדכנים רק שדות שהמשתמש רשאי לשנות
             existingRequest.Latitude = helpRequestDto.Latitude;
@@ -71,19 +86,9 @@ namespace BLL.Services
             existingRequest.Address = helpRequestDto.Address;
             existingRequest.AddressNotes = helpRequestDto.AddressNotes;
 
-            // עדכון סוגי הציוד הנדרשים
+            // מחליפים את סוגי הציוד הנדרשים
             var existingEquipments =
                 _requestEquipmentRepository.GetByHelpRequestId(id);
-
-            var equipmentTypeIds =  helpRequestDto.RequiredEquipmentTypeIds.Distinct().ToList();
-
-            foreach (var equipmentTypeId in equipmentTypeIds)
-            {
-                if (_equipmentTypeRepository.GetById(equipmentTypeId) == null)
-                {
-                    return false;
-                }
-            }
 
             foreach (var equipment in existingEquipments)
             {
@@ -103,6 +108,7 @@ namespace BLL.Services
 
             return true;
         }
+
         public bool Delete(int id, int userId)
         {
             var existingRequest = _helpRequestRepository.GetOwned(id, userId);
