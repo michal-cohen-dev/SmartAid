@@ -13,7 +13,7 @@ namespace BLL.MappingProfiles
     {
         public MappingProfile()
         {
-            CreateMap<User, UserDto>().ReverseMap();
+            CreateMap<User, UserDto>();
             CreateMap<Volunteer, VolunteerDto>().ReverseMap();
             CreateMap<HelpRequest, HelpRequestDto>().ReverseMap();
 

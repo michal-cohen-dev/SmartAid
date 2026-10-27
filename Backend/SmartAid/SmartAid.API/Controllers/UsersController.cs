@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using DTO;
 using BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace SmartAid.API.Controllers
 {
@@ -18,58 +19,54 @@ namespace SmartAid.API.Controllers
             _userService = userService;
         }
 
-        [HttpGet]
-        public ActionResult<IEnumerable<UserDto>> GetAll()
+        private int? GetCurrentUserId()
         {
-            return Ok(_userService.GetAll());
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (int.TryParse(userIdClaim, out var currentUserId))
+                return currentUserId;
+
+            return null;
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public ActionResult<UserDto> GetById(int id)
         {
-            var user = _userService.GetById(id);
+            var currentUserId = GetCurrentUserId();
+
+            if (currentUserId == null)
+                return Unauthorized();
+
+            var user = _userService.GetById(id, currentUserId.Value);
 
             if (user == null)
             {
                 return NotFound(new
                 {
-                    message = $"User with ID {id} not found."
+                    message = "User not found."
                 });
             }
 
             return Ok(user);
         }
 
-        [HttpPost]
-        public ActionResult Add([FromBody] UserDto userDto)
+        [HttpPut("{id:int}")]
+        public ActionResult Update(int id, [FromBody] UserUpdateDto userDto)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+            var currentUserId = GetCurrentUserId();
 
-            _userService.Add(userDto);
+            if (currentUserId == null)
+                return Unauthorized();
 
-            return Ok(new
-            {
-                message = "User added successfully."
-            });
-        }
+            var updated = _userService.Update(id, userDto, currentUserId.Value);
 
-        [HttpPut("{id}")]
-        public ActionResult Update(int id, [FromBody] UserDto userDto)
-        {
-            var existing = _userService.GetById(id);
-
-            if (existing == null)
+            if (!updated)
             {
                 return NotFound(new
                 {
-                    message = $"User with ID {id} not found."
+                    message = "User not found."
                 });
             }
-
-            _userService.Update(id, userDto);
 
             return Ok(new
             {
@@ -77,20 +74,23 @@ namespace SmartAid.API.Controllers
             });
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
         public ActionResult Delete(int id)
         {
-            var existing = _userService.GetById(id);
+            var currentUserId = GetCurrentUserId();
 
-            if (existing == null)
+            if (currentUserId == null)
+                return Unauthorized();
+
+            var deleted = _userService.Delete(id, currentUserId.Value);
+
+            if (!deleted)
             {
                 return NotFound(new
                 {
-                    message = $"User with ID {id} not found."
+                    message = "User not found."
                 });
             }
-
-            _userService.Delete(id);
 
             return Ok(new
             {
