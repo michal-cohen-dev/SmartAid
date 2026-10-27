@@ -9,23 +9,26 @@ namespace BLL.Services
     public class HelpRequestService : IHelpRequestService
     {
         private readonly IHelpRequestRepository _helpRequestRepository;
+        private readonly IVolunteerService _volunteerService;
         private readonly IMapper _mapper;
         private readonly IImageService _imageService;
         private readonly IRequestEquipmentRepository _requestEquipmentRepository;
         private readonly IEquipmentTypeRepository _equipmentTypeRepository;
 
         public HelpRequestService(
-    IHelpRequestRepository helpRequestRepository,
-    IMapper mapper,
-    IImageService imageService,
-    IRequestEquipmentRepository requestEquipmentRepository,
-    IEquipmentTypeRepository equipmentTypeRepository)
+     IHelpRequestRepository helpRequestRepository,
+     IMapper mapper,
+     IImageService imageService,
+     IRequestEquipmentRepository requestEquipmentRepository,
+     IEquipmentTypeRepository equipmentTypeRepository,
+     IVolunteerService volunteerService)
         {
             _helpRequestRepository = helpRequestRepository;
             _mapper = mapper;
             _imageService = imageService;
             _requestEquipmentRepository = requestEquipmentRepository;
             _equipmentTypeRepository = equipmentTypeRepository;
+            _volunteerService = volunteerService;
         }
 
         public List<HelpRequestDto> GetAll()
@@ -42,6 +45,21 @@ namespace BLL.Services
                 return null;
 
             return _mapper.Map<HelpRequestDto>(request);
+        }
+
+        public bool IsAssignedVolunteer(int requestId, int userId)
+        {
+            var request = _helpRequestRepository.GetById(requestId);
+
+            if (request == null || request.AssignedVolunteerId == null)
+                return false;
+
+            var volunteer = _volunteerService.GetByUserId(userId);
+
+            if (volunteer == null)
+                return false;
+
+            return request.AssignedVolunteerId == volunteer.Id;
         }
 
         public void Add(HelpRequestPostDto helpRequestDto, int userId)

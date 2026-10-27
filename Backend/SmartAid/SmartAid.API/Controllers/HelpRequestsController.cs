@@ -21,15 +21,28 @@ namespace SmartAid.API.Controllers
             _helpRequestService = helpRequestService;
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public ActionResult<IEnumerable<HelpRequestDto>> GetAll()
         {
             return Ok(_helpRequestService.GetAll());
         }
 
+
         [HttpGet("{id}")]
         public ActionResult<HelpRequestDto> GetById(int id)
         {
+            if (!User.IsInRole("Admin"))
+            {
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                if (!int.TryParse(userIdClaim, out var userId))
+                    return Unauthorized();
+
+                if (!_helpRequestService.IsAssignedVolunteer(id, userId))
+                    return NotFound();
+            }
+
             var request = _helpRequestService.GetById(id);
 
             if (request == null)
@@ -42,6 +55,7 @@ namespace SmartAid.API.Controllers
 
             return Ok(request);
         }
+
 
         [HttpPost]
         [Consumes("multipart/form-data")]

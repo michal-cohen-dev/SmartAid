@@ -12,5 +12,6 @@ namespace BLL.Services.Interfaces
         void Add(HelpRequestPostDto helpRequestDto, int userId);
         bool Update(  int id, HelpRequestUpdateDto helpRequestDto, int userId);
         bool Delete(int id, int userId);
+        bool IsAssignedVolunteer(int requestId, int userId);
     }
 }
