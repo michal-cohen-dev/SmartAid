@@ -78,10 +78,8 @@ namespace DAL.Migrations
                     b.Property<int?>("Rating")
                         .HasColumnType("int");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.Property<int>("UserId")
                         .HasColumnType("int");
@@ -129,16 +127,14 @@ namespace DAL.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("HelpRequestId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("OfferedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("RequestId")
+                    b.Property<int>("Status")
                         .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
 
                     b.Property<int>("VolunteerId")
                         .HasColumnType("int");
@@ -147,7 +143,7 @@ namespace DAL.Migrations
 
                     b.HasIndex("VolunteerId");
 
-                    b.HasIndex("RequestId", "VolunteerId")
+                    b.HasIndex("HelpRequestId", "VolunteerId")
                         .IsUnique();
 
                     b.ToTable("RequestOffers");
@@ -304,7 +300,7 @@ namespace DAL.Migrations
                 {
                     b.HasOne("DAL.Entities.HelpRequest", "HelpRequest")
                         .WithMany("Offers")
-                        .HasForeignKey("RequestId")
+                        .HasForeignKey("HelpRequestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

@@ -2,9 +2,11 @@
 using Microsoft.AspNetCore.Mvc;
 using DTO;
 using BLL.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SmartAid.API.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class RequestOffersController : ControllerBase
@@ -15,13 +17,15 @@ namespace SmartAid.API.Controllers
         {
             _requestOfferService = requestOfferService;
         }
-
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public ActionResult<IEnumerable<RequestOfferDto>> GetAll()
         {
             return Ok(_requestOfferService.GetAll());
         }
 
+
+        [Authorize(Roles = "Admin")]
         [HttpGet("{id}")]
         public ActionResult<RequestOfferDto> GetById(int id)
         {

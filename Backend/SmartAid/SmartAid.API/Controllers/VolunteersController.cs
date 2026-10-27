@@ -38,6 +38,7 @@ namespace SmartAid.API.Controllers
             return Ok(_volunteerService.GetAll());
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpGet("{id}")]
         public ActionResult<VolunteerDto> GetById(int id)
         {

@@ -11,16 +11,18 @@ namespace BLL.Services
     public class VolunteerService : IVolunteerService
     {
         private readonly IVolunteerRepository _volunteerRepository;
+       private readonly IUserRepository _userRepository;
         private readonly IMapper _mapper;
 
         public VolunteerService(
-            IVolunteerRepository volunteerRepository,
-            IMapper mapper)
+    IVolunteerRepository volunteerRepository,
+    IUserRepository userRepository,
+    IMapper mapper)
         {
             _volunteerRepository = volunteerRepository;
+            _userRepository = userRepository;
             _mapper = mapper;
         }
-
         public List<VolunteerDto> GetAll()
         {
             var volunteers = _volunteerRepository.GetAll();
@@ -39,7 +41,7 @@ namespace BLL.Services
 
         public void Add(VolunteerDto volunteerDto, int currentUserId)
         {
-            // בדיקה אם כבר קיים פרופיל מתנדב לחשבון
+            // בדיקה אם כבר קיים פרופיל מתנדב למשתמש
             var existingVolunteer =
                 _volunteerRepository.GetByUserId(currentUserId);
 
@@ -49,17 +51,27 @@ namespace BLL.Services
                     "This user already has a volunteer profile.");
             }
 
-            var volunteer = _mapper.Map<Volunteer>(volunteerDto);
+            // שליפת פרטי המשתמש הקיים ממסד הנתונים
+            var user = _userRepository.GetById(currentUserId);
 
-            // קישור הפרופיל לחשבון המשתמש המחובר
-            volunteer.UserId = currentUserId;
+            if (user == null)
+            {
+                throw new KeyNotFoundException(
+                    "The current user was not found.");
+            }
 
-            // ערכי ברירת מחדל שנקבעים בצד השרת
-            volunteer.IsActive = true;
-            volunteer.TotalOffersReceived = 0;
-            volunteer.TotalOffersAccepted = 0;
-            volunteer.TotalCompleted = 0;
-            volunteer.ReliabilityScore = 100.0;
+            // יצירת פרופיל מתנדב על בסיס פרטי המשתמש הקיים
+            var volunteer = new Volunteer
+            {
+                UserId = user.Id,
+                FullName = user.FullName,
+                PhoneNumber = user.PhoneNumber,
+                IsActive = true,
+                TotalOffersReceived = 0,
+                TotalOffersAccepted = 0,
+                TotalCompleted = 0,
+                ReliabilityScore = 100.0
+            };
 
             _volunteerRepository.Add(volunteer);
         }
