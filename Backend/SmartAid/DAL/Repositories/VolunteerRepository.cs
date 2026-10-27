@@ -26,6 +26,12 @@ namespace DAL.Repositories
             return _context.Volunteers.FirstOrDefault(v => v.Id == id);
         }
 
+        public Volunteer? GetByUserId(int userId)
+        {
+            return _context.Volunteers
+                .FirstOrDefault(v => v.UserId == userId);
+        }
+
         public void Add(Volunteer volunteer)
         {
             _context.Volunteers.Add(volunteer);

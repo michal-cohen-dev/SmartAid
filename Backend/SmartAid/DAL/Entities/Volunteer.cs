@@ -11,6 +11,13 @@ namespace DAL.Entities
         //טבלת מתנדבים
         //מייצגת את הפרטים והמדדים הסטטיסטיים של המתנדבים
         public int Id { get; set; }
+
+
+        // קישור לחשבון המשתמש במערכת
+        public int UserId { get; set; }
+        public User User { get; set; } = null!;
+
+
         public string FullName { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;

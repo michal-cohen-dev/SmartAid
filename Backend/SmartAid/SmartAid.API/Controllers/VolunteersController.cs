@@ -2,9 +2,13 @@
 using Microsoft.AspNetCore.Mvc;
 using DTO;
 using BLL.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using System.Collections.Generic;
 
 namespace SmartAid.API.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class VolunteersController : ControllerBase
@@ -16,6 +20,18 @@ namespace SmartAid.API.Controllers
             _volunteerService = volunteerService;
         }
 
+        private int? GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (int.TryParse(userIdClaim, out var currentUserId))
+                return currentUserId;
+
+            return null;
+        }
+
+
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public ActionResult<IEnumerable<VolunteerDto>> GetAll()
         {
@@ -37,7 +53,6 @@ namespace SmartAid.API.Controllers
 
             return Ok(volunteer);
         }
-
         [HttpPost]
         public ActionResult Add([FromBody] VolunteerDto volunteerDto)
         {
@@ -46,12 +61,29 @@ namespace SmartAid.API.Controllers
                 return BadRequest(ModelState);
             }
 
-            _volunteerService.Add(volunteerDto);
+            var currentUserId = GetCurrentUserId();
 
-            return Ok(new
+            if (currentUserId == null)
             {
-                message = "Volunteer added successfully."
-            });
+                return Unauthorized();
+            }
+
+            try
+            {
+                _volunteerService.Add(volunteerDto, currentUserId.Value);
+
+                return Ok(new
+                {
+                    message = "Volunteer added successfully."
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new
+                {
+                    message = ex.Message
+                });
+            }
         }
 
         [HttpPut("{id}")]
@@ -62,43 +94,57 @@ namespace SmartAid.API.Controllers
                 return BadRequest("Invalid request data.");
             }
 
-            var existing = _volunteerService.GetById(id);
+            var currentUserId = GetCurrentUserId();
 
-            if (existing == null)
+            if (currentUserId == null)
+            {
+                return Unauthorized();
+            }
+
+            try
+            {
+                _volunteerService.Update(id, volunteerDto, currentUserId.Value);
+
+                return Ok(new
+                {
+                    message = "Volunteer updated successfully."
+                });
+            }
+            catch (KeyNotFoundException)
             {
                 return NotFound(new
                 {
-                    message = $"Volunteer with ID {id} not found."
+                    message = "Volunteer profile not found."
                 });
             }
-
-            _volunteerService.Update(id, volunteerDto);
-
-            return Ok(new
-            {
-                message = "Volunteer updated successfully."
-            });
         }
 
         [HttpDelete("{id}")]
         public ActionResult Delete(int id)
         {
-            var existing = _volunteerService.GetById(id);
+            var currentUserId = GetCurrentUserId();
 
-            if (existing == null)
+            if (currentUserId == null)
+            {
+                return Unauthorized();
+            }
+
+            try
+            {
+                _volunteerService.Delete(id, currentUserId.Value);
+
+                return Ok(new
+                {
+                    message = "Volunteer deleted successfully."
+                });
+            }
+            catch (KeyNotFoundException)
             {
                 return NotFound(new
                 {
-                    message = $"Volunteer with ID {id} not found."
+                    message = "Volunteer profile not found."
                 });
             }
-
-            _volunteerService.Delete(id);
-
-            return Ok(new
-            {
-                message = "Volunteer deleted successfully."
-            });
         }
     }
 }

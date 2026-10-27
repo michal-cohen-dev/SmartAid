@@ -28,12 +28,23 @@ public class AppDbContext : DbContext
             e.HasIndex(u => u.Email).IsUnique();
         });
 
+
         // ---------- Volunteer ----------
         modelBuilder.Entity<Volunteer>(e =>
         {
             e.Property(v => v.FullName).IsRequired().HasMaxLength(100);
             e.Property(v => v.PhoneNumber).HasMaxLength(20);
+
+            // קישור בין פרופיל המתנדב לחשבון המשתמש
+            e.HasOne(v => v.User)
+             .WithOne()
+             .HasForeignKey<Volunteer>(v => v.UserId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            // לכל חשבון משתמש יכול להיות לכל היותר פרופיל מתנדב אחד
+            e.HasIndex(v => v.UserId).IsUnique();
         });
+
 
         // ---------- EquipmentType ----------
         modelBuilder.Entity<EquipmentType>(e =>

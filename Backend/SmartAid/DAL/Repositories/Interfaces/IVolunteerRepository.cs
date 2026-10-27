@@ -12,6 +12,7 @@ namespace DAL.Repositories.Interfaces
     {
         List<Volunteer> GetAll();
         Volunteer? GetById(int id);
+        Volunteer? GetByUserId(int userId);
         void Add(Volunteer volunteer);
         void Update(Volunteer volunteer);
         void Delete(int id);

@@ -52,7 +52,7 @@ namespace BLL.Services
 
                 new Claim(ClaimTypes.Email, user.Email),
 
-                new Claim(ClaimTypes.Role, "User")
+               new Claim(ClaimTypes.Role, user.Role)
             };
 
             var signingKey = new SymmetricSecurityKey(

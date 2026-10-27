@@ -183,6 +183,10 @@ namespace DAL.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
@@ -224,7 +228,13 @@ namespace DAL.Migrations
                     b.Property<int>("TotalOffersReceived")
                         .HasColumnType("int");
 
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("Volunteers");
                 });
@@ -307,6 +317,17 @@ namespace DAL.Migrations
                     b.Navigation("HelpRequest");
 
                     b.Navigation("Volunteer");
+                });
+
+            modelBuilder.Entity("DAL.Entities.Volunteer", b =>
+                {
+                    b.HasOne("DAL.Entities.User", "User")
+                        .WithOne()
+                        .HasForeignKey("DAL.Entities.Volunteer", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("DAL.Entities.VolunteerEquipment", b =>

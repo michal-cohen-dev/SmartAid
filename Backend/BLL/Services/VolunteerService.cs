@@ -4,6 +4,7 @@ using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
 using BLL.Services.Interfaces;
+using System.Collections.Generic;
 
 namespace BLL.Services
 {
@@ -36,32 +37,63 @@ namespace BLL.Services
             return _mapper.Map<VolunteerDto>(volunteer);
         }
 
-        public void Add(VolunteerDto volunteerDto)
+        public void Add(VolunteerDto volunteerDto, int currentUserId)
         {
+            // בדיקה אם כבר קיים פרופיל מתנדב לחשבון
+            var existingVolunteer =
+                _volunteerRepository.GetByUserId(currentUserId);
+
+            if (existingVolunteer != null)
+            {
+                throw new InvalidOperationException(
+                    "This user already has a volunteer profile.");
+            }
+
             var volunteer = _mapper.Map<Volunteer>(volunteerDto);
 
-            // Business defaults
+            // קישור הפרופיל לחשבון המשתמש המחובר
+            volunteer.UserId = currentUserId;
+
+            // ערכי ברירת מחדל שנקבעים בצד השרת
             volunteer.IsActive = true;
+            volunteer.TotalOffersReceived = 0;
+            volunteer.TotalOffersAccepted = 0;
+            volunteer.TotalCompleted = 0;
             volunteer.ReliabilityScore = 100.0;
 
             _volunteerRepository.Add(volunteer);
         }
-
-        public void Update(int id, VolunteerDto volunteerDto)
+        public void Update(int id, VolunteerDto volunteerDto, int currentUserId)
         {
             var existingVolunteer = _volunteerRepository.GetById(id);
 
-            if (existingVolunteer == null)
-                return;
+            // הפרופיל לא קיים או שאינו שייך למשתמש המחובר
+            if (existingVolunteer == null ||
+                existingVolunteer.UserId != currentUserId)
+            {
+                throw new KeyNotFoundException(
+                    "Volunteer profile not found.");
+            }
 
-            var volunteer = _mapper.Map<Volunteer>(volunteerDto);
-            volunteer.Id = id;
+            // מעדכנים רק שדות שהמשתמש רשאי לשנות
+            existingVolunteer.FullName = volunteerDto.FullName;
+            existingVolunteer.PhoneNumber = volunteerDto.PhoneNumber;
 
-            _volunteerRepository.Update(volunteer);
+            _volunteerRepository.Update(existingVolunteer);
         }
 
-        public void Delete(int id)
+        public void Delete(int id, int currentUserId)
         {
+            var existingVolunteer = _volunteerRepository.GetById(id);
+
+            // הפרופיל לא קיים או שאינו שייך למשתמש המחובר
+            if (existingVolunteer == null ||
+                existingVolunteer.UserId != currentUserId)
+            {
+                throw new KeyNotFoundException(
+                    "Volunteer profile not found.");
+            }
+
             _volunteerRepository.Delete(id);
         }
     }
