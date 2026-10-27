@@ -1,7 +1,4 @@
-﻿using AutoMapper;
-using DAL.Entities;
-using DAL.Repositories.Interfaces;
-using DTO;
+﻿using DTO;
 
 namespace BLL.Services.Interfaces
 {

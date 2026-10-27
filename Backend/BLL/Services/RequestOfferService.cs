@@ -38,7 +38,18 @@ namespace BLL.Services
 
         public void Add(RequestOfferDto requestOfferDto)
         {
-            var offer = _mapper.Map<RequestOffer>(requestOfferDto);
+            if (requestOfferDto.HelpRequestId <= 0)
+                throw new ArgumentException("Invalid help request ID.");
+
+            if (requestOfferDto.VolunteerId <= 0)
+                throw new ArgumentException("Invalid volunteer ID.");
+
+            var offer = new RequestOffer
+            {
+                HelpRequestId = requestOfferDto.HelpRequestId,
+                VolunteerId = requestOfferDto.VolunteerId
+            };
+
             _requestOfferRepository.Add(offer);
         }
 
@@ -49,10 +60,12 @@ namespace BLL.Services
             if (existingOffer == null)
                 return;
 
-            var offer = _mapper.Map<RequestOffer>(requestOfferDto);
-            offer.Id = id;
+            if (!Enum.IsDefined(typeof(OfferStatus), requestOfferDto.Status))
+                throw new ArgumentException("Invalid offer status.");
 
-            _requestOfferRepository.Update(offer);
+            existingOffer.Status = (OfferStatus)requestOfferDto.Status;
+
+            _requestOfferRepository.Update(existingOffer);
         }
 
         public void Delete(int id)
