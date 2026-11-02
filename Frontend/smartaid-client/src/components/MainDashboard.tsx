@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from 'react-router-dom';
 
 function MainDashboard() {
   const [isAvailable, setIsAvailable] = useState(true);
@@ -88,23 +89,9 @@ function MainDashboard() {
       </section>
 
       {}
-      <button
-        type="button"
-        style={{
-          width: "100%",
-          backgroundColor: "#0284C7", 
-          color: "#FFFFFF",
-          border: "none",
-          padding: "14px",
-          borderRadius: "10px",
-          fontSize: "16px",
-          fontWeight: "bold",
-          cursor: "pointer",
-          boxShadow: "0 4px 6px rgba(0, 2, 8, 0.3)"
-        }}
-      >
-        פתיחת בקשת עזרה חדשה
-      </button>
+      <Link to="/request">
+  פתיחת בקשת עזרה חדשה
+</Link>
     </div>
   );
 }

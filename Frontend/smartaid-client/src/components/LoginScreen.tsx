@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from 'react-router-dom';
 
 function LoginScreen() {
   const [emailOrPhone, setEmailOrPhone] = useState("");
@@ -41,7 +42,9 @@ function LoginScreen() {
           <button type="submit">התחברות</button>
         </form>
 
-        <p>עדיין אין לך חשבון? הירשמי עכשיו</p>
+       <p>
+  עדיין אין לך חשבון? <Link to="/register">הירשמי עכשיו</Link>
+</p>
       </div>
     </div>
   );

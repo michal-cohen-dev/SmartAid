@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from 'react-router-dom';
 
 function AISuggestionsScreen() {
+  const navigate = useNavigate();
   const [isSolutionClicked, setIsSolutionClicked] = useState(false);
   const [showHelpMessage, setShowHelpMessage] = useState(false);
 
@@ -69,9 +71,13 @@ function AISuggestionsScreen() {
             <p>אפשר להיעזר במתנדב מהקהילה.</p>
           </div>
 
-          <button type="button" className="volunteer-button">
-            אני צריכה מתנדב
-          </button>
+         <button
+  type="button"
+  className="volunteer-button"
+  onClick={() => navigate("/request-tracking")}
+>
+  אני צריכה מתנדב
+</button>
         </div>
       </div>
     </div>

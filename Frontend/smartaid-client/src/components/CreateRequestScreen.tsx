@@ -1,13 +1,21 @@
-import { useState } from "react";
+import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from "react";
+
 
 function CreateRequestScreen() {
+  const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-  }
+  useEffect(() => {
+  document.title = "בקשת עזרה חדשה | SmartAid";
+}, []);
+ const handleSubmit = (event: React.FormEvent) => {
+  event.preventDefault();
+  navigate('/suggestions');
+};
+  
 
   return (
     <div dir="rtl">

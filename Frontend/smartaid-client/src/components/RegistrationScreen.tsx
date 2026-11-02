@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from 'react-router-dom';
 
 function RegistrationScreen() {
   const [fullName, setFullName] = useState("");
@@ -78,7 +79,9 @@ function RegistrationScreen() {
           <button type="submit">הרשמה</button>
         </form>
 
-        <p>כבר יש לך חשבון? התחברי עכשיו</p>
+        <p>
+  כבר יש לך חשבון? <Link to="/login">התחברי עכשיו</Link>
+</p>
       </div>
     </div>
   );
