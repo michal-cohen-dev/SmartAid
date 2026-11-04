@@ -5,8 +5,11 @@ function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isVolunteer = location.pathname.startsWith("/volunteer");
-
+ const isVolunteer =
+  location.pathname === "/" ||
+  location.pathname.startsWith("/volunteer") ||
+  location.pathname === "/request-details";
+  
   function handleSwitchMode() {
     if (isVolunteer) {
       navigate("/requester");

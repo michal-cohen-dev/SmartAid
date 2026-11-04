@@ -1,7 +1,13 @@
-import { useState } from "react";
 
+import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 function RequestDetailsScreen() {
+  const { id } = useParams();
   const [showAllDetails, setShowAllDetails] = useState(true);
+  const navigate = useNavigate();
+useEffect(() => {
+  console.log("מספר הבקשה השתנה:", id);
+}, [id]);
 
   return (
     <div dir="rtl" className="request-page">
@@ -16,7 +22,7 @@ function RequestDetailsScreen() {
           <div>
             <span className="request-status">בקשה חדשה</span>
             <h2>הרכב אינו מניע</h2>
-            <p>בקשה מספר 1</p>
+            <p>בקשה מספר {id}</p>
           </div>
         </div>
 
@@ -44,7 +50,10 @@ function RequestDetailsScreen() {
 
         <div className="request-section">
           <h3>תיאור הבעיה</h3>
-          <p>הרכב לא מניע לאחר שהחנה אותו. נראה שיש בעיה במצבר ונדרשת עזרה בהתנעה.</p>
+          <p>
+            הרכב לא מניע לאחר שהחנה אותו. נראה שיש בעיה במצבר
+            ונדרשת עזרה בהתנעה.
+          </p>
         </div>
 
         <div className="request-section">
@@ -72,7 +81,9 @@ function RequestDetailsScreen() {
             className="details-toggle"
             onClick={() => setShowAllDetails(!showAllDetails)}
           >
-            {showAllDetails ? "הסתרת פרטים נוספים" : "הצגת פרטים נוספים"}
+            {showAllDetails
+              ? "הסתרת פרטים נוספים"
+              : "הצגת פרטים נוספים"}
           </button>
 
           {showAllDetails && (
@@ -91,6 +102,13 @@ function RequestDetailsScreen() {
             דחייה
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+        >
+          חזרה למסך הקודם
+        </button>
       </main>
     </div>
   );
