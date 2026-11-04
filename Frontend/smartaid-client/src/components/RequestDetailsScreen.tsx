@@ -6,7 +6,13 @@ function RequestDetailsScreen() {
   const [showAllDetails, setShowAllDetails] = useState(true);
   const navigate = useNavigate();
 useEffect(() => {
-  console.log("מספר הבקשה השתנה:", id);
+  const previousTitle = document.title;
+
+  document.title = `פרטי בקשה ${id} | SmartAid`;
+
+  return () => {
+    document.title = previousTitle;
+  };
 }, [id]);
 
   return (
