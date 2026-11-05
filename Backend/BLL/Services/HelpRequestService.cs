@@ -1,8 +1,10 @@
-﻿using AutoMapper;
+﻿
+using AutoMapper;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
 using BLL.Services.Interfaces;
+using BLL.Exceptions;
 
 namespace BLL.Services
 {
@@ -16,12 +18,12 @@ namespace BLL.Services
         private readonly IEquipmentTypeRepository _equipmentTypeRepository;
 
         public HelpRequestService(
-     IHelpRequestRepository helpRequestRepository,
-     IMapper mapper,
-     IImageService imageService,
-     IRequestEquipmentRepository requestEquipmentRepository,
-     IEquipmentTypeRepository equipmentTypeRepository,
-     IVolunteerService volunteerService)
+            IHelpRequestRepository helpRequestRepository,
+            IMapper mapper,
+            IImageService imageService,
+            IRequestEquipmentRepository requestEquipmentRepository,
+            IEquipmentTypeRepository equipmentTypeRepository,
+            IVolunteerService volunteerService)
         {
             _helpRequestRepository = helpRequestRepository;
             _mapper = mapper;
@@ -66,6 +68,7 @@ namespace BLL.Services
         {
             var request = _mapper.Map<HelpRequest>(helpRequestDto);
             request.UserId = userId;
+
             if (helpRequestDto.ImageFile != null)
             {
                 var imageName = _imageService.Save(helpRequestDto.ImageFile);
@@ -75,19 +78,16 @@ namespace BLL.Services
             _helpRequestRepository.Add(request);
         }
 
-
         public bool Update(
             int id,
             HelpRequestUpdateDto helpRequestDto,
             int userId)
         {
-            // מוודאים שהבקשה קיימת ושייכת למשתמש המחובר
             var existingRequest = _helpRequestRepository.GetOwned(id, userId);
 
             if (existingRequest == null)
-                return false;
+                throw new NotFoundException("Help request not found.");
 
-            // בודקים את כל סוגי הציוד לפני ביצוע שינויים
             var equipmentTypeIds = helpRequestDto.RequiredEquipmentTypeIds
                 .Distinct()
                 .ToList();
@@ -95,16 +95,17 @@ namespace BLL.Services
             foreach (var equipmentTypeId in equipmentTypeIds)
             {
                 if (_equipmentTypeRepository.GetById(equipmentTypeId) == null)
-                    return false;
+                {
+                    throw new BusinessRuleException(
+                        $"Equipment type with ID {equipmentTypeId} does not exist.");
+                }
             }
 
-            // מעדכנים רק שדות שהמשתמש רשאי לשנות
             existingRequest.Latitude = helpRequestDto.Latitude;
             existingRequest.Longitude = helpRequestDto.Longitude;
             existingRequest.Address = helpRequestDto.Address;
             existingRequest.AddressNotes = helpRequestDto.AddressNotes;
 
-            // מחליפים את סוגי הציוד הנדרשים
             var existingEquipments =
                 _requestEquipmentRepository.GetByHelpRequestId(id);
 

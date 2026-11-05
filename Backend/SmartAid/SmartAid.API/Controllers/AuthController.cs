@@ -1,4 +1,4 @@
-﻿using BLL.Services;
+﻿
 using BLL.Services.Interfaces;
 using DTO;
 using Microsoft.AspNetCore.Authorization;
@@ -21,51 +21,26 @@ namespace SmartAid.API.Controllers
         [HttpPost("register")]
         public ActionResult Register([FromBody] RegisterDto dto)
         {
-            try
-            {
-                var token = _authService.Register(dto);
+            var token = _authService.Register(dto);
 
-                return Ok(new
-                {
-                    message = "Registration successful.",
-                    token
-                });
-            }
-            catch (ArgumentException ex)
+            return Ok(new
             {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
-            }
+                message = "Registration successful.",
+                token
+            });
         }
 
         [AllowAnonymous]
         [HttpPost("login")]
         public ActionResult Login([FromBody] LoginDto dto)
         {
-            try
-            {
-                var token = _authService.Login(dto);
+            var token = _authService.Login(dto);
 
-                return Ok(new
-                {
-                    message = "Login successful.",
-                    token
-                });
-            }
-            catch (ArgumentException ex)
+            return Ok(new
             {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return Unauthorized(new
-                {
-                    message = "Invalid email or password."
-                });
-            }
+                message = "Login successful.",
+                token
+            });
         }
     }
 }

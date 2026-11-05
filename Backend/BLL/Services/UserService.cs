@@ -1,9 +1,9 @@
-﻿
-using AutoMapper;
+﻿using AutoMapper;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
 using BLL.Services.Interfaces;
+using BLL.Exceptions;
 
 namespace BLL.Services
 {
@@ -20,41 +20,43 @@ namespace BLL.Services
 
         public UserDto? GetById(int id, int currentUserId)
         {
-            // המשתמש יכול לצפות רק בפרופיל של עצמו
             if (id != currentUserId)
-                return null;
+                throw new BusinessRuleException(
+                    "You can only view your own profile.");
 
             var user = _userRepository.GetById(id);
 
             if (user == null)
-                return null;
+                throw new NotFoundException("User not found.");
 
             return _mapper.Map<UserDto>(user);
         }
 
-
         public bool Update(int id, UserUpdateDto userDto, int currentUserId)
         {
-            // המשתמש יכול לעדכן רק את הפרופיל של עצמו
             if (id != currentUserId)
-                return false;
+                throw new BusinessRuleException(
+                    "You can only update your own profile.");
 
             var existingUser = _userRepository.GetById(id);
 
             if (existingUser == null)
-                return false;
+                throw new NotFoundException("User not found.");
 
             if (string.IsNullOrWhiteSpace(userDto.FullName) ||
                 string.IsNullOrWhiteSpace(userDto.Email))
-                return false;
+            {
+                throw new BusinessRuleException(
+                    "Full name and email are required.");
+            }
 
             var email = userDto.Email.Trim();
 
-            // בדיקה אם כתובת הדוא"ל כבר שייכת למשתמש אחר
             var userWithEmail = _userRepository.GetByEmail(email);
 
             if (userWithEmail != null && userWithEmail.Id != id)
-                return false;
+                throw new ConflictException(
+                    "This email is already in use.");
 
             existingUser.FullName = userDto.FullName.Trim();
             existingUser.Email = email;
@@ -65,17 +67,16 @@ namespace BLL.Services
             return true;
         }
 
-
         public bool Delete(int id, int currentUserId)
         {
-            // משתמש לא יכול למחוק משתמש אחר
             if (id != currentUserId)
-                return false;
+                throw new BusinessRuleException(
+                    "You can only delete your own account.");
 
             var existingUser = _userRepository.GetById(id);
 
             if (existingUser == null)
-                return false;
+                throw new NotFoundException("User not found.");
 
             _userRepository.Delete(id);
 

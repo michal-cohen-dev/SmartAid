@@ -4,7 +4,6 @@ using DTO;
 using BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
-using System.Collections.Generic;
 
 namespace SmartAid.API.Controllers
 {
@@ -30,7 +29,6 @@ namespace SmartAid.API.Controllers
             return null;
         }
 
-
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public ActionResult<IEnumerable<VolunteerDto>> GetAll()
@@ -54,70 +52,37 @@ namespace SmartAid.API.Controllers
 
             return Ok(volunteer);
         }
+
         [HttpPost]
         public ActionResult Add([FromBody] VolunteerDto volunteerDto)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
             var currentUserId = GetCurrentUserId();
 
             if (currentUserId == null)
-            {
                 return Unauthorized();
-            }
 
-            try
-            {
-                _volunteerService.Add(volunteerDto, currentUserId.Value);
+            _volunteerService.Add(volunteerDto, currentUserId.Value);
 
-                return Ok(new
-                {
-                    message = "Volunteer added successfully."
-                });
-            }
-            catch (InvalidOperationException ex)
+            return Ok(new
             {
-                return Conflict(new
-                {
-                    message = ex.Message
-                });
-            }
+                message = "Volunteer added successfully."
+            });
         }
 
         [HttpPut("{id}")]
         public ActionResult Update(int id, [FromBody] VolunteerDto volunteerDto)
         {
-            if (volunteerDto == null)
-            {
-                return BadRequest("Invalid request data.");
-            }
-
             var currentUserId = GetCurrentUserId();
 
             if (currentUserId == null)
-            {
                 return Unauthorized();
-            }
 
-            try
-            {
-                _volunteerService.Update(id, volunteerDto, currentUserId.Value);
+            _volunteerService.Update(id, volunteerDto, currentUserId.Value);
 
-                return Ok(new
-                {
-                    message = "Volunteer updated successfully."
-                });
-            }
-            catch (KeyNotFoundException)
+            return Ok(new
             {
-                return NotFound(new
-                {
-                    message = "Volunteer profile not found."
-                });
-            }
+                message = "Volunteer updated successfully."
+            });
         }
 
         [HttpDelete("{id}")]
@@ -126,26 +91,14 @@ namespace SmartAid.API.Controllers
             var currentUserId = GetCurrentUserId();
 
             if (currentUserId == null)
-            {
                 return Unauthorized();
-            }
 
-            try
-            {
-                _volunteerService.Delete(id, currentUserId.Value);
+            _volunteerService.Delete(id, currentUserId.Value);
 
-                return Ok(new
-                {
-                    message = "Volunteer deleted successfully."
-                });
-            }
-            catch (KeyNotFoundException)
+            return Ok(new
             {
-                return NotFound(new
-                {
-                    message = "Volunteer profile not found."
-                });
-            }
+                message = "Volunteer deleted successfully."
+            });
         }
     }
 }

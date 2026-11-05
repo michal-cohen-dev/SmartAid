@@ -4,6 +4,7 @@ using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
 using BLL.Services.Interfaces;
+using BLL.Exceptions;
 
 namespace BLL.Services
 {
@@ -34,6 +35,9 @@ namespace BLL.Services
 
         public RequestOfferDto? GetById(int id)
         {
+            if (id <= 0)
+                throw new ArgumentException("Invalid request offer ID.");
+
             var offer = _requestOfferRepository.GetById(id);
 
             if (offer == null)
@@ -54,20 +58,20 @@ namespace BLL.Services
                 _helpRequestRepository.GetById(requestOfferDto.HelpRequestId);
 
             if (helpRequest == null)
-                throw new ArgumentException("Help request not found.");
+                throw new NotFoundException("Help request not found.");
 
             if (helpRequest.Status != RequestStatus.Open)
-                throw new InvalidOperationException(
+                throw new BusinessRuleException(
                     "Offers can only be created for open help requests.");
 
             var volunteer =
                 _volunteerRepository.GetById(requestOfferDto.VolunteerId);
 
             if (volunteer == null)
-                throw new ArgumentException("Volunteer not found.");
+                throw new NotFoundException("Volunteer not found.");
 
             if (!volunteer.IsActive)
-                throw new InvalidOperationException(
+                throw new BusinessRuleException(
                     "Offers can only be created for active volunteers.");
 
             var offer = new RequestOffer
@@ -81,10 +85,13 @@ namespace BLL.Services
 
         public void Update(int id, RequestOfferDto requestOfferDto)
         {
+            if (id <= 0)
+                throw new ArgumentException("Invalid request offer ID.");
+
             var existingOffer = _requestOfferRepository.GetById(id);
 
             if (existingOffer == null)
-                return;
+                throw new NotFoundException("Request offer not found.");
 
             if (!Enum.IsDefined(
                     typeof(OfferStatus), requestOfferDto.Status))
@@ -99,6 +106,14 @@ namespace BLL.Services
 
         public void Delete(int id)
         {
+            if (id <= 0)
+                throw new ArgumentException("Invalid request offer ID.");
+
+            var existingOffer = _requestOfferRepository.GetById(id);
+
+            if (existingOffer == null)
+                throw new NotFoundException("Request offer not found.");
+
             _requestOfferRepository.Delete(id);
         }
     }

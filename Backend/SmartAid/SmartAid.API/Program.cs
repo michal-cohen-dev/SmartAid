@@ -12,6 +12,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
+using SmartAid.API.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -102,7 +103,10 @@ builder.Services.AddScoped<IPasswordHasher<DAL.Entities.User>,
     PasswordHasher<DAL.Entities.User>>();
 
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<GlobalExceptionFilter>();
+});
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>

@@ -4,25 +4,26 @@ using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
 using BLL.Services.Interfaces;
-using System.Collections.Generic;
+using BLL.Exceptions;
 
 namespace BLL.Services
 {
     public class VolunteerService : IVolunteerService
     {
         private readonly IVolunteerRepository _volunteerRepository;
-       private readonly IUserRepository _userRepository;
+        private readonly IUserRepository _userRepository;
         private readonly IMapper _mapper;
 
         public VolunteerService(
-    IVolunteerRepository volunteerRepository,
-    IUserRepository userRepository,
-    IMapper mapper)
+            IVolunteerRepository volunteerRepository,
+            IUserRepository userRepository,
+            IMapper mapper)
         {
             _volunteerRepository = volunteerRepository;
             _userRepository = userRepository;
             _mapper = mapper;
         }
+
         public List<VolunteerDto> GetAll()
         {
             var volunteers = _volunteerRepository.GetAll();
@@ -38,6 +39,7 @@ namespace BLL.Services
 
             return _mapper.Map<VolunteerDto>(volunteer);
         }
+
         public VolunteerDto? GetByUserId(int userId)
         {
             var volunteer = _volunteerRepository.GetByUserId(userId);
@@ -47,28 +49,26 @@ namespace BLL.Services
 
             return _mapper.Map<VolunteerDto>(volunteer);
         }
+
         public void Add(VolunteerDto volunteerDto, int currentUserId)
         {
-            // בדיקה אם כבר קיים פרופיל מתנדב למשתמש
             var existingVolunteer =
                 _volunteerRepository.GetByUserId(currentUserId);
 
             if (existingVolunteer != null)
             {
-                throw new InvalidOperationException(
+                throw new ConflictException(
                     "This user already has a volunteer profile.");
             }
 
-            // שליפת פרטי המשתמש הקיים ממסד הנתונים
             var user = _userRepository.GetById(currentUserId);
 
             if (user == null)
             {
-                throw new KeyNotFoundException(
+                throw new NotFoundException(
                     "The current user was not found.");
             }
 
-            // יצירת פרופיל מתנדב על בסיס פרטי המשתמש הקיים
             var volunteer = new Volunteer
             {
                 UserId = user.Id,
@@ -83,19 +83,18 @@ namespace BLL.Services
 
             _volunteerRepository.Add(volunteer);
         }
+
         public void Update(int id, VolunteerDto volunteerDto, int currentUserId)
         {
             var existingVolunteer = _volunteerRepository.GetById(id);
 
-            // הפרופיל לא קיים או שאינו שייך למשתמש המחובר
             if (existingVolunteer == null ||
                 existingVolunteer.UserId != currentUserId)
             {
-                throw new KeyNotFoundException(
+                throw new NotFoundException(
                     "Volunteer profile not found.");
             }
 
-            // מעדכנים רק שדות שהמשתמש רשאי לשנות
             existingVolunteer.FullName = volunteerDto.FullName;
             existingVolunteer.PhoneNumber = volunteerDto.PhoneNumber;
 
@@ -106,11 +105,10 @@ namespace BLL.Services
         {
             var existingVolunteer = _volunteerRepository.GetById(id);
 
-            // הפרופיל לא קיים או שאינו שייך למשתמש המחובר
             if (existingVolunteer == null ||
                 existingVolunteer.UserId != currentUserId)
             {
-                throw new KeyNotFoundException(
+                throw new NotFoundException(
                     "Volunteer profile not found.");
             }
 
@@ -118,4 +116,3 @@ namespace BLL.Services
         }
     }
 }
-

@@ -1,14 +1,10 @@
-﻿using BLL.Services.Interfaces;
+﻿
+using BLL.Exceptions;
+using BLL.Services.Interfaces;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
 using Microsoft.AspNetCore.Identity;
-using System;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BLL.Services
 {
@@ -42,7 +38,7 @@ namespace BLL.Services
 
             if (_userRepository.GetByEmail(email) != null)
             {
-                throw new InvalidOperationException(
+                throw new ConflictException(
                     "An account with this email already exists.");
             }
 
@@ -50,7 +46,7 @@ namespace BLL.Services
             {
                 FullName = dto.FullName.Trim(),
                 Email = email,
-                PhoneNumber = dto.PhoneNumber.Trim(),
+                PhoneNumber = dto.PhoneNumber?.Trim() ?? string.Empty,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -77,7 +73,7 @@ namespace BLL.Services
 
             if (user == null)
             {
-                throw new UnauthorizedAccessException(
+                throw new InvalidCredentialsException(
                     "Invalid email or password.");
             }
 
@@ -88,7 +84,7 @@ namespace BLL.Services
 
             if (result == PasswordVerificationResult.Failed)
             {
-                throw new UnauthorizedAccessException(
+                throw new InvalidCredentialsException(
                     "Invalid email or password.");
             }
 
