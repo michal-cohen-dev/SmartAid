@@ -4,6 +4,7 @@ using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
 using BLL.Services.Interfaces;
+using BLL.Exceptions;
 
 namespace BLL.Services
 {
@@ -47,7 +48,7 @@ namespace BLL.Services
             var existing = _repository.GetById(id);
 
             if (existing == null)
-                return;
+                throw new NotFoundException("Request equipment not found.");
 
             var item = _mapper.Map<RequestEquipment>(dto);
             item.Id = id;

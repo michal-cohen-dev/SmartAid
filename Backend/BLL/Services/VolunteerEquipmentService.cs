@@ -4,6 +4,7 @@ using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
 using BLL.Services.Interfaces;
+using BLL.Exceptions;
 
 namespace BLL.Services
 {
@@ -60,12 +61,12 @@ namespace BLL.Services
             var volunteer = _volunteerRepository.GetById(dto.VolunteerId);
 
             if (volunteer == null)
-                throw new ArgumentException("Volunteer not found.");
+                throw new NotFoundException("Volunteer not found.");
 
             var equipmentType = _equipmentTypeRepository.GetById(dto.EquipmentTypeId);
 
             if (equipmentType == null)
-                throw new ArgumentException("Equipment type not found.");
+                throw new NotFoundException("Equipment type not found.");
 
             var item = new VolunteerEquipment
             {
@@ -84,12 +85,12 @@ namespace BLL.Services
             var existing = _repository.GetById(id);
 
             if (existing == null)
-                return;
+                throw new NotFoundException("Volunteer equipment not found.");
 
             var equipmentType = _equipmentTypeRepository.GetById(dto.EquipmentTypeId);
 
             if (equipmentType == null)
-                throw new ArgumentException("Equipment type not found.");
+                throw new NotFoundException("Equipment type not found.");
 
             existing.EquipmentTypeId = equipmentType.Id;
 

@@ -66,16 +66,50 @@ namespace BLL.Services
 
         public void Add(HelpRequestPostDto helpRequestDto, int userId)
         {
+            var equipmentTypeIds = helpRequestDto.RequiredEquipmentTypeIds
+                .Distinct()
+                .ToList();
+
+            foreach (var equipmentTypeId in equipmentTypeIds)
+            {
+                if (_equipmentTypeRepository.GetById(equipmentTypeId) == null)
+                {
+                    throw new BusinessRuleException(
+                        $"Equipment type with ID {equipmentTypeId} does not exist.");
+                }
+            }
+
             var request = _mapper.Map<HelpRequest>(helpRequestDto);
             request.UserId = userId;
 
-            if (helpRequestDto.ImageFile != null)
-            {
-                var imageName = _imageService.Save(helpRequestDto.ImageFile);
-                request.ImageName = imageName;
-            }
+            string? savedImageName = null;
 
-            _helpRequestRepository.Add(request);
+            try
+            {
+                if (helpRequestDto.ImageFile != null)
+                {
+                    savedImageName = _imageService.Save(helpRequestDto.ImageFile);
+                    request.ImageName = savedImageName;
+                }
+
+                _helpRequestRepository.Add(request);
+            }
+            catch
+            {
+                if (!string.IsNullOrEmpty(savedImageName))
+                {
+                    try
+                    {
+                        _imageService.Delete(savedImageName);
+                    }
+                    catch
+                    {
+                        // Preserve the original exception.
+                    }
+                }
+
+                throw;
+            }
         }
 
         public bool Update(

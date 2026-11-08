@@ -3,6 +3,7 @@ using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
 using BLL.Services.Interfaces;
+using BLL.Exceptions;
 
 namespace BLL.Services
 {
@@ -37,7 +38,21 @@ namespace BLL.Services
 
         public void Add(EquipmentTypeDto equipmentTypeDto)
         {
+            var normalizedName = equipmentTypeDto.Name.Trim();
+
+            var nameAlreadyExists = _repository.GetAll()
+                .Any(existing => string.Equals(
+                    existing.Name,
+                    normalizedName,
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (nameAlreadyExists)
+                throw new ConflictException(
+                    "An equipment type with this name already exists.");
+
             var equipmentType = _mapper.Map<EquipmentType>(equipmentTypeDto);
+            equipmentType.Name = normalizedName;
+
             _repository.Add(equipmentType);
         }
 
@@ -46,10 +61,24 @@ namespace BLL.Services
             var existingEquipmentType = _repository.GetById(id);
 
             if (existingEquipmentType == null)
-                return;
+                throw new NotFoundException("Equipment type not found.");
+
+            var normalizedName = equipmentTypeDto.Name.Trim();
+
+            var nameAlreadyExists = _repository.GetAll()
+                .Any(existing => existing.Id != id &&
+                    string.Equals(
+                        existing.Name,
+                        normalizedName,
+                        StringComparison.OrdinalIgnoreCase));
+
+            if (nameAlreadyExists)
+                throw new ConflictException(
+                    "An equipment type with this name already exists.");
 
             var equipmentType = _mapper.Map<EquipmentType>(equipmentTypeDto);
             equipmentType.Id = id;
+            equipmentType.Name = normalizedName;
 
             _repository.Update(equipmentType);
         }
