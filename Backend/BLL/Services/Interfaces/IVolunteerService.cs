@@ -10,9 +10,10 @@ namespace BLL.Services.Interfaces
         List<VolunteerDto> GetAll();
         VolunteerDto? GetById(int id);
         VolunteerDto? GetByUserId(int userId);
-        void Add(VolunteerDto volunteerDto, int currentUserId);
+
+        void Add(RegisterVolunteerDto volunteerDto, int currentUserId);
+
         void Update(int id, VolunteerDto volunteerDto, int currentUserId);
         void Delete(int id, int currentUserId);
     }
 }
-

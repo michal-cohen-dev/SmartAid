@@ -54,14 +54,17 @@ namespace SmartAid.API.Controllers
         }
 
         [HttpPost]
-        public ActionResult Add([FromBody] VolunteerDto volunteerDto)
+        public ActionResult Add(
+    [FromBody] RegisterVolunteerDto volunteerDto)
         {
             var currentUserId = GetCurrentUserId();
 
             if (currentUserId == null)
                 return Unauthorized();
 
-            _volunteerService.Add(volunteerDto, currentUserId.Value);
+            _volunteerService.Add(
+                volunteerDto,
+                currentUserId.Value);
 
             return Ok(new
             {
@@ -99,6 +102,25 @@ namespace SmartAid.API.Controllers
             {
                 message = "Volunteer deleted successfully."
             });
+        }
+
+        [HttpGet("me")]
+        public ActionResult<VolunteerDto> GetMyProfile()
+        {
+            var currentUserId = GetCurrentUserId();
+
+            if (currentUserId == null)
+                return Unauthorized();
+
+            var volunteer = _volunteerService.GetByUserId(currentUserId.Value);
+
+            if (volunteer == null)
+                return NotFound(new
+                {
+                    message = "Volunteer profile not found for the current user."
+                });
+
+            return Ok(volunteer);
         }
     }
 }

@@ -1,14 +1,13 @@
-﻿using BLL.Services.Interfaces;
+﻿
+using BLL.Services.Interfaces;
 using DAL.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace BLL.Services
 {
@@ -21,7 +20,10 @@ namespace BLL.Services
             _configuration = configuration;
         }
 
-        public string GenerateToken(User user)
+        public string GenerateToken(
+            User user,
+            bool isVolunteer,
+            int? volunteerId)
         {
             var jwtSettings = _configuration.GetSection("Jwt");
             var key = _configuration["Jwt:Key"];
@@ -44,16 +46,33 @@ namespace BLL.Services
                     "JWT ExpiresMinutes is invalid.");
             }
 
-            var claims = new[]
+            var claims = new List<Claim>
             {
                 new Claim(
                     ClaimTypes.NameIdentifier,
                     user.Id.ToString()),
 
-                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(
+                    ClaimTypes.Email,
+                    user.Email),
 
-               new Claim(ClaimTypes.Role, user.Role)
+                new Claim(
+                    ClaimTypes.Role,
+                    user.Role),
+
+                new Claim(
+                    "isVolunteer",
+                    isVolunteer.ToString())
             };
+
+            // אם המשתמש מתנדב, נוסיף גם את מזהה המתנדב
+            if (volunteerId.HasValue)
+            {
+                claims.Add(
+                    new Claim(
+                        "volunteerId",
+                        volunteerId.Value.ToString()));
+            }
 
             var signingKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(key));

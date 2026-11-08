@@ -11,15 +11,18 @@ namespace BLL.Services
     public class AuthService : IAuthService
     {
         private readonly IUserRepository _userRepository;
+        private readonly IVolunteerRepository _volunteerRepository;
         private readonly ITokenService _tokenService;
         private readonly IPasswordHasher<User> _passwordHasher;
 
         public AuthService(
             IUserRepository userRepository,
+            IVolunteerRepository volunteerRepository,
             ITokenService tokenService,
             IPasswordHasher<User> passwordHasher)
         {
             _userRepository = userRepository;
+            _volunteerRepository = volunteerRepository;
             _tokenService = tokenService;
             _passwordHasher = passwordHasher;
         }
@@ -56,7 +59,11 @@ namespace BLL.Services
 
             _userRepository.Add(user);
 
-            return _tokenService.GenerateToken(user);
+            // בהרשמה ראשונית המשתמש עדיין אינו מתנדב
+            return _tokenService.GenerateToken(
+                user,
+                false,
+                null);
         }
 
         public string Login(LoginDto dto)
@@ -88,7 +95,19 @@ namespace BLL.Services
                     "Invalid email or password.");
             }
 
-            return _tokenService.GenerateToken(user);
+            // בדיקה האם למשתמש יש פרופיל מתנדב
+            var volunteer =
+                _volunteerRepository.GetByUserId(user.Id);
+
+            bool isVolunteer = volunteer != null;
+
+            int? volunteerId = volunteer?.Id;
+
+            // יצירת Token בהתאם למצב המשתמש
+            return _tokenService.GenerateToken(
+                user,
+                isVolunteer,
+                volunteerId);
         }
     }
 }

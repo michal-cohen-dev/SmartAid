@@ -3,12 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
 using DAL.Entities;
 
 namespace BLL.Services.Interfaces
 {
     public interface ITokenService
     {
-        string GenerateToken(User user);
+        string GenerateToken(
+            User user,
+            bool isVolunteer,
+            int? volunteerId
+        );
     }
 }
