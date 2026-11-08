@@ -13,8 +13,15 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using SmartAid.API.Filters;
+using BLL.Services.ExternalServices;
+
 
 var builder = WebApplication.CreateBuilder(args);
+
+Console.WriteLine(
+    $"TomTom key loaded: {!string.IsNullOrWhiteSpace(builder.Configuration["TomTom:ApiKey"])}");
+Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
+Console.WriteLine($"UserSecretsId: {builder.Configuration["UserSecretsId"]}");
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var jwtKey = builder.Configuration["Jwt:Key"];
@@ -94,6 +101,12 @@ builder.Services.AddScoped<IHelpRequestService, HelpRequestService>();
 builder.Services.AddScoped<IRequestEquipmentService, RequestEquipmentService>();
 builder.Services.AddScoped<IRequestOfferService, RequestOfferService>();
 builder.Services.AddScoped<IEquipmentTypeService, EquipmentTypeService>();
+builder.Services.AddHttpClient<
+    ITomTomRoutingService,
+    TomTomRoutingService>(client =>
+    {
+        client.BaseAddress = new Uri("https://api.tomtom.com/");
+    });
 builder.Services.AddScoped<IVolunteerEquipmentService, VolunteerEquipmentService>();
 builder.Services.AddSingleton<IImageService>(
     new ImageService(imagesFolder));
@@ -154,5 +167,25 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+if (app.Environment.IsDevelopment())
+{
+    app.MapGet("/debug/tomtom", async (
+        ITomTomRoutingService tomTom) =>
+    {
+        var origins = new[]
+        {
+            new TomTomLocation(32.0809, 34.7806)
+        };
 
+        var destination = new TomTomLocation(
+            32.0740,
+            34.7925);
+
+        var results = await tomTom.CalculateRoutesAsync(
+            origins,
+            destination);
+
+        return Results.Ok(results);
+    }).AllowAnonymous();
+}
 app.Run();
