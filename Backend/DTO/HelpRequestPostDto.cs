@@ -1,10 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿
+using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 namespace DTO;
 
 public class HelpRequestPostDto
@@ -20,8 +18,7 @@ public class HelpRequestPostDto
     public double? Longitude { get; set; }
 
     [Required(ErrorMessage = "Address is required.")]
-    [StringLength(300, MinimumLength = 2,
-        ErrorMessage = "Address must contain between 2 and 300 characters.")]
+    [StringLength(300)]
     public string Address { get; set; } = string.Empty;
 
     [StringLength(300,
