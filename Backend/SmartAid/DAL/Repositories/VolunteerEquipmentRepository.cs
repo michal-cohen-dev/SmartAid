@@ -30,6 +30,13 @@ namespace DAL.Repositories
                 .Include(ve => ve.EquipmentType)
                 .FirstOrDefault(ve => ve.Id == id);
         }
+        public List<VolunteerEquipment> GetByVolunteerId(int volunteerId)
+        {
+            return _context.VolunteerEquipments
+                .Include(ve => ve.EquipmentType)
+                .Where(ve => ve.VolunteerId == volunteerId)
+                .ToList();
+        }
 
         public void Add(VolunteerEquipment volunteerEquipment)
         {

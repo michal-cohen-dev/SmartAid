@@ -11,6 +11,7 @@ namespace DTO
         public int Id { get; set; }
         public int UserId { get; set; }
         public string? UserFullName { get; set; } // לעזרת הצגה נוחה בקליינט
+        public string? ImageName { get; set; }
         public double Latitude { get; set; }
         public double Longitude { get; set; }
         public string Address { get; set; } = string.Empty;

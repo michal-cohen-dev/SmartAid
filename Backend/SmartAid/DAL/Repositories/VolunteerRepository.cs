@@ -26,6 +26,12 @@ namespace DAL.Repositories
             return _context.Volunteers.FirstOrDefault(v => v.Id == id);
         }
 
+        public Volunteer? GetByUserId(int userId)
+        {
+            return _context.Volunteers
+                .FirstOrDefault(v => v.UserId == userId);
+        }
+
         public void Add(Volunteer volunteer)
         {
             _context.Volunteers.Add(volunteer);
@@ -61,5 +67,29 @@ namespace DAL.Repositories
                 _context.SaveChanges();
             }
         }
+    
+
+    public void AddWithEquipment(
+    Volunteer volunteer,
+    List<int> equipmentTypeIds)
+        {
+            _context.Volunteers.Add(volunteer);
+
+            foreach (var equipmentTypeId in equipmentTypeIds)
+            {
+                var volunteerEquipment = new VolunteerEquipment
+                {
+                    Volunteer = volunteer,
+                    EquipmentTypeId = equipmentTypeId
+                };
+
+                _context.VolunteerEquipments.Add(volunteerEquipment);
+            }
+
+            // שמירת המתנדב וכל פריטי הציוד יחד
+            _context.SaveChanges();
+        }
     }
 }
+
+  

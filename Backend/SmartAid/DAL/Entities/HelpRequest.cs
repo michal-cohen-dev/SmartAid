@@ -28,6 +28,7 @@ namespace DAL.Entities
 
         // הערות מיקום נוספות (למשל: קומה/דירה, או תיאור השוליים בכביש)
         public string? AddressNotes { get; set; }
+        public string? ImageName { get; set; }
 
         public RequestStatus Status { get; set; } = RequestStatus.Open;
 

@@ -10,6 +10,7 @@ namespace DAL.Repositories.Interfaces
     {
         List<RequestEquipment> GetAll();
         RequestEquipment? GetById(int id);
+        List<RequestEquipment> GetByHelpRequestId(int helpRequestId);
         void Add(RequestEquipment requestEquipment);
         void Update(RequestEquipment requestEquipment);
         void Delete(int id);

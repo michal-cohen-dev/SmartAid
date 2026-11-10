@@ -32,9 +32,13 @@ namespace DAL.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
 
                     b.ToTable("EquipmentTypes");
                 });
@@ -49,16 +53,21 @@ namespace DAL.Migrations
 
                     b.Property<string>("Address")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("AddressNotes")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<int?>("AssignedVolunteerId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("ImageName")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<double>("Latitude")
                         .HasColumnType("float");
@@ -78,6 +87,8 @@ namespace DAL.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AssignedVolunteerId");
+
+                    b.HasIndex("Status");
 
                     b.HasIndex("UserId");
 
@@ -102,7 +113,8 @@ namespace DAL.Migrations
 
                     b.HasIndex("EquipmentTypeId");
 
-                    b.HasIndex("HelpRequestId");
+                    b.HasIndex("HelpRequestId", "EquipmentTypeId")
+                        .IsUnique();
 
                     b.ToTable("RequestEquipments");
                 });
@@ -121,9 +133,6 @@ namespace DAL.Migrations
                     b.Property<DateTime>("OfferedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("RequestId")
-                        .HasColumnType("int");
-
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -132,9 +141,10 @@ namespace DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("HelpRequestId");
-
                     b.HasIndex("VolunteerId");
+
+                    b.HasIndex("HelpRequestId", "VolunteerId")
+                        .IsUnique();
 
                     b.ToTable("RequestOffers");
                 });
@@ -152,11 +162,13 @@ namespace DAL.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("FullName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -164,9 +176,17 @@ namespace DAL.Migrations
 
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
 
                     b.ToTable("Users");
                 });
@@ -181,14 +201,16 @@ namespace DAL.Migrations
 
                     b.Property<string>("FullName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<double>("ReliabilityScore")
                         .HasColumnType("float");
@@ -202,7 +224,13 @@ namespace DAL.Migrations
                     b.Property<int>("TotalOffersReceived")
                         .HasColumnType("int");
 
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("Volunteers");
                 });
@@ -225,7 +253,8 @@ namespace DAL.Migrations
 
                     b.HasIndex("EquipmentTypeId");
 
-                    b.HasIndex("VolunteerId");
+                    b.HasIndex("VolunteerId", "EquipmentTypeId")
+                        .IsUnique();
 
                     b.ToTable("VolunteerEquipments");
                 });
@@ -234,12 +263,13 @@ namespace DAL.Migrations
                 {
                     b.HasOne("DAL.Entities.Volunteer", "AssignedVolunteer")
                         .WithMany("AssignedRequests")
-                        .HasForeignKey("AssignedVolunteerId");
+                        .HasForeignKey("AssignedVolunteerId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("DAL.Entities.User", "User")
                         .WithMany("HelpRequests")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("AssignedVolunteer");
@@ -252,7 +282,7 @@ namespace DAL.Migrations
                     b.HasOne("DAL.Entities.EquipmentType", "EquipmentType")
                         .WithMany("RequestEquipments")
                         .HasForeignKey("EquipmentTypeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("DAL.Entities.HelpRequest", "HelpRequest")
@@ -277,7 +307,7 @@ namespace DAL.Migrations
                     b.HasOne("DAL.Entities.Volunteer", "Volunteer")
                         .WithMany("RequestOffers")
                         .HasForeignKey("VolunteerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("HelpRequest");
@@ -285,12 +315,23 @@ namespace DAL.Migrations
                     b.Navigation("Volunteer");
                 });
 
+            modelBuilder.Entity("DAL.Entities.Volunteer", b =>
+                {
+                    b.HasOne("DAL.Entities.User", "User")
+                        .WithOne()
+                        .HasForeignKey("DAL.Entities.Volunteer", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("DAL.Entities.VolunteerEquipment", b =>
                 {
                     b.HasOne("DAL.Entities.EquipmentType", "EquipmentType")
                         .WithMany("VolunteerEquipments")
                         .HasForeignKey("EquipmentTypeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("DAL.Entities.Volunteer", "Volunteer")

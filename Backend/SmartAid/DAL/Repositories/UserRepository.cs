@@ -5,6 +5,7 @@ using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
+
 namespace DAL.Repositories
 {
     public class UserRepository : IUserRepository
@@ -26,11 +27,18 @@ namespace DAL.Repositories
             return _context.Users.FirstOrDefault(u => u.Id == id);
         }
 
+        public User? GetByEmail(string email)
+        {
+            return _context.Users
+                .FirstOrDefault(u => u.Email == email);
+        }
+
         public void Add(User user)
         {
             _context.Users.Add(user);
             _context.SaveChanges();
         }
+
 
         public void Update(User user)
         {
@@ -40,13 +48,12 @@ namespace DAL.Repositories
             {
                 entity.FullName = user.FullName;
                 entity.Email = user.Email;
-                entity.PasswordHash = user.PasswordHash;
                 entity.PhoneNumber = user.PhoneNumber;
 
-                _context.Users.Update(entity);
                 _context.SaveChanges();
             }
         }
+
 
         public void Delete(int id)
         {

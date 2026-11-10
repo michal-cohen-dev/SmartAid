@@ -1,21 +1,25 @@
 ﻿
 using Microsoft.AspNetCore.Mvc;
-using BLL.Services;
 using DTO;
+using BLL.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace SmartAid.API.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class HelpRequestsController : ControllerBase
     {
-       private readonly IHelpRequestService _helpRequestService;
+        private readonly IHelpRequestService _helpRequestService;
 
         public HelpRequestsController(IHelpRequestService helpRequestService)
         {
             _helpRequestService = helpRequestService;
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public ActionResult<IEnumerable<HelpRequestDto>> GetAll()
         {
@@ -25,6 +29,17 @@ namespace SmartAid.API.Controllers
         [HttpGet("{id}")]
         public ActionResult<HelpRequestDto> GetById(int id)
         {
+            if (!User.IsInRole("Admin"))
+            {
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                if (!int.TryParse(userIdClaim, out var userId))
+                    return Unauthorized();
+
+                if (!_helpRequestService.IsAssignedVolunteer(id, userId))
+                    return NotFound();
+            }
+
             var request = _helpRequestService.GetById(id);
 
             if (request == null)
@@ -39,57 +54,69 @@ namespace SmartAid.API.Controllers
         }
 
         [HttpPost]
-        public ActionResult Add([FromBody] HelpRequestDto helpRequestDto)
+        [Consumes("multipart/form-data")]
+        public ActionResult Add([FromForm] HelpRequestPostDto helpRequestDto)
         {
-            if (!ModelState.IsValid)
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            // מזהה המשתמש נלקח מה-Token ולא מהבקשה
+            _helpRequestService.Add(helpRequestDto, userId);
+
+            return Ok(new
             {
-                return BadRequest(ModelState);
-            }
-
-            _helpRequestService.Add(helpRequestDto);
-
-            return Ok(new { message = "Help request added successfully." });
+                message = "Help request added successfully."
+            });
         }
 
         [HttpPut("{id}")]
-        public ActionResult Update(int id, [FromBody] HelpRequestDto helpRequestDto)
+        public ActionResult Update(int id, [FromBody] HelpRequestUpdateDto helpRequestDto)
         {
-            if (helpRequestDto == null)
-            {
-                return BadRequest("Invalid request data.");
-            }
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            var existing = _helpRequestService.GetById(id);
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
 
-            if (existing == null)
+            var updated = _helpRequestService.Update(id, helpRequestDto, userId);
+
+            if (!updated)
             {
                 return NotFound(new
                 {
-                    message = $"Help request with ID {id} not found."
+                    message = "Help request not found."
                 });
             }
 
-            _helpRequestService.Update(id, helpRequestDto);
-
-            return Ok(new { message = "Help request updated successfully." });
+            return Ok(new
+            {
+                message = "Help request updated successfully."
+            });
         }
 
         [HttpDelete("{id}")]
         public ActionResult Delete(int id)
         {
-            var existing = _helpRequestService.GetById(id);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            if (existing == null)
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var deleted = _helpRequestService.Delete(id, userId);
+
+            if (!deleted)
             {
                 return NotFound(new
                 {
-                    message = $"Help request with ID {id} not found."
+                    message = "Help request not found."
                 });
             }
 
-            _helpRequestService.Delete(id);
-
-            return Ok(new { message = "Help request deleted successfully." });
+            return Ok(new
+            {
+                message = "Help request deleted successfully."
+            });
         }
     }
 }

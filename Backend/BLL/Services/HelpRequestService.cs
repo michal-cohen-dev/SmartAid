@@ -1,22 +1,36 @@
-﻿using AutoMapper;
+﻿
+using AutoMapper;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
-using BLL.Services;
+using BLL.Services.Interfaces;
+using BLL.Exceptions;
 
 namespace BLL.Services
 {
     public class HelpRequestService : IHelpRequestService
     {
         private readonly IHelpRequestRepository _helpRequestRepository;
+        private readonly IVolunteerService _volunteerService;
         private readonly IMapper _mapper;
+        private readonly IImageService _imageService;
+        private readonly IRequestEquipmentRepository _requestEquipmentRepository;
+        private readonly IEquipmentTypeRepository _equipmentTypeRepository;
 
         public HelpRequestService(
             IHelpRequestRepository helpRequestRepository,
-            IMapper mapper)
+            IMapper mapper,
+            IImageService imageService,
+            IRequestEquipmentRepository requestEquipmentRepository,
+            IEquipmentTypeRepository equipmentTypeRepository,
+            IVolunteerService volunteerService)
         {
             _helpRequestRepository = helpRequestRepository;
             _mapper = mapper;
+            _imageService = imageService;
+            _requestEquipmentRepository = requestEquipmentRepository;
+            _equipmentTypeRepository = equipmentTypeRepository;
+            _volunteerService = volunteerService;
         }
 
         public List<HelpRequestDto> GetAll()
@@ -35,28 +49,129 @@ namespace BLL.Services
             return _mapper.Map<HelpRequestDto>(request);
         }
 
-        public void Add(HelpRequestDto helpRequestDto)
+        public bool IsAssignedVolunteer(int requestId, int userId)
         {
-            var request = _mapper.Map<HelpRequest>(helpRequestDto);
-            _helpRequestRepository.Add(request);
+            var request = _helpRequestRepository.GetById(requestId);
+
+            if (request == null || request.AssignedVolunteerId == null)
+                return false;
+
+            var volunteer = _volunteerService.GetByUserId(userId);
+
+            if (volunteer == null)
+                return false;
+
+            return request.AssignedVolunteerId == volunteer.Id;
         }
 
-        public void Update(int id, HelpRequestDto helpRequestDto)
+        public void Add(HelpRequestPostDto helpRequestDto, int userId)
         {
-            var existingRequest = _helpRequestRepository.GetById(id);
+            var equipmentTypeIds = helpRequestDto.RequiredEquipmentTypeIds
+                .Distinct()
+                .ToList();
+
+            foreach (var equipmentTypeId in equipmentTypeIds)
+            {
+                if (_equipmentTypeRepository.GetById(equipmentTypeId) == null)
+                {
+                    throw new BusinessRuleException(
+                        $"Equipment type with ID {equipmentTypeId} does not exist.");
+                }
+            }
+
+            var request = _mapper.Map<HelpRequest>(helpRequestDto);
+            request.UserId = userId;
+
+            string? savedImageName = null;
+
+            try
+            {
+                if (helpRequestDto.ImageFile != null)
+                {
+                    savedImageName = _imageService.Save(helpRequestDto.ImageFile);
+                    request.ImageName = savedImageName;
+                }
+
+                _helpRequestRepository.Add(request);
+            }
+            catch
+            {
+                if (!string.IsNullOrEmpty(savedImageName))
+                {
+                    try
+                    {
+                        _imageService.Delete(savedImageName);
+                    }
+                    catch
+                    {
+                        // Preserve the original exception.
+                    }
+                }
+
+                throw;
+            }
+        }
+
+        public bool Update(
+            int id,
+            HelpRequestUpdateDto helpRequestDto,
+            int userId)
+        {
+            var existingRequest = _helpRequestRepository.GetOwned(id, userId);
 
             if (existingRequest == null)
-                return;
+                throw new NotFoundException("Help request not found.");
 
-            var request = _mapper.Map<HelpRequest>(helpRequestDto);
-            request.Id = id;
+            var equipmentTypeIds = helpRequestDto.RequiredEquipmentTypeIds
+                .Distinct()
+                .ToList();
 
-            _helpRequestRepository.Update(request);
+            foreach (var equipmentTypeId in equipmentTypeIds)
+            {
+                if (_equipmentTypeRepository.GetById(equipmentTypeId) == null)
+                {
+                    throw new BusinessRuleException(
+                        $"Equipment type with ID {equipmentTypeId} does not exist.");
+                }
+            }
+
+            existingRequest.Latitude = helpRequestDto.Latitude;
+            existingRequest.Longitude = helpRequestDto.Longitude;
+            existingRequest.Address = helpRequestDto.Address;
+            existingRequest.AddressNotes = helpRequestDto.AddressNotes;
+
+            var existingEquipments =
+                _requestEquipmentRepository.GetByHelpRequestId(id);
+
+            foreach (var equipment in existingEquipments)
+            {
+                _requestEquipmentRepository.Delete(equipment.Id);
+            }
+
+            foreach (var equipmentTypeId in equipmentTypeIds)
+            {
+                _requestEquipmentRepository.Add(new RequestEquipment
+                {
+                    HelpRequestId = id,
+                    EquipmentTypeId = equipmentTypeId
+                });
+            }
+
+            _helpRequestRepository.Update(existingRequest);
+
+            return true;
         }
 
-        public void Delete(int id)
+        public bool Delete(int id, int userId)
         {
+            var existingRequest = _helpRequestRepository.GetOwned(id, userId);
+
+            if (existingRequest == null)
+                return false;
+
             _helpRequestRepository.Delete(id);
+
+            return true;
         }
     }
 }

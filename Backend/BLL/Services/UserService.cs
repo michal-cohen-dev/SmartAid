@@ -2,7 +2,8 @@
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
-using BLL.Services;
+using BLL.Services.Interfaces;
+using BLL.Exceptions;
 
 namespace BLL.Services
 {
@@ -17,43 +18,69 @@ namespace BLL.Services
             _mapper = mapper;
         }
 
-        public List<UserDto> GetAll()
+        public UserDto? GetById(int id, int currentUserId)
         {
-            var users = _userRepository.GetAll();
-            return _mapper.Map<List<UserDto>>(users);
-        }
+            if (id != currentUserId)
+                throw new BusinessRuleException(
+                    "You can only view your own profile.");
 
-        public UserDto? GetById(int id)
-        {
             var user = _userRepository.GetById(id);
+
             if (user == null)
-                return null;
+                throw new NotFoundException("User not found.");
 
             return _mapper.Map<UserDto>(user);
         }
 
-        public void Add(UserDto userDto)
+        public bool Update(int id, UserUpdateDto userDto, int currentUserId)
         {
-            var user = _mapper.Map<User>(userDto);
-            user.CreatedAt = DateTime.UtcNow;
-            _userRepository.Add(user);
-        }
+            if (id != currentUserId)
+                throw new BusinessRuleException(
+                    "You can only update your own profile.");
 
-        public void Update(int id, UserDto userDto)
-        {
             var existingUser = _userRepository.GetById(id);
+
             if (existingUser == null)
-                return;
+                throw new NotFoundException("User not found.");
 
-            var user = _mapper.Map<User>(userDto);
-            user.Id = id;
+            if (string.IsNullOrWhiteSpace(userDto.FullName) ||
+                string.IsNullOrWhiteSpace(userDto.Email))
+            {
+                throw new BusinessRuleException(
+                    "Full name and email are required.");
+            }
 
-            _userRepository.Update(user);
+            var email = userDto.Email.Trim();
+
+            var userWithEmail = _userRepository.GetByEmail(email);
+
+            if (userWithEmail != null && userWithEmail.Id != id)
+                throw new ConflictException(
+                    "This email is already in use.");
+
+            existingUser.FullName = userDto.FullName.Trim();
+            existingUser.Email = email;
+            existingUser.PhoneNumber = userDto.PhoneNumber?.Trim();
+
+            _userRepository.Update(existingUser);
+
+            return true;
         }
 
-        public void Delete(int id)
+        public bool Delete(int id, int currentUserId)
         {
+            if (id != currentUserId)
+                throw new BusinessRuleException(
+                    "You can only delete your own account.");
+
+            var existingUser = _userRepository.GetById(id);
+
+            if (existingUser == null)
+                throw new NotFoundException("User not found.");
+
             _userRepository.Delete(id);
+
+            return true;
         }
     }
 }

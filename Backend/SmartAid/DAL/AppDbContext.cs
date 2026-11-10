@@ -28,12 +28,23 @@ public class AppDbContext : DbContext
             e.HasIndex(u => u.Email).IsUnique();
         });
 
+
         // ---------- Volunteer ----------
         modelBuilder.Entity<Volunteer>(e =>
         {
             e.Property(v => v.FullName).IsRequired().HasMaxLength(100);
             e.Property(v => v.PhoneNumber).HasMaxLength(20);
+
+            // קישור בין פרופיל המתנדב לחשבון המשתמש
+            e.HasOne(v => v.User)
+             .WithOne()
+             .HasForeignKey<Volunteer>(v => v.UserId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            // לכל חשבון משתמש יכול להיות לכל היותר פרופיל מתנדב אחד
+            e.HasIndex(v => v.UserId).IsUnique();
         });
+
 
         // ---------- EquipmentType ----------
         modelBuilder.Entity<EquipmentType>(e =>
@@ -66,7 +77,9 @@ public class AppDbContext : DbContext
             e.Property(h => h.AddressNotes).HasMaxLength(300);
 
             // stored as text ("Open", "Assigned"...) so the atomic UPDATE ... WHERE Status='Open' is readable
-            e.Property(h => h.Status).HasConversion<string>().HasMaxLength(20);
+            // Status is stored as an integer in the database
+            e.Property(h => h.Status)
+                .HasConversion<int>();
 
             e.HasOne(h => h.User)
              .WithMany(u => u.HelpRequests)
@@ -100,11 +113,11 @@ public class AppDbContext : DbContext
         // ---------- RequestOffer ----------
         modelBuilder.Entity<RequestOffer>(e =>
         {
-            e.Property(o => o.Status).HasConversion<string>().HasMaxLength(20);
-
+            e.Property(o => o.Status)
+    .HasConversion<int>();
             e.HasOne(o => o.HelpRequest)
              .WithMany(h => h.Offers)
-             .HasForeignKey(o => o.RequestId)
+             .HasForeignKey(o => o.HelpRequestId)
              .OnDelete(DeleteBehavior.Cascade);
 
             e.HasOne(o => o.Volunteer)
@@ -113,7 +126,8 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Restrict);
 
             // the same request is never offered twice to the same volunteer
-            e.HasIndex(o => new { o.RequestId, o.VolunteerId }).IsUnique();
+            e.HasIndex(o => new { o.HelpRequestId, o.VolunteerId }).IsUnique();
+        
         });
     }
 }

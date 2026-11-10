@@ -20,7 +20,7 @@ namespace DAL.Entities
         //מעקב אחר הצעות שנשלחו למתנדבים בזמן אמת
         public int Id { get; set; }
 
-        public int RequestId { get; set; }
+        public int HelpRequestId { get; set; }
         public HelpRequest HelpRequest { get; set; } = null!;
 
         public int VolunteerId { get; set; }
