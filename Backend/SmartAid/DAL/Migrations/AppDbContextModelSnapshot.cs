@@ -66,6 +66,9 @@ namespace DAL.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("HelpTypeId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ImageName")
                         .HasColumnType("nvarchar(max)");
 
@@ -88,11 +91,56 @@ namespace DAL.Migrations
 
                     b.HasIndex("AssignedVolunteerId");
 
+                    b.HasIndex("HelpTypeId");
+
                     b.HasIndex("Status");
 
                     b.HasIndex("UserId");
 
                     b.ToTable("HelpRequests");
+                });
+
+            modelBuilder.Entity("DAL.Entities.HelpType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("HelpTypes");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "התנעת רכב"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "החלפת גלגל"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "פתיחת רכב נעול"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "חילוץ רכב תקוע"
+                        });
                 });
 
             modelBuilder.Entity("DAL.Entities.RequestEquipment", b =>
@@ -259,11 +307,31 @@ namespace DAL.Migrations
                     b.ToTable("VolunteerEquipments");
                 });
 
+            modelBuilder.Entity("DAL.Entities.VolunteerHelpType", b =>
+                {
+                    b.Property<int>("VolunteerId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("HelpTypeId")
+                        .HasColumnType("int");
+
+                    b.HasKey("VolunteerId", "HelpTypeId");
+
+                    b.HasIndex("HelpTypeId");
+
+                    b.ToTable("VolunteerHelpTypes");
+                });
+
             modelBuilder.Entity("DAL.Entities.HelpRequest", b =>
                 {
                     b.HasOne("DAL.Entities.Volunteer", "AssignedVolunteer")
                         .WithMany("AssignedRequests")
                         .HasForeignKey("AssignedVolunteerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DAL.Entities.HelpType", "HelpType")
+                        .WithMany("HelpRequests")
+                        .HasForeignKey("HelpTypeId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("DAL.Entities.User", "User")
@@ -273,6 +341,8 @@ namespace DAL.Migrations
                         .IsRequired();
 
                     b.Navigation("AssignedVolunteer");
+
+                    b.Navigation("HelpType");
 
                     b.Navigation("User");
                 });
@@ -345,6 +415,25 @@ namespace DAL.Migrations
                     b.Navigation("Volunteer");
                 });
 
+            modelBuilder.Entity("DAL.Entities.VolunteerHelpType", b =>
+                {
+                    b.HasOne("DAL.Entities.HelpType", "HelpType")
+                        .WithMany("VolunteerHelpTypes")
+                        .HasForeignKey("HelpTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DAL.Entities.Volunteer", "Volunteer")
+                        .WithMany("VolunteerHelpTypes")
+                        .HasForeignKey("VolunteerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("HelpType");
+
+                    b.Navigation("Volunteer");
+                });
+
             modelBuilder.Entity("DAL.Entities.EquipmentType", b =>
                 {
                     b.Navigation("RequestEquipments");
@@ -359,6 +448,13 @@ namespace DAL.Migrations
                     b.Navigation("RequiredEquipments");
                 });
 
+            modelBuilder.Entity("DAL.Entities.HelpType", b =>
+                {
+                    b.Navigation("HelpRequests");
+
+                    b.Navigation("VolunteerHelpTypes");
+                });
+
             modelBuilder.Entity("DAL.Entities.User", b =>
                 {
                     b.Navigation("HelpRequests");
@@ -371,6 +467,8 @@ namespace DAL.Migrations
                     b.Navigation("RequestOffers");
 
                     b.Navigation("VolunteerEquipments");
+
+                    b.Navigation("VolunteerHelpTypes");
                 });
 #pragma warning restore 612, 618
         }

@@ -105,6 +105,7 @@ builder.Services.AddAutoMapper(cfg =>
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IVolunteerRepository, VolunteerRepository>();
 builder.Services.AddScoped<IEquipmentTypeRepository, EquipmentTypeRepository>();
+builder.Services.AddScoped<IHelpTypeRepository, HelpTypeRepository>();
 builder.Services.AddScoped<IVolunteerEquipmentRepository, VolunteerEquipmentRepository>();
 builder.Services.AddScoped<IHelpRequestRepository, HelpRequestRepository>();
 builder.Services.AddScoped<IRequestEquipmentRepository, RequestEquipmentRepository>();

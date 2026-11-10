@@ -16,13 +16,14 @@ namespace BLL.Services
         private readonly IImageService _imageService;
         private readonly IRequestEquipmentRepository _requestEquipmentRepository;
         private readonly IEquipmentTypeRepository _equipmentTypeRepository;
-
+        private readonly IHelpTypeRepository _helpTypeRepository;
         public HelpRequestService(
             IHelpRequestRepository helpRequestRepository,
             IMapper mapper,
             IImageService imageService,
             IRequestEquipmentRepository requestEquipmentRepository,
             IEquipmentTypeRepository equipmentTypeRepository,
+            IHelpTypeRepository helpTypeRepository,
             IVolunteerService volunteerService)
         {
             _helpRequestRepository = helpRequestRepository;
@@ -30,6 +31,7 @@ namespace BLL.Services
             _imageService = imageService;
             _requestEquipmentRepository = requestEquipmentRepository;
             _equipmentTypeRepository = equipmentTypeRepository;
+            _helpTypeRepository = helpTypeRepository;
             _volunteerService = volunteerService;
         }
 
@@ -79,8 +81,18 @@ namespace BLL.Services
                 }
             }
 
+            // בדיקה שסוג העזרה קיים במערכת
+            var helpType = _helpTypeRepository.GetById(
+                helpRequestDto.HelpTypeId);
+
+            if (helpType == null)
+            {
+                throw new BusinessRuleException(
+                    $"Help type with ID {helpRequestDto.HelpTypeId} does not exist.");
+            }
             var request = _mapper.Map<HelpRequest>(helpRequestDto);
             request.UserId = userId;
+            request.HelpTypeId = helpRequestDto.HelpTypeId;
 
             string? savedImageName = null;
 
@@ -139,6 +151,18 @@ namespace BLL.Services
             existingRequest.Longitude = helpRequestDto.Longitude;
             existingRequest.Address = helpRequestDto.Address;
             existingRequest.AddressNotes = helpRequestDto.AddressNotes;
+
+            // בדיקה שסוג העזרה קיים במערכת
+            var helpType = _helpTypeRepository.GetById(
+                helpRequestDto.HelpTypeId);
+
+            if (helpType == null)
+            {
+                throw new BusinessRuleException(
+                    $"Help type with ID {helpRequestDto.HelpTypeId} does not exist.");
+            }
+
+            existingRequest.HelpTypeId = helpRequestDto.HelpTypeId;
 
             var existingEquipments =
                 _requestEquipmentRepository.GetByHelpRequestId(id);

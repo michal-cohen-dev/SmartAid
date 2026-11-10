@@ -15,6 +15,9 @@ public class AppDbContext : DbContext
     public DbSet<RequestEquipment> RequestEquipments { get; set; }
     public DbSet<RequestOffer> RequestOffers { get; set; }
 
+    public DbSet<HelpType> HelpTypes { get; set; }
+    public DbSet<VolunteerHelpType> VolunteerHelpTypes { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -70,6 +73,45 @@ public class AppDbContext : DbContext
             e.HasIndex(ve => new { ve.VolunteerId, ve.EquipmentTypeId }).IsUnique();
         });
 
+
+        // ---------- HelpType ----------
+        modelBuilder.Entity<HelpType>(e =>
+        {
+            e.Property(t => t.Name)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            e.HasIndex(t => t.Name).IsUnique();
+
+            e.HasData(
+                new HelpType { Id = 1, Name = "התנעת רכב" },
+                new HelpType { Id = 2, Name = "החלפת גלגל" },
+                new HelpType { Id = 3, Name = "פתיחת רכב נעול" },
+                new HelpType { Id = 4, Name = "חילוץ רכב תקוע" }
+            );
+        });
+
+        // ---------- VolunteerHelpType ----------
+        modelBuilder.Entity<VolunteerHelpType>(e =>
+        {
+            e.HasKey(vht => new
+            {
+                vht.VolunteerId,
+                vht.HelpTypeId
+            });
+
+            e.HasOne(vht => vht.Volunteer)
+                .WithMany(v => v.VolunteerHelpTypes)
+                .HasForeignKey(vht => vht.VolunteerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(vht => vht.HelpType)
+                .WithMany(ht => ht.VolunteerHelpTypes)
+                .HasForeignKey(vht => vht.HelpTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+
         // ---------- HelpRequest ----------
         modelBuilder.Entity<HelpRequest>(e =>
         {
@@ -92,6 +134,12 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Restrict);
 
             e.HasIndex(h => h.Status);
+
+            e.HasOne(h => h.HelpType)
+             .WithMany(ht => ht.HelpRequests)
+             .HasForeignKey(h => h.HelpTypeId)
+             .OnDelete(DeleteBehavior.Restrict);
+
         });
 
         // ---------- RequestEquipment ----------
