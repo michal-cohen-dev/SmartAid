@@ -19,6 +19,10 @@ namespace DAL.Entities
         public int UserId { get; set; }
         public User User { get; set; } = null!;
 
+        // כותרת ותיאור של בקשת העזרה
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+
         // מיקום גיאוגרפי עבור אלגוריתם המרחק והניווט
         public double Latitude { get; set; }
         public double Longitude { get; set; }

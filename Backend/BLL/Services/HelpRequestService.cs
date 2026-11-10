@@ -135,6 +135,8 @@ namespace BLL.Services
                 }
             }
 
+            existingRequest.Title = helpRequestDto.Title;
+            existingRequest.Description = helpRequestDto.Description;
             existingRequest.Latitude = helpRequestDto.Latitude;
             existingRequest.Longitude = helpRequestDto.Longitude;
             existingRequest.Address = helpRequestDto.Address;
