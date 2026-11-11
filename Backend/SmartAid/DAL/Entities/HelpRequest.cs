@@ -34,6 +34,11 @@ namespace DAL.Entities
         public string? AddressNotes { get; set; }
         public string? ImageName { get; set; }
 
+        public int? HelpTypeId { get; set; }
+        public HelpType? HelpType { get; set; }
+
+
+
         public RequestStatus Status { get; set; } = RequestStatus.Open;
 
         // FK למתנדב שתפס את הקריאה (Nullable)

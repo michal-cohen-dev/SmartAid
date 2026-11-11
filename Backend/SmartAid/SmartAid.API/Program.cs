@@ -8,14 +8,12 @@ using DAL.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using SmartAid.API.Filters;
 using BLL.Services.ExternalServices;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,6 +36,7 @@ if (string.IsNullOrWhiteSpace(jwtKey) ||
         "JWT Key is missing or too short. Configure Jwt__Key.");
 }
 
+// Authentication
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -60,6 +59,7 @@ builder.Services
         };
     });
 
+// Authorization
 builder.Services.AddAuthorization(options =>
 {
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
@@ -67,14 +67,26 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
-// הגדרת תיקיית התמונות
+// CORS - allow the React development client
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("ReactClient", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
+// Images folder
 var imagesFolder = Path.GetFullPath(Path.Combine(
     builder.Environment.ContentRootPath,
     builder.Configuration["ImagesFolder"] ?? "../Images"));
 
 Directory.CreateDirectory(imagesFolder);
 
-// רישום ה-DbContext למסד הנתונים
+// Database
 var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
 
 if (string.IsNullOrWhiteSpace(connStr))
@@ -87,20 +99,23 @@ if (string.IsNullOrWhiteSpace(connStr))
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connStr));
 
-// רישום AutoMapper
-builder.Services.AddAutoMapper(cfg => {
+// AutoMapper
+builder.Services.AddAutoMapper(cfg =>
+{
     cfg.AddProfile<MappingProfile>();
 });
 
-// רישום ה-Repositories וה-Services
+// Repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IVolunteerRepository, VolunteerRepository>();
 builder.Services.AddScoped<IEquipmentTypeRepository, EquipmentTypeRepository>();
+builder.Services.AddScoped<IHelpTypeRepository, HelpTypeRepository>();
 builder.Services.AddScoped<IVolunteerEquipmentRepository, VolunteerEquipmentRepository>();
 builder.Services.AddScoped<IHelpRequestRepository, HelpRequestRepository>();
 builder.Services.AddScoped<IRequestEquipmentRepository, RequestEquipmentRepository>();
 builder.Services.AddScoped<IRequestOfferRepository, RequestOfferRepository>();
 
+// Services
 builder.Services.AddScoped<IVolunteerService, VolunteerService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IHelpRequestService, HelpRequestService>();
@@ -118,7 +133,6 @@ builder.Services.AddHttpClient<
 builder.Services.AddHttpClient<
     IImageAnalysisService,
     ImageAnalysisService>();
-
 
 builder.Services.AddScoped<IVolunteerEquipmentService, VolunteerEquipmentService>();
 
@@ -166,7 +180,6 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -182,8 +195,13 @@ app.UseStaticFiles(new StaticFileOptions
 });
 
 app.UseHttpsRedirection();
+
+// CORS must run before authentication and authorization
+app.UseCors("ReactClient");
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
 if (app.Environment.IsDevelopment())

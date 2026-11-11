@@ -32,6 +32,12 @@ public class HelpRequestUpdateDto
         ErrorMessage = "Address notes cannot exceed 300 characters.")]
     public string? AddressNotes { get; set; }
 
+    [Required(ErrorMessage = "Help type is required.")]
+    [Range(1, int.MaxValue,
+    ErrorMessage = "A valid help type must be selected.")]
+    public int HelpTypeId { get; set; }
+
+
     [MaxLength(20,
         ErrorMessage = "You cannot select more than 20 equipment types.")]
     public List<int> RequiredEquipmentTypeIds { get; set; } = new();

@@ -29,6 +29,8 @@ namespace DAL.Entities
         public double ReliabilityScore { get; set; } = 100.0;
 
         // Navigation Properties
+
+        public List<VolunteerHelpType> VolunteerHelpTypes { get; set; } = new();
         public List<VolunteerEquipment> VolunteerEquipments { get; set; } = new();
         public List<HelpRequest> AssignedRequests { get; set; } = new();
         public List<RequestOffer> RequestOffers { get; set; } = new();

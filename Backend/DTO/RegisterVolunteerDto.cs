@@ -10,4 +10,5 @@ namespace DTO;
 public class RegisterVolunteerDto
 {
     public List<int> EquipmentTypeIds { get; set; } = new();
+    public List<int> HelpTypeIds { get; set; } = new();
 }

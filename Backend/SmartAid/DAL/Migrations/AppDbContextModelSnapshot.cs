@@ -23,364 +23,460 @@ namespace DAL.Migrations
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("DAL.Entities.EquipmentType", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+            {
+                b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                b.Property<string>("Name")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("nvarchar(100)");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.HasIndex("Name")
-                        .IsUnique();
+                b.HasIndex("Name")
+                    .IsUnique();
 
-                    b.ToTable("EquipmentTypes");
-                });
+                b.ToTable("EquipmentTypes");
+            });
 
             modelBuilder.Entity("DAL.Entities.HelpRequest", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+            {
+                b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                b.Property<string>("Address")
+                    .IsRequired()
+                    .HasMaxLength(300)
+                    .HasColumnType("nvarchar(300)");
 
-                    b.Property<string>("AddressNotes")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                b.Property<string>("AddressNotes")
+                    .HasMaxLength(300)
+                    .HasColumnType("nvarchar(300)");
 
-                    b.Property<int?>("AssignedVolunteerId")
-                        .HasColumnType("int");
+                b.Property<int?>("AssignedVolunteerId")
+                    .HasColumnType("int");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("Description")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ImageName")
-                        .HasColumnType("nvarchar(max)");
+                b.Property<int?>("HelpTypeId")
+                    .HasColumnType("int");
 
-                    b.Property<double>("Latitude")
-                        .HasColumnType("float");
+                b.Property<string>("ImageName")
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<double>("Longitude")
-                        .HasColumnType("float");
+                b.Property<double>("Latitude")
+                    .HasColumnType("float");
 
-                    b.Property<int?>("Rating")
-                        .HasColumnType("int");
+                b.Property<double>("Longitude")
+                    .HasColumnType("float");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
+                b.Property<int?>("Rating")
+                    .HasColumnType("int");
 
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<int>("Status")
+                    .HasColumnType("int");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
+                b.Property<string>("Title")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("Id");
+                b.Property<int>("UserId")
+                    .HasColumnType("int");
 
-                    b.HasIndex("AssignedVolunteerId");
+                b.HasKey("Id");
 
-                    b.HasIndex("Status");
+                b.HasIndex("AssignedVolunteerId");
 
-                    b.HasIndex("UserId");
+                b.HasIndex("HelpTypeId");
 
-                    b.ToTable("HelpRequests");
-                });
+                b.HasIndex("Status");
+
+                b.HasIndex("UserId");
+
+                b.ToTable("HelpRequests");
+            });
+
+            modelBuilder.Entity("DAL.Entities.HelpType", b =>
+            {
+                b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
+
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                b.Property<string>("Name")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("nvarchar(100)");
+
+                b.HasKey("Id");
+
+                b.HasIndex("Name")
+                    .IsUnique();
+
+                b.ToTable("HelpTypes");
+
+                b.HasData(
+                    new
+                    {
+                        Id = 1,
+                        Name = "התנעת רכב"
+                    },
+                    new
+                    {
+                        Id = 2,
+                        Name = "החלפת גלגל"
+                    },
+                    new
+                    {
+                        Id = 3,
+                        Name = "פתיחת רכב נעול"
+                    },
+                    new
+                    {
+                        Id = 4,
+                        Name = "חילוץ רכב תקוע"
+                    });
+            });
 
             modelBuilder.Entity("DAL.Entities.RequestEquipment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+            {
+                b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("EquipmentTypeId")
-                        .HasColumnType("int");
+                b.Property<int>("EquipmentTypeId")
+                    .HasColumnType("int");
 
-                    b.Property<int>("HelpRequestId")
-                        .HasColumnType("int");
+                b.Property<int>("HelpRequestId")
+                    .HasColumnType("int");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
+                b.HasIndex("EquipmentTypeId");
 
-                    b.HasIndex("EquipmentTypeId");
+                b.HasIndex("HelpRequestId", "EquipmentTypeId")
+                    .IsUnique();
 
-                    b.HasIndex("HelpRequestId", "EquipmentTypeId")
-                        .IsUnique();
-
-                    b.ToTable("RequestEquipments");
-                });
+                b.ToTable("RequestEquipments");
+            });
 
             modelBuilder.Entity("DAL.Entities.RequestOffer", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+            {
+                b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("HelpRequestId")
-                        .HasColumnType("int");
+                b.Property<int>("HelpRequestId")
+                    .HasColumnType("int");
 
-                    b.Property<DateTime>("OfferedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("OfferedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
+                b.Property<int>("Status")
+                    .HasColumnType("int");
 
-                    b.Property<int>("VolunteerId")
-                        .HasColumnType("int");
+                b.Property<int>("VolunteerId")
+                    .HasColumnType("int");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.HasIndex("VolunteerId");
+                b.HasIndex("VolunteerId");
 
-                    b.HasIndex("HelpRequestId", "VolunteerId")
-                        .IsUnique();
+                b.HasIndex("HelpRequestId", "VolunteerId")
+                    .IsUnique();
 
-                    b.ToTable("RequestOffers");
-                });
+                b.ToTable("RequestOffers");
+            });
 
             modelBuilder.Entity("DAL.Entities.User", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+            {
+                b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("datetime2");
 
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                b.Property<string>("Email")
+                    .IsRequired()
+                    .HasMaxLength(200)
+                    .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                b.Property<string>("FullName")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("PasswordHash")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("PhoneNumber")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                b.Property<string>("PhoneNumber")
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasColumnType("nvarchar(20)");
 
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                b.Property<string>("Role")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.HasIndex("Email")
-                        .IsUnique();
+                b.HasIndex("Email")
+                    .IsUnique();
 
-                    b.ToTable("Users");
-                });
+                b.ToTable("Users");
+            });
 
             modelBuilder.Entity("DAL.Entities.Volunteer", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+            {
+                b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                b.Property<string>("FullName")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("nvarchar(100)");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                b.Property<bool>("IsActive")
+                    .HasColumnType("bit");
 
-                    b.Property<string>("PhoneNumber")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                b.Property<string>("PhoneNumber")
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasColumnType("nvarchar(20)");
 
-                    b.Property<double>("ReliabilityScore")
-                        .HasColumnType("float");
+                b.Property<double>("ReliabilityScore")
+                    .HasColumnType("float");
 
-                    b.Property<int>("TotalCompleted")
-                        .HasColumnType("int");
+                b.Property<int>("TotalCompleted")
+                    .HasColumnType("int");
 
-                    b.Property<int>("TotalOffersAccepted")
-                        .HasColumnType("int");
+                b.Property<int>("TotalOffersAccepted")
+                           .HasColumnType("int");
 
-                    b.Property<int>("TotalOffersReceived")
-                        .HasColumnType("int");
+                b.Property<int>("TotalOffersReceived")
+                    .HasColumnType("int");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
+                b.Property<int>("UserId")
+                    .HasColumnType("int");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
+                b.HasIndex("UserId")
+                    .IsUnique();
 
-                    b.ToTable("Volunteers");
-                });
+                b.ToTable("Volunteers");
+            });
 
             modelBuilder.Entity("DAL.Entities.VolunteerEquipment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+            {
+                b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("EquipmentTypeId")
-                        .HasColumnType("int");
+                b.Property<int>("EquipmentTypeId")
+                    .HasColumnType("int");
 
-                    b.Property<int>("VolunteerId")
-                        .HasColumnType("int");
+                b.Property<int>("VolunteerId")
+                    .HasColumnType("int");
 
-                    b.HasKey("Id");
+                b.HasKey("Id");
 
-                    b.HasIndex("EquipmentTypeId");
+                b.HasIndex("EquipmentTypeId");
 
-                    b.HasIndex("VolunteerId", "EquipmentTypeId")
-                        .IsUnique();
+                b.HasIndex("VolunteerId", "EquipmentTypeId")
+                    .IsUnique();
 
-                    b.ToTable("VolunteerEquipments");
-                });
+                b.ToTable("VolunteerEquipments");
+            });
+
+            modelBuilder.Entity("DAL.Entities.VolunteerHelpType", b =>
+            {
+                b.Property<int>("VolunteerId")
+                         .HasColumnType("int");
+
+                b.Property<int>("HelpTypeId")
+                    .HasColumnType("int");
+
+                b.HasKey("VolunteerId", "HelpTypeId");
+
+                b.HasIndex("HelpTypeId");
+
+                b.ToTable("VolunteerHelpTypes");
+            });
 
             modelBuilder.Entity("DAL.Entities.HelpRequest", b =>
-                {
-                    b.HasOne("DAL.Entities.Volunteer", "AssignedVolunteer")
-                        .WithMany("AssignedRequests")
-                        .HasForeignKey("AssignedVolunteerId")
-                        .OnDelete(DeleteBehavior.Restrict);
+            {
+                b.HasOne("DAL.Entities.Volunteer", "AssignedVolunteer")
+                    .WithMany("AssignedRequests")
+                    .HasForeignKey("AssignedVolunteerId")
+                    .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("DAL.Entities.User", "User")
-                        .WithMany("HelpRequests")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                b.HasOne("DAL.Entities.HelpType", "HelpType")
+                    .WithMany("HelpRequests")
+                    .HasForeignKey("HelpTypeId")
+                    .OnDelete(DeleteBehavior.Restrict);
 
-                    b.Navigation("AssignedVolunteer");
+                b.HasOne("DAL.Entities.User", "User")
+                    .WithMany("HelpRequests")
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
 
-                    b.Navigation("User");
-                });
+                b.Navigation("AssignedVolunteer");
+
+                b.Navigation("HelpType");
+
+                b.Navigation("User");
+            });
 
             modelBuilder.Entity("DAL.Entities.RequestEquipment", b =>
-                {
-                    b.HasOne("DAL.Entities.EquipmentType", "EquipmentType")
-                        .WithMany("RequestEquipments")
-                        .HasForeignKey("EquipmentTypeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+            {
+                b.HasOne("DAL.Entities.EquipmentType", "EquipmentType")
+                    .WithMany("RequestEquipments")
+                    .HasForeignKey("EquipmentTypeId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
 
-                    b.HasOne("DAL.Entities.HelpRequest", "HelpRequest")
-                        .WithMany("RequiredEquipments")
-                        .HasForeignKey("HelpRequestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                b.HasOne("DAL.Entities.HelpRequest", "HelpRequest")
+                    .WithMany("RequiredEquipments")
+                    .HasForeignKey("HelpRequestId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
 
-                    b.Navigation("EquipmentType");
+                b.Navigation("EquipmentType");
 
-                    b.Navigation("HelpRequest");
-                });
+                b.Navigation("HelpRequest");
+            });
 
             modelBuilder.Entity("DAL.Entities.RequestOffer", b =>
-                {
-                    b.HasOne("DAL.Entities.HelpRequest", "HelpRequest")
-                        .WithMany("Offers")
-                        .HasForeignKey("HelpRequestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+            {
+                b.HasOne("DAL.Entities.HelpRequest", "HelpRequest")
+                    .WithMany("Offers")
+                    .HasForeignKey("HelpRequestId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
 
-                    b.HasOne("DAL.Entities.Volunteer", "Volunteer")
-                        .WithMany("RequestOffers")
-                        .HasForeignKey("VolunteerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                b.HasOne("DAL.Entities.Volunteer", "Volunteer")
+                    .WithMany("RequestOffers")
+                    .HasForeignKey("VolunteerId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
 
-                    b.Navigation("HelpRequest");
+                b.Navigation("HelpRequest");
 
-                    b.Navigation("Volunteer");
-                });
+                b.Navigation("Volunteer");
+            });
 
             modelBuilder.Entity("DAL.Entities.Volunteer", b =>
-                {
-                    b.HasOne("DAL.Entities.User", "User")
-                        .WithOne()
-                        .HasForeignKey("DAL.Entities.Volunteer", "UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+            {
+                b.HasOne("DAL.Entities.User", "User")
+                    .WithOne()
+                    .HasForeignKey("DAL.Entities.Volunteer", "UserId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
 
-                    b.Navigation("User");
-                });
+                b.Navigation("User");
+            });
 
             modelBuilder.Entity("DAL.Entities.VolunteerEquipment", b =>
-                {
-                    b.HasOne("DAL.Entities.EquipmentType", "EquipmentType")
-                        .WithMany("VolunteerEquipments")
-                        .HasForeignKey("EquipmentTypeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+            {
+                b.HasOne("DAL.Entities.EquipmentType", "EquipmentType")
+                    .WithMany("VolunteerEquipments")
+                    .HasForeignKey("EquipmentTypeId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
 
-                    b.HasOne("DAL.Entities.Volunteer", "Volunteer")
-                        .WithMany("VolunteerEquipments")
-                        .HasForeignKey("VolunteerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                b.HasOne("DAL.Entities.Volunteer", "Volunteer")
+                    .WithMany("VolunteerEquipments")
+                    .HasForeignKey("VolunteerId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
 
-                    b.Navigation("EquipmentType");
+                b.Navigation("EquipmentType");
 
-                    b.Navigation("Volunteer");
-                });
+                b.Navigation("Volunteer");
+            });
+
+            modelBuilder.Entity("DAL.Entities.VolunteerHelpType", b =>
+            {
+                b.HasOne("DAL.Entities.HelpType", "HelpType")
+                    .WithMany("VolunteerHelpTypes")
+                    .HasForeignKey("HelpTypeId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+                b.HasOne("DAL.Entities.Volunteer", "Volunteer")
+                    .WithMany("VolunteerHelpTypes")
+                    .HasForeignKey("VolunteerId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
+
+                b.Navigation("HelpType");
+
+                b.Navigation("Volunteer");
+            });
 
             modelBuilder.Entity("DAL.Entities.EquipmentType", b =>
-                {
-                    b.Navigation("RequestEquipments");
+            {
+                b.Navigation("RequestEquipments");
 
-                    b.Navigation("VolunteerEquipments");
-                });
+                b.Navigation("VolunteerEquipments");
+            });
 
             modelBuilder.Entity("DAL.Entities.HelpRequest", b =>
-                {
-                    b.Navigation("Offers");
+            {
+                b.Navigation("Offers");
 
-                    b.Navigation("RequiredEquipments");
-                });
+                b.Navigation("RequiredEquipments");
+            });
+
+            modelBuilder.Entity("DAL.Entities.HelpType", b =>
+            {
+                b.Navigation("HelpRequests");
+
+                b.Navigation("VolunteerHelpTypes");
+            });
 
             modelBuilder.Entity("DAL.Entities.User", b =>
-                {
-                    b.Navigation("HelpRequests");
-                });
+            {
+                b.Navigation("HelpRequests");
+            });
 
             modelBuilder.Entity("DAL.Entities.Volunteer", b =>
-                {
-                    b.Navigation("AssignedRequests");
+            {
+                b.Navigation("AssignedRequests");
 
-                    b.Navigation("RequestOffers");
+                b.Navigation("RequestOffers");
 
-                    b.Navigation("VolunteerEquipments");
-                });
-#pragma warning restore 612, 618
+                b.Navigation("VolunteerEquipments");
+
+                b.Navigation("VolunteerHelpTypes");
+            });
         }
     }
 }
