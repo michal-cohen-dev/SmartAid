@@ -10,6 +10,8 @@ namespace DTO
     {
         public int Id { get; set; }
         public int UserId { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
         public string? UserFullName { get; set; } // לעזרת הצגה נוחה בקליינט
         public string? ImageName { get; set; }
         public double Latitude { get; set; }

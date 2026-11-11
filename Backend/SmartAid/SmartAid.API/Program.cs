@@ -1,3 +1,4 @@
+
 using BLL.MappingProfiles;
 using BLL.Services;
 using BLL.Services.Interfaces;
@@ -20,6 +21,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 Console.WriteLine(
     $"TomTom key loaded: {!string.IsNullOrWhiteSpace(builder.Configuration["TomTom:ApiKey"])}");
+
+var geminiApiKey = builder.Configuration["Gemini:ApiKey"];
+Console.WriteLine($"Gemini API key loaded: {!string.IsNullOrWhiteSpace(geminiApiKey)}");
+
 Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
 Console.WriteLine($"UserSecretsId: {builder.Configuration["UserSecretsId"]}");
 
@@ -82,12 +87,12 @@ if (string.IsNullOrWhiteSpace(connStr))
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connStr));
 
-// רישום ה-AutoMapper בצורה נפרדת ותקינה
+// רישום AutoMapper
 builder.Services.AddAutoMapper(cfg => {
     cfg.AddProfile<MappingProfile>();
 });
 
-// רישום 7 ה-Repositories ב-Dependency Injection (AddScoped)
+// רישום ה-Repositories וה-Services
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IVolunteerRepository, VolunteerRepository>();
 builder.Services.AddScoped<IEquipmentTypeRepository, EquipmentTypeRepository>();
@@ -95,31 +100,42 @@ builder.Services.AddScoped<IVolunteerEquipmentRepository, VolunteerEquipmentRepo
 builder.Services.AddScoped<IHelpRequestRepository, HelpRequestRepository>();
 builder.Services.AddScoped<IRequestEquipmentRepository, RequestEquipmentRepository>();
 builder.Services.AddScoped<IRequestOfferRepository, RequestOfferRepository>();
+
 builder.Services.AddScoped<IVolunteerService, VolunteerService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IHelpRequestService, HelpRequestService>();
 builder.Services.AddScoped<IRequestEquipmentService, RequestEquipmentService>();
 builder.Services.AddScoped<IRequestOfferService, RequestOfferService>();
 builder.Services.AddScoped<IEquipmentTypeService, EquipmentTypeService>();
+
 builder.Services.AddHttpClient<
     ITomTomRoutingService,
     TomTomRoutingService>(client =>
     {
         client.BaseAddress = new Uri("https://api.tomtom.com/");
     });
+
+builder.Services.AddHttpClient<
+    IImageAnalysisService,
+    ImageAnalysisService>();
+
+
 builder.Services.AddScoped<IVolunteerEquipmentService, VolunteerEquipmentService>();
+
 builder.Services.AddSingleton<IImageService>(
     new ImageService(imagesFolder));
+
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+
 builder.Services.AddScoped<IPasswordHasher<DAL.Entities.User>,
     PasswordHasher<DAL.Entities.User>>();
-
 
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<GlobalExceptionFilter>();
 });
+
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
@@ -158,15 +174,18 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(imagesFolder),
     RequestPath = "/images"
 });
+
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapGet("/debug/tomtom", async (
@@ -188,4 +207,5 @@ if (app.Environment.IsDevelopment())
         return Results.Ok(results);
     }).AllowAnonymous();
 }
+
 app.Run();
