@@ -59,7 +59,8 @@ namespace BLL.Services
                 Title = request.Title,
                 Description = request.Description,
                 CreatedAt = request.CreatedAt,
-                RequiredEquipmentTypeIds = request.RequiredEquipmentTypeIds
+                RequiredEquipmentTypeIds = request.RequiredEquipmentTypeIds,
+                RequiredEquipmentNames = request.RequiredEquipmentNames
             }).ToList();
         }
 

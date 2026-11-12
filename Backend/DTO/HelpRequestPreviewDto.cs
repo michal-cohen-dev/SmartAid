@@ -15,5 +15,6 @@ namespace DTO
         public string Description { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
         public List<int> RequiredEquipmentTypeIds { get; set; } = new();
+        public List<string> RequiredEquipmentNames { get; set; } = new();
     }
 }

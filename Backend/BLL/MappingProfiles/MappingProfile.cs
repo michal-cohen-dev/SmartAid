@@ -17,13 +17,19 @@ namespace BLL.MappingProfiles
             CreateMap<Volunteer, VolunteerDto>()  .ReverseMap() .ForMember(dest => dest.Id, opt => opt.Ignore());
 
             CreateMap<HelpRequest, HelpRequestDto>()
-                .ForMember(
-                    dest => dest.RequiredEquipmentTypeIds,
-                    opt => opt.MapFrom(src =>
-                        src.RequiredEquipments.Select(e => e.EquipmentTypeId)
-                    )
-                )
-                .ReverseMap();
+     .ForMember(
+         dest => dest.RequiredEquipmentTypeIds,
+         opt => opt.MapFrom(src =>
+             src.RequiredEquipments.Select(e => e.EquipmentTypeId)
+         )
+     )
+     .ForMember(
+         dest => dest.RequiredEquipmentNames,
+         opt => opt.MapFrom(src =>
+             src.RequiredEquipments.Select(e => e.EquipmentType.Name)
+         )
+     )
+     .ReverseMap();
 
 
             CreateMap<HelpRequestPostDto, HelpRequest>()

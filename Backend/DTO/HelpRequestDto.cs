@@ -25,5 +25,6 @@ namespace DTO
         public int? Rating { get; set; }
 
         public List<int> RequiredEquipmentTypeIds { get; set; } = new();
+        public List<string> RequiredEquipmentNames { get; set; } = new();
     }
 }

@@ -9,6 +9,7 @@ interface HelpRequest {
   description: string;
   createdAt: string;
   requiredEquipmentTypeIds: number[];
+  requiredEquipmentNames: string[];
 }
 
 function VolunteerHome() {

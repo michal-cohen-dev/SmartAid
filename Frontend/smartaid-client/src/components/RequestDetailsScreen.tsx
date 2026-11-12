@@ -1,122 +1,308 @@
 
-import { useParams, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { apiRequest } from '../services/api';
+import './RequestDetailsScreen.css';
+
+interface HelpRequestPreview {
+  id: number;
+  title: string;
+  description: string;
+  createdAt: string;
+  requiredEquipmentTypeIds: number[];
+  requiredEquipmentNames: string[];
+}
+
+interface HelpRequestDetails extends HelpRequestPreview {
+  userId: number;
+  userFullName: string | null;
+  imageName: string | null;
+  latitude: number;
+  longitude: number;
+  address: string;
+  addressNotes: string | null;
+  status: number;
+  assignedVolunteerId: number | null;
+  assignedVolunteerName: string | null;
+  rating: number | null;
+}
+
 function RequestDetailsScreen() {
-  const { id } = useParams();
-  const [showAllDetails, setShowAllDetails] = useState(true);
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-useEffect(() => {
-  const previousTitle = document.title;
 
-  document.title = `פרטי בקשה ${id} | SmartAid`;
+  const [preview, setPreview] = useState<HelpRequestPreview | null>(null);
+  const [details, setDetails] = useState<HelpRequestDetails | null>(null);
 
-  return () => {
-    document.title = previousTitle;
-  };
-}, [id]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadRequest() {
+      if (!id) {
+        setError('מזהה הבקשה אינו תקין.');
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError('');
+
+        // תחילה מנסים למצוא את הבקשה ברשימת הבקשות הפתוחות
+        const openRequests = await apiRequest<HelpRequestPreview[]>(
+          '/api/HelpRequests/open'
+        );
+
+        const requestPreview = openRequests.find(
+          request => request.id === Number(id)
+        );
+
+        if (requestPreview) {
+          if (isMounted) {
+            setPreview(requestPreview);
+          }
+
+          return;
+        }
+
+        // אם הבקשה אינה פתוחה, ייתכן שכבר הוקצתה למתנדב המחובר
+        const fullRequest = await apiRequest<HelpRequestDetails>(
+          `/api/HelpRequests/${id}`
+        );
+
+        if (isMounted) {
+          setDetails(fullRequest);
+        }
+      } catch {
+        if (isMounted) {
+          setError(
+            'לא ניתן לטעון את הבקשה. ייתכן שהיא כבר אינה זמינה או שאינה משויכת אליך.'
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadRequest();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  async function handleAcceptRequest() {
+    if (!id) return;
+
+    try {
+      setIsAccepting(true);
+      setError('');
+
+      // שליחת בקשת קבלה לשרת
+      await apiRequest<{ message: string }>(
+        `/api/HelpRequests/${id}/accept`,
+        {
+          method: 'POST',
+        }
+      );
+
+      // לאחר הקצאה מוצלחת טוענים את הפרטים המלאים
+      const fullRequest = await apiRequest<HelpRequestDetails>(
+        `/api/HelpRequests/${id}`
+      );
+
+      setDetails(fullRequest);
+      setPreview(null);
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'אירעה שגיאה בקבלת הבקשה.'
+      );
+    } finally {
+      setIsAccepting(false);
+    }
+  }
+
+  function formatDate(date: string) {
+    return new Date(date).toLocaleString('he-IL');
+  }
+
+  if (isLoading) {
+    return (
+      <main className="request-details-page" dir="rtl">
+        <div className="request-details-state">
+          <span className="loading-spinner" />
+          <p>טוען פרטי בקשה...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!preview && !details) {
+    return (
+      <main className="request-details-page" dir="rtl">
+        <div className="request-details-state">
+          <span className="state-icon">!</span>
+          <h2>לא ניתן להציג את הבקשה</h2>
+          <p>{error || 'הבקשה אינה זמינה.'}</p>
+
+          <button
+            className="secondary-button"
+            onClick={() => navigate('/volunteer')}
+          >
+            חזרה למסך המתנדב
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  const request = details || preview;
+  const equipmentNames = request?.requiredEquipmentNames ?? [];
 
   return (
-    <div dir="rtl" className="request-page">
-      <header className="request-header">
-        <h1>SmartAid</h1>
-        <p>פרטי בקשת עזרה</p>
-      </header>
+    <main className="request-details-page" dir="rtl">
+      <div className="request-details-container">
 
-      <main className="request-card">
-        <div className="request-top">
-          <span className="request-icon">🚗</span>
-          <div>
-            <span className="request-status">בקשה חדשה</span>
-            <h2>הרכב אינו מניע</h2>
-            <p>בקשה מספר {id}</p>
-          </div>
-        </div>
-
-        <div className="request-info">
-          <div>
-            <span>שם הפונה</span>
-            <strong>דנה לוי</strong>
-          </div>
-
-          <div>
-            <span>קטגוריה</span>
-            <strong>סיוע בדרכים</strong>
-          </div>
-
-          <div>
-            <span>מרחק ממך</span>
-            <strong>3.6 ק״מ</strong>
-          </div>
-
-          <div>
-            <span>זמן הגעה משוער</span>
-            <strong>12 דקות</strong>
-          </div>
-        </div>
-
-        <div className="request-section">
-          <h3>תיאור הבעיה</h3>
-          <p>
-            הרכב לא מניע לאחר שהחנה אותו. נראה שיש בעיה במצבר
-            ונדרשת עזרה בהתנעה.
-          </p>
-        </div>
-
-        <div className="request-section">
-          <h3>מיקום הבקשה</h3>
-          <p>📍 רחוב הרצל 12, חיפה</p>
-          <div className="map-placeholder">
-            <span>📍</span>
-            <p>תצוגת מפה לדוגמה</p>
-          </div>
-        </div>
-
-        <div className="request-section">
-          <h3>ציוד נדרש</h3>
-          <div className="equipment-row">
-            <span>✓</span> כבלים להתנעת רכב
-          </div>
-          <div className="equipment-row">
-            <span>✓</span> ערכת כלי עבודה
-          </div>
-        </div>
-
-        <div className="request-section">
+        <header className="details-header">
           <button
-            type="button"
-            className="details-toggle"
-            onClick={() => setShowAllDetails(!showAllDetails)}
+            className="back-button"
+            onClick={() => navigate(-1)}
           >
-            {showAllDetails
-              ? "הסתרת פרטים נוספים"
-              : "הצגת פרטים נוספים"}
+            ← חזרה
           </button>
 
-          {showAllDetails && (
-            <p className="request-time">
-              זמן יצירת הבקשה: לפני 5 דקות
+          <div>
+            <span className="details-eyebrow">SMART AID</span>
+            <h1>פרטי בקשת עזרה</h1>
+            <p>בקשה מספר {request?.id}</p>
+          </div>
+
+          <span className="status-badge">
+            {details ? 'הבקשה הוקצתה אליך' : 'בקשה פתוחה'}
+          </span>
+        </header>
+
+        {error && (
+          <div className="details-error" role="alert">
+            {error}
+          </div>
+        )}
+
+        <section className="details-card">
+          <div className="details-card-header">
+            <div className="request-title-icon">✚</div>
+
+            <div>
+              <span className="section-label">בקשת עזרה</span>
+              <h2>{request?.title}</h2>
+            </div>
+          </div>
+
+          <div className="details-section">
+            <h3>תיאור הבקשה</h3>
+            <p className="description-text">
+              {request?.description}
             </p>
+          </div>
+
+          <div className="details-section">
+            <h3>ציוד נדרש</h3>
+
+            {equipmentNames.length > 0 ? (
+              <div className="equipment-list">
+                {equipmentNames.map((equipmentName, index) => (
+                  <span
+                    className="equipment-chip"
+                    key={`${equipmentName}-${index}`}
+                  >
+                    {equipmentName}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="muted-text">לא נדרש ציוד מיוחד.</p>
+            )}
+          </div>
+
+          <div className="details-section">
+            <h3>פרטי זמן</h3>
+            <p className="detail-value">
+              {formatDate(request!.createdAt)}
+            </p>
+          </div>
+
+          {details && (
+            <>
+              <div className="full-details-divider" />
+
+              <div className="full-details-heading">
+                <span>🔓</span>
+                <div>
+                  <h3>פרטים מלאים</h3>
+                  <p>הפרטים זמינים לאחר קבלת הבקשה</p>
+                </div>
+              </div>
+
+              <div className="details-grid">
+                <div className="detail-item">
+                  <span>שם הפונה</span>
+                  <strong>
+                    {details.userFullName || 'לא צוין'}
+                  </strong>
+                </div>
+
+                <div className="detail-item">
+                  <span>כתובת</span>
+                  <strong>{details.address || 'לא צוינה'}</strong>
+                </div>
+
+                <div className="detail-item">
+                  <span>הערות מיקום</span>
+                  <strong>
+                    {details.addressNotes || 'אין הערות נוספות'}
+                  </strong>
+                </div>
+
+                <div className="detail-item">
+                  <span>מזהה הבקשה</span>
+                  <strong>{details.id}</strong>
+                </div>
+              </div>
+            </>
           )}
-        </div>
 
-        <div className="request-actions">
-          <button type="button" className="accept-button">
-            קבלת בקשה
-          </button>
+          {preview && (
+            <div className="accept-section">
+              <p>
+                לאחר קבלת הבקשה, יוצגו לך פרטי הפונה והמיקום המלאים.
+              </p>
 
-          <button type="button" className="reject-button">
-            דחייה
-          </button>
-        </div>
+              <button
+                className="accept-request-button"
+                onClick={handleAcceptRequest}
+                disabled={isAccepting}
+              >
+                {isAccepting ? 'מקבל את הבקשה...' : 'קבלת הבקשה'}
+              </button>
+            </div>
+          )}
 
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-        >
-          חזרה למסך הקודם
-        </button>
-      </main>
-    </div>
+          {details && (
+            <div className="accepted-message">
+              ✓ הבקשה הוקצתה אליך בהצלחה.
+            </div>
+          )}
+        </section>
+      </div>
+    </main>
   );
 }
 

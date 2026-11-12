@@ -28,9 +28,11 @@ namespace DAL.Repositories
         public HelpRequest? GetById(int id)
         {
             return _context.HelpRequests
-                .Include(hr => hr.User)
-                .Include(hr => hr.AssignedVolunteer)
-                .FirstOrDefault(hr => hr.Id == id);
+     .Include(hr => hr.User)
+     .Include(hr => hr.AssignedVolunteer)
+     .Include(hr => hr.RequiredEquipments)
+         .ThenInclude(re => re.EquipmentType)
+     .FirstOrDefault(hr => hr.Id == id);
         }
 
         public HelpRequest? GetOwned(int id, int userId)
@@ -71,6 +73,7 @@ namespace DAL.Repositories
             return _context.HelpRequests
                 .Include(hr => hr.User)
                 .Include(hr => hr.RequiredEquipments)
+                    .ThenInclude(re => re.EquipmentType)
                 .Where(hr =>
                     hr.Status == RequestStatus.Open &&
                     hr.AssignedVolunteerId == null)
