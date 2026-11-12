@@ -19,12 +19,35 @@ namespace SmartAid.API.Controllers
             _helpRequestService = helpRequestService;
         }
 
+
+
+
+
+
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public ActionResult<IEnumerable<HelpRequestDto>> GetAll()
         {
             return Ok(_helpRequestService.GetAll());
         }
+
+
+
+
+        [HttpGet("open")]
+        public ActionResult<IEnumerable<HelpRequestDto>> GetOpenForVolunteer()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            return Ok(_helpRequestService.GetOpenForVolunteer(userId));
+        }
+
+
+
+
 
         [HttpGet("{id}")]
         public ActionResult<HelpRequestDto> GetById(int id)

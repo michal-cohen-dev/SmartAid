@@ -9,6 +9,7 @@ namespace BLL.Services.Interfaces
     {
         List<HelpRequestDto> GetAll();
         HelpRequestDto? GetById(int id);
+        List<HelpRequestDto> GetOpenForVolunteer(int userId);
         void Add(HelpRequestPostDto helpRequestDto, int userId);
         bool Update(  int id, HelpRequestUpdateDto helpRequestDto, int userId);
         bool Delete(int id, int userId);

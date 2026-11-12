@@ -64,5 +64,15 @@ namespace DAL.Repositories
                 _context.SaveChanges();
             }
         }
+
+        public List<HelpRequest> GetOpenRequests()
+        {
+            return _context.HelpRequests
+                .Include(hr => hr.User)
+                .Where(hr =>
+                    hr.Status == RequestStatus.Open &&
+                    hr.AssignedVolunteerId == null)
+                .ToList();
+        }
     }
 }

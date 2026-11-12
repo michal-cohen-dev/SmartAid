@@ -9,6 +9,7 @@ namespace DAL.Repositories.Interfaces
     public interface IHelpRequestRepository
     {
         List<HelpRequest> GetAll();
+        List<HelpRequest> GetOpenRequests();
         HelpRequest? GetById(int id);
 
         // שליפה רק אם הבקשה שייכת למשתמש

@@ -41,6 +41,18 @@ namespace BLL.Services
             return _mapper.Map<List<HelpRequestDto>>(requests);
         }
 
+        public List<HelpRequestDto> GetOpenForVolunteer(int userId)
+        {
+            var volunteer = _volunteerService.GetByUserId(userId);
+
+            if (volunteer == null)
+                return new List<HelpRequestDto>();
+
+            var requests = _helpRequestRepository.GetOpenRequests();
+
+            return _mapper.Map<List<HelpRequestDto>>(requests);
+        }
+
         public HelpRequestDto? GetById(int id)
         {
             var request = _helpRequestRepository.GetById(id);
