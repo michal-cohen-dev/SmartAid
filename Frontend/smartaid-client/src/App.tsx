@@ -15,6 +15,7 @@ import VolunteerHome from './components/VolunteerHome';
 import VolunteerReg from './components/VolunteerReg';
 import MyRequestsScreen from './components/MyRequestsScreen';
 import NotFound from './NotFound';
+import VolunteerHistoryScreen from './components/VolunteerHistoryScreen';
 
 function App() {
   return (
@@ -26,7 +27,10 @@ function App() {
       <Route element={<AppLayout />}>
         <Route path="/volunteer" element={<VolunteerHome />} />
         <Route path="/volunteer/open-requests" element={<VolunteerHome />} />
-
+<Route
+  path="/volunteer/history"
+  element={<VolunteerHistoryScreen />}
+/>
         <Route
           path="/volunteer-registration"
           element={<VolunteerReg />}

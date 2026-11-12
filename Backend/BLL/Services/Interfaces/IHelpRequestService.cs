@@ -9,6 +9,7 @@ namespace BLL.Services.Interfaces
         HelpRequestDto? GetById(int id);
         List<HelpRequestPreviewDto> GetOpenForVolunteer(int userId);
         List<HelpRequestDto> GetByUserId(int userId);
+        List<HelpRequestDto> GetByVolunteerId(int userId);
 
         int Add(HelpRequestPostDto helpRequestDto, int userId);
         bool Update(int id, HelpRequestUpdateDto helpRequestDto, int userId);

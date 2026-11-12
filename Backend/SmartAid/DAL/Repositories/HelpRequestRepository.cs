@@ -36,6 +36,19 @@ namespace DAL.Repositories
                 .ToList();
         }
 
+
+        public List<HelpRequest> GetByVolunteerId(int volunteerId)
+        {
+            return _context.HelpRequests
+                .Include(hr => hr.User)
+                .Include(hr => hr.AssignedVolunteer)
+                .Include(hr => hr.RequiredEquipments)
+                    .ThenInclude(re => re.EquipmentType)
+                .Where(hr => hr.AssignedVolunteerId == volunteerId)
+                .OrderByDescending(hr => hr.CreatedAt)
+                .ToList();
+        }
+
         public HelpRequest? GetById(int id)
         {
             return _context.HelpRequests

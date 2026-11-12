@@ -62,6 +62,19 @@ namespace SmartAid.API.Controllers
             return Ok(requests);
         }
 
+        [HttpGet("volunteer/my")]
+        public IActionResult GetMyVolunteerRequests()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var requests = _helpRequestService.GetByVolunteerId(userId);
+
+            return Ok(requests);
+        }
+
 
 
         [HttpGet("{id}")]

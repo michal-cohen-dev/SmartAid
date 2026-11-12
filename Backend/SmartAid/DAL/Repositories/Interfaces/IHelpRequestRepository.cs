@@ -9,7 +9,7 @@ namespace DAL.Repositories.Interfaces
         List<HelpRequest> GetAll();
         List<HelpRequest> GetOpenRequests();
         List<HelpRequest> GetByUserId(int userId);
-
+        List<HelpRequest> GetByVolunteerId(int volunteerId);
         HelpRequest? GetById(int id);
         HelpRequest? GetOwned(int id, int userId);
 

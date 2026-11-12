@@ -389,6 +389,28 @@ function AppLayout() {
                         <span>קריאות שטופלו כבר</span>
                         <span className="menu-item-arrow">‹</span>
                       </button>
+
+                      {/* היסטוריית ההתנדבות */}
+                      <button
+                        type="button"
+                        className="profile-menu-item"
+                        onClick={() =>
+                          handleMenuNavigation("/volunteer/history")
+                        }
+                      >
+                        <span className="menu-item-icon turquoise">
+                          <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                              d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                        </span>
+                        <span>היסטוריית ההתנדבות שלי</span>
+                        <span className="menu-item-arrow">‹</span>
+                      </button>
                     </div>
                   </>
                 )}
