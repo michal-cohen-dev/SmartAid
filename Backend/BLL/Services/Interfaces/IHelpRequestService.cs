@@ -16,5 +16,7 @@ namespace BLL.Services.Interfaces
         bool IsOwner(int requestId, int userId);
         bool IsAssignedVolunteer(int requestId, int userId);
         bool TryAssignToVolunteer(int requestId, int userId);
+        bool TryMarkInTreatment(int requestId, int userId);
+        bool TryCompleteRequest(int requestId, int userId);
     }
 }

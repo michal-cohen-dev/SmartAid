@@ -8,7 +8,8 @@ namespace DAL.Entities
         Open = 0,
         Assigned = 1,
         Completed = 2,
-        Cancelled = 3
+        Cancelled = 3,
+        InTreatment = 4
     }
 
     public class HelpRequest

@@ -108,5 +108,36 @@ namespace DAL.Repositories
 
             return rowsAffected == 1;
         }
+
+
+        public bool TryMarkInTreatment(int requestId, int volunteerId)
+        {
+            var rowsAffected = _context.HelpRequests
+                .Where(request =>
+                    request.Id == requestId &&
+                    request.Status == RequestStatus.Assigned &&
+                    request.AssignedVolunteerId == volunteerId)
+                .ExecuteUpdate(setters => setters
+                    .SetProperty(
+                        request => request.Status,
+                        RequestStatus.InTreatment));
+
+            return rowsAffected == 1;
+        }
+
+        public bool TryCompleteRequest(int requestId, int volunteerId)
+        {
+            var rowsAffected = _context.HelpRequests
+                .Where(request =>
+                    request.Id == requestId &&
+                    request.Status == RequestStatus.InTreatment &&
+                    request.AssignedVolunteerId == volunteerId)
+                .ExecuteUpdate(setters => setters
+                    .SetProperty(
+                        request => request.Status,
+                        RequestStatus.Completed));
+
+            return rowsAffected == 1;
+        }
     }
 }

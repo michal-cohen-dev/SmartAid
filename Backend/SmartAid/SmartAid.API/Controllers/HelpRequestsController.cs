@@ -191,5 +191,57 @@ namespace SmartAid.API.Controllers
                 message = "הבקשה הוקצתה אליך בהצלחה."
             });
         }
+
+        [HttpPost("{id}/arrive")]
+        public ActionResult MarkArrived(int id)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var marked = _helpRequestService.TryMarkInTreatment(
+                id,
+                userId);
+
+            if (!marked)
+            {
+                return Conflict(new
+                {
+                    message = "לא ניתן לסמן הגעה. ייתכן שהבקשה אינה משויכת אליך או שכבר שונה הסטטוס שלה."
+                });
+            }
+
+            return Ok(new
+            {
+                message = "הגעתך סומנה בהצלחה."
+            });
+        }
+
+        [HttpPost("{id}/complete")]
+        public ActionResult CompleteRequest(int id)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var completed = _helpRequestService.TryCompleteRequest(
+                id,
+                userId);
+
+            if (!completed)
+            {
+                return Conflict(new
+                {
+                    message = "לא ניתן לסיים את הטיפול. ייתכן שהבקשה אינה משויכת אליך או שעדיין לא סומנה הגעה."
+                });
+            }
+
+            return Ok(new
+            {
+                message = "הטיפול הסתיים בהצלחה."
+            });
+        }
     }
 }

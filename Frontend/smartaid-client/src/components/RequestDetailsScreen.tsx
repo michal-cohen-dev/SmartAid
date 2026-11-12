@@ -36,7 +36,19 @@ function RequestDetailsScreen() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isAccepting, setIsAccepting] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [error, setError] = useState('');
+
+  async function loadFullRequest() {
+    if (!id) return;
+
+    const fullRequest = await apiRequest<HelpRequestDetails>(
+      `/api/HelpRequests/${id}`
+    );
+
+    setDetails(fullRequest);
+    setPreview(null);
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -52,7 +64,6 @@ function RequestDetailsScreen() {
         setIsLoading(true);
         setError('');
 
-        // תחילה מנסים למצוא את הבקשה ברשימת הבקשות הפתוחות
         const openRequests = await apiRequest<HelpRequestPreview[]>(
           '/api/HelpRequests/open'
         );
@@ -62,21 +73,15 @@ function RequestDetailsScreen() {
         );
 
         if (requestPreview) {
-          if (isMounted) {
-            setPreview(requestPreview);
-          }
-
+          if (isMounted) setPreview(requestPreview);
           return;
         }
 
-        // אם הבקשה אינה פתוחה, ייתכן שכבר הוקצתה למתנדב המחובר
         const fullRequest = await apiRequest<HelpRequestDetails>(
           `/api/HelpRequests/${id}`
         );
 
-        if (isMounted) {
-          setDetails(fullRequest);
-        }
+        if (isMounted) setDetails(fullRequest);
       } catch {
         if (isMounted) {
           setError(
@@ -84,9 +89,7 @@ function RequestDetailsScreen() {
           );
         }
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     }
 
@@ -104,21 +107,12 @@ function RequestDetailsScreen() {
       setIsAccepting(true);
       setError('');
 
-      // שליחת בקשת קבלה לשרת
       await apiRequest<{ message: string }>(
         `/api/HelpRequests/${id}/accept`,
-        {
-          method: 'POST',
-        }
+        { method: 'POST' }
       );
 
-      // לאחר הקצאה מוצלחת טוענים את הפרטים המלאים
-      const fullRequest = await apiRequest<HelpRequestDetails>(
-        `/api/HelpRequests/${id}`
-      );
-
-      setDetails(fullRequest);
-      setPreview(null);
+      await loadFullRequest();
     } catch (error) {
       setError(
         error instanceof Error
@@ -127,6 +121,54 @@ function RequestDetailsScreen() {
       );
     } finally {
       setIsAccepting(false);
+    }
+  }
+
+  async function handleMarkArrived() {
+    if (!id) return;
+
+    try {
+      setIsUpdatingStatus(true);
+      setError('');
+
+      await apiRequest<{ message: string }>(
+        `/api/HelpRequests/${id}/arrive`,
+        { method: 'POST' }
+      );
+
+      await loadFullRequest();
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'אירעה שגיאה בסימון ההגעה.'
+      );
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  }
+
+  async function handleCompleteRequest() {
+    if (!id) return;
+
+    try {
+      setIsUpdatingStatus(true);
+      setError('');
+
+      await apiRequest<{ message: string }>(
+        `/api/HelpRequests/${id}/complete`,
+        { method: 'POST' }
+      );
+
+      await loadFullRequest();
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'אירעה שגיאה בסיום הטיפול.'
+      );
+    } finally {
+      setIsUpdatingStatus(false);
     }
   }
 
@@ -167,6 +209,16 @@ function RequestDetailsScreen() {
   const request = details || preview;
   const equipmentNames = request?.requiredEquipmentNames ?? [];
 
+  const statusText = details
+    ? details.status === 1
+      ? 'הבקשה הוקצתה אליך'
+      : details.status === 4
+        ? 'הטיפול מתבצע'
+        : details.status === 2
+          ? 'הטיפול הושלם'
+          : 'פרטי הבקשה'
+    : 'בקשה פתוחה';
+
   return (
     <main className="request-details-page" dir="rtl">
       <div className="request-details-container">
@@ -185,9 +237,7 @@ function RequestDetailsScreen() {
             <p>בקשה מספר {request?.id}</p>
           </div>
 
-          <span className="status-badge">
-            {details ? 'הבקשה הוקצתה אליך' : 'בקשה פתוחה'}
-          </span>
+          <span className="status-badge">{statusText}</span>
         </header>
 
         {error && (
@@ -295,9 +345,37 @@ function RequestDetailsScreen() {
             </div>
           )}
 
-          {details && (
+          {details && details.status === 1 && (
+            <div className="accept-section">
+              <p>הבקשה משויכת אליך. לאחר הגעתך למיקום, סמן הגעה.</p>
+
+              <button
+                className="accept-request-button"
+                onClick={handleMarkArrived}
+                disabled={isUpdatingStatus}
+              >
+                {isUpdatingStatus ? 'מעדכן...' : 'הגעתי למיקום'}
+              </button>
+            </div>
+          )}
+
+          {details && details.status === 4 && (
+            <div className="accept-section">
+              <p>הגעת למיקום והטיפול מתבצע. בסיום הטיפול לחץ על הכפתור.</p>
+
+              <button
+                className="accept-request-button"
+                onClick={handleCompleteRequest}
+                disabled={isUpdatingStatus}
+              >
+                {isUpdatingStatus ? 'מעדכן...' : 'סיום טיפול'}
+              </button>
+            </div>
+          )}
+
+          {details && details.status === 2 && (
             <div className="accepted-message">
-              ✓ הבקשה הוקצתה אליך בהצלחה.
+              ✓ הטיפול בבקשה הושלם בהצלחה.
             </div>
           )}
         </section>

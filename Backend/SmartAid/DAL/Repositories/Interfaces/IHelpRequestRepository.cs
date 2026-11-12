@@ -14,7 +14,8 @@ namespace DAL.Repositories.Interfaces
         HelpRequest? GetOwned(int id, int userId);
 
         bool TryAssignToVolunteer(int requestId, int volunteerId);
-
+        bool TryMarkInTreatment(int requestId, int volunteerId);
+        bool TryCompleteRequest(int requestId, int volunteerId);
         void Add(HelpRequest helpRequest);
         void Update(HelpRequest helpRequest);
         void Delete(int id);

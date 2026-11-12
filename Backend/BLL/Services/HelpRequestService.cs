@@ -1,10 +1,11 @@
 ﻿
 using AutoMapper;
+using BLL.Exceptions;
+using BLL.Services.Interfaces;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
-using BLL.Services.Interfaces;
-using BLL.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace BLL.Services
 {
@@ -267,6 +268,33 @@ namespace BLL.Services
 
             // הקצאה אטומית: רק מתנדב אחד יוכל לקבל את הבקשה
             return _helpRequestRepository.TryAssignToVolunteer(
+                requestId,
+                volunteer.Id);
+        }
+
+        public bool TryMarkInTreatment(int requestId, int userId)
+        {
+            // איתור פרופיל המתנדב לפי המשתמש המחובר
+            var volunteer = _volunteerService.GetByUserId(userId);
+
+            // רק מתנדב פעיל יכול לסמן שהגיע
+            if (volunteer == null || !volunteer.IsActive)
+                return false;
+
+            // שינוי הסטטוס מ-Assigned ל-InTreatment
+            return _helpRequestRepository.TryMarkInTreatment(
+                requestId,
+                volunteer.Id);
+        }
+
+        public bool TryCompleteRequest(int requestId, int userId)
+        {
+            var volunteer = _volunteerService.GetByUserId(userId);
+
+            if (volunteer == null || !volunteer.IsActive)
+                return false;
+
+            return _helpRequestRepository.TryCompleteRequest(
                 requestId,
                 volunteer.Id);
         }
