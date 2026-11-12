@@ -46,6 +46,21 @@ namespace SmartAid.API.Controllers
         }
 
 
+        [Authorize]
+        [HttpGet("my")]
+        public IActionResult GetMyRequests()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!int.TryParse(userIdClaim, out int userId))
+            {
+                return Unauthorized();
+            }
+
+            var requests = _helpRequestService.GetByUserId(userId);
+
+            return Ok(requests);
+        }
 
 
 
@@ -59,7 +74,11 @@ namespace SmartAid.API.Controllers
                 if (!int.TryParse(userIdClaim, out var userId))
                     return Unauthorized();
 
-                if (!_helpRequestService.IsAssignedVolunteer(id, userId))
+                bool isOwner = _helpRequestService.IsOwner(id, userId);
+                bool isAssignedVolunteer =
+                    _helpRequestService.IsAssignedVolunteer(id, userId);
+
+                if (!isOwner && !isAssignedVolunteer)
                     return NotFound();
             }
 
@@ -76,6 +95,8 @@ namespace SmartAid.API.Controllers
             return Ok(request);
         }
 
+
+
         [HttpPost]
         [Consumes("multipart/form-data")]
         public ActionResult Add([FromForm] HelpRequestPostDto helpRequestDto)
@@ -85,14 +106,16 @@ namespace SmartAid.API.Controllers
             if (!int.TryParse(userIdClaim, out var userId))
                 return Unauthorized();
 
-            // מזהה המשתמש נלקח מה-Token ולא מהבקשה
-            _helpRequestService.Add(helpRequestDto, userId);
+            // שמירת הבקשה וקבלת המזהה שנוצר
+            var requestId = _helpRequestService.Add(helpRequestDto, userId);
 
             return Ok(new
             {
-                message = "Help request added successfully."
+                message = "Help request added successfully.",
+                id = requestId
             });
         }
+
 
         [HttpPut("{id}")]
         public ActionResult Update(int id, [FromBody] HelpRequestUpdateDto helpRequestDto)

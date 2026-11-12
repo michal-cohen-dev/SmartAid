@@ -123,12 +123,15 @@ function CreateRequestScreen() {
       formData.append('Address', 'מיקום לפי קואורדינטות GPS');
       formData.append('HelpTypeId', helpTypeId);
 
-      await apiRequest<{ message: string }>('/api/HelpRequests', {
-        method: 'POST',
-        body: formData
-      });
+     const response = await apiRequest<{ message: string; id: number }>(
+  '/api/HelpRequests',
+  {
+    method: 'POST',
+    body: formData
+  }
+);
 
-      navigate('/suggestions');
+navigate(`/suggestions/${response.id}`);
     } catch (error) {
       setSubmitError(
         error instanceof Error

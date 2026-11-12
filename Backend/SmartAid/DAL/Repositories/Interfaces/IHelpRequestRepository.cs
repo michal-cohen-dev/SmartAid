@@ -1,8 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿
+using System.Collections.Generic;
 using DAL.Entities;
-using DAL.Repositories.Interfaces;
-using Microsoft.EntityFrameworkCore;
 
 namespace DAL.Repositories.Interfaces
 {
@@ -10,11 +8,12 @@ namespace DAL.Repositories.Interfaces
     {
         List<HelpRequest> GetAll();
         List<HelpRequest> GetOpenRequests();
-        HelpRequest? GetById(int id);
-        bool TryAssignToVolunteer(int requestId, int volunteerId);
+        List<HelpRequest> GetByUserId(int userId);
 
-        // שליפה רק אם הבקשה שייכת למשתמש
+        HelpRequest? GetById(int id);
         HelpRequest? GetOwned(int id, int userId);
+
+        bool TryAssignToVolunteer(int requestId, int volunteerId);
 
         void Add(HelpRequest helpRequest);
         void Update(HelpRequest helpRequest);

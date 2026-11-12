@@ -41,6 +41,12 @@ namespace BLL.Services
             return _mapper.Map<List<HelpRequestDto>>(requests);
         }
 
+        public List<HelpRequestDto> GetByUserId(int userId)
+        {
+            var requests = _helpRequestRepository.GetByUserId(userId);
+
+            return _mapper.Map<List<HelpRequestDto>>(requests);
+        }
 
         public List<HelpRequestPreviewDto> GetOpenForVolunteer(int userId)
         {
@@ -75,6 +81,17 @@ namespace BLL.Services
             return _mapper.Map<HelpRequestDto>(request);
         }
 
+
+        public bool IsOwner(int requestId, int userId)
+        {
+            var request = _helpRequestRepository.GetOwned(requestId, userId);
+
+            return request != null;
+        }
+
+
+
+
         public bool IsAssignedVolunteer(int requestId, int userId)
         {
             var request = _helpRequestRepository.GetById(requestId);
@@ -91,7 +108,7 @@ namespace BLL.Services
         }
 
 
-        public void Add(HelpRequestPostDto helpRequestDto, int userId)
+        public int Add(HelpRequestPostDto helpRequestDto, int userId)
         {
             var equipmentTypeIds = helpRequestDto.RequiredEquipmentTypeIds
                 .Distinct()
@@ -158,6 +175,7 @@ namespace BLL.Services
 
                 throw;
             }
+            return request.Id;
         }
 
         
