@@ -67,7 +67,7 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
-// CORS - allow the React development client
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("ReactClient", policy =>
@@ -123,6 +123,7 @@ builder.Services.AddScoped<IRequestEquipmentService, RequestEquipmentService>();
 builder.Services.AddScoped<IRequestOfferService, RequestOfferService>();
 builder.Services.AddScoped<IEquipmentTypeService, EquipmentTypeService>();
 
+// TomTom
 builder.Services.AddHttpClient<
     ITomTomRoutingService,
     TomTomRoutingService>(client =>
@@ -130,6 +131,7 @@ builder.Services.AddHttpClient<
         client.BaseAddress = new Uri("https://api.tomtom.com/");
     });
 
+// AI Image Analysis
 builder.Services.AddHttpClient<
     IImageAnalysisService,
     ImageAnalysisService>();
@@ -145,6 +147,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IPasswordHasher<DAL.Entities.User>,
     PasswordHasher<DAL.Entities.User>>();
 
+// Controllers
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<GlobalExceptionFilter>();
