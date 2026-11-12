@@ -65,14 +65,35 @@ namespace DAL.Repositories
             }
         }
 
+
         public List<HelpRequest> GetOpenRequests()
         {
             return _context.HelpRequests
                 .Include(hr => hr.User)
+                .Include(hr => hr.RequiredEquipments)
                 .Where(hr =>
                     hr.Status == RequestStatus.Open &&
                     hr.AssignedVolunteerId == null)
                 .ToList();
+        }
+
+
+        public bool TryAssignToVolunteer(int requestId, int volunteerId)
+        {
+            var rowsAffected = _context.HelpRequests
+                .Where(request =>
+                    request.Id == requestId &&
+                    request.Status == RequestStatus.Open &&
+                    request.AssignedVolunteerId == null)
+                .ExecuteUpdate(setters => setters
+                    .SetProperty(
+                        request => request.AssignedVolunteerId,
+                        volunteerId)
+                    .SetProperty(
+                        request => request.Status,
+                        RequestStatus.Assigned));
+
+            return rowsAffected == 1;
         }
     }
 }

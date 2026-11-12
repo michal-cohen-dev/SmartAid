@@ -35,7 +35,7 @@ namespace SmartAid.API.Controllers
 
 
         [HttpGet("open")]
-        public ActionResult<IEnumerable<HelpRequestDto>> GetOpenForVolunteer()
+        public ActionResult<IEnumerable<HelpRequestPreviewDto>> GetOpenForVolunteer()
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -139,6 +139,33 @@ namespace SmartAid.API.Controllers
             return Ok(new
             {
                 message = "Help request deleted successfully."
+            });
+        }
+
+
+        [HttpPost("{id}/accept")]
+        public ActionResult AcceptRequest(int id)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var accepted = _helpRequestService.TryAssignToVolunteer(
+                id,
+                userId);
+
+            if (!accepted)
+            {
+                return Conflict(new
+                {
+                    message = "הבקשה כבר אינה זמינה או שאין לך הרשאה לקבל אותה."
+                });
+            }
+
+            return Ok(new
+            {
+                message = "הבקשה הוקצתה אליך בהצלחה."
             });
         }
     }

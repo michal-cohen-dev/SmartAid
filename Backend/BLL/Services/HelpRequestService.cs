@@ -41,17 +41,28 @@ namespace BLL.Services
             return _mapper.Map<List<HelpRequestDto>>(requests);
         }
 
-        public List<HelpRequestDto> GetOpenForVolunteer(int userId)
+
+        public List<HelpRequestPreviewDto> GetOpenForVolunteer(int userId)
         {
             var volunteer = _volunteerService.GetByUserId(userId);
 
-            if (volunteer == null)
-                return new List<HelpRequestDto>();
+            if (volunteer == null || !volunteer.IsActive)
+                return new List<HelpRequestPreviewDto>();
 
             var requests = _helpRequestRepository.GetOpenRequests();
 
-            return _mapper.Map<List<HelpRequestDto>>(requests);
+            var fullDtos = _mapper.Map<List<HelpRequestDto>>(requests);
+
+            return fullDtos.Select(request => new HelpRequestPreviewDto
+            {
+                Id = request.Id,
+                Title = request.Title,
+                Description = request.Description,
+                CreatedAt = request.CreatedAt,
+                RequiredEquipmentTypeIds = request.RequiredEquipmentTypeIds
+            }).ToList();
         }
+
 
         public HelpRequestDto? GetById(int id)
         {
@@ -78,6 +89,7 @@ namespace BLL.Services
             return request.AssignedVolunteerId == volunteer.Id;
         }
 
+
         public void Add(HelpRequestPostDto helpRequestDto, int userId)
         {
             var equipmentTypeIds = helpRequestDto.RequiredEquipmentTypeIds
@@ -93,7 +105,6 @@ namespace BLL.Services
                 }
             }
 
-            // בדיקה שסוג העזרה קיים במערכת
             var helpType = _helpTypeRepository.GetById(
                 helpRequestDto.HelpTypeId);
 
@@ -102,6 +113,7 @@ namespace BLL.Services
                 throw new BusinessRuleException(
                     $"Help type with ID {helpRequestDto.HelpTypeId} does not exist.");
             }
+
             var request = _mapper.Map<HelpRequest>(helpRequestDto);
             request.UserId = userId;
             request.HelpTypeId = helpRequestDto.HelpTypeId;
@@ -116,7 +128,18 @@ namespace BLL.Services
                     request.ImageName = savedImageName;
                 }
 
+                // שמירת הבקשה וקבלת המזהה שלה
                 _helpRequestRepository.Add(request);
+
+                // שמירת הציוד הנדרש בטבלת RequestEquipments
+                foreach (var equipmentTypeId in equipmentTypeIds)
+                {
+                    _requestEquipmentRepository.Add(new RequestEquipment
+                    {
+                        HelpRequestId = request.Id,
+                        EquipmentTypeId = equipmentTypeId
+                    });
+                }
             }
             catch
             {
@@ -135,6 +158,8 @@ namespace BLL.Services
                 throw;
             }
         }
+
+        
 
         public bool Update(
             int id,
@@ -210,6 +235,21 @@ namespace BLL.Services
             _helpRequestRepository.Delete(id);
 
             return true;
+        }
+
+        public bool TryAssignToVolunteer(int requestId, int userId)
+        {
+            // איתור פרופיל המתנדב לפי המשתמש המחובר
+            var volunteer = _volunteerService.GetByUserId(userId);
+
+            // רק מתנדב פעיל יכול לקבל בקשה
+            if (volunteer == null || !volunteer.IsActive)
+                return false;
+
+            // הקצאה אטומית: רק מתנדב אחד יוכל לקבל את הבקשה
+            return _helpRequestRepository.TryAssignToVolunteer(
+                requestId,
+                volunteer.Id);
         }
     }
 }

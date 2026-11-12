@@ -11,6 +11,7 @@ namespace DAL.Repositories.Interfaces
         List<HelpRequest> GetAll();
         List<HelpRequest> GetOpenRequests();
         HelpRequest? GetById(int id);
+        bool TryAssignToVolunteer(int requestId, int volunteerId);
 
         // שליפה רק אם הבקשה שייכת למשתמש
         HelpRequest? GetOwned(int id, int userId);

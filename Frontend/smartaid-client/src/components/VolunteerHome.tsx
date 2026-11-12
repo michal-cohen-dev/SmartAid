@@ -5,20 +5,9 @@ import { apiRequest } from '../services/api';
 
 interface HelpRequest {
   id: number;
-  userId: number;
   title: string;
   description: string;
-  userFullName: string | null;
-  imageName: string | null;
-  latitude: number;
-  longitude: number;
-  address: string;
-  addressNotes: string | null;
-  status: number;
-  assignedVolunteerId: number | null;
-  assignedVolunteerName: string | null;
   createdAt: string;
-  rating: number | null;
   requiredEquipmentTypeIds: number[];
 }
 
@@ -43,7 +32,6 @@ function VolunteerHome() {
         );
 
         if (isMounted) {
-          // הצגת בקשות שיש להן כותרת ותיאור
           const validRequests = data.filter(
             request =>
               request.title?.trim() &&
@@ -117,20 +105,6 @@ function VolunteerHome() {
             <h3>{request.title}</h3>
 
             <p>{request.description}</p>
-
-            <p>
-              פונה: {request.userFullName || 'לא צוין'}
-            </p>
-
-            <p>
-              מיקום: {request.address}
-            </p>
-
-            {request.addressNotes && (
-              <p>
-                הערות מיקום: {request.addressNotes}
-              </p>
-            )}
 
             <p>
               תאריך יצירה:{' '}
