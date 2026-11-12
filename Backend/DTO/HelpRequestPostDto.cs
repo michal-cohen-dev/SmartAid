@@ -47,3 +47,4 @@ public class HelpRequestPostDto
     [ImageFileValidation]
     public IFormFile? ImageFile { get; set; }
 }
+
