@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../services/api';
+import './VolunteerHome.css';
 
 interface HelpRequest {
   id: number;
@@ -67,71 +68,97 @@ function VolunteerHome() {
     setIsAvailable(previous => !previous);
   }
 
+  
   return (
-    <div dir="rtl">
-      <h1>SmartAid</h1>
-      <h2>שלום, מתנדב!</h2>
+    <div className="volunteer-page" dir="rtl">
+      <header className="volunteer-header">
+        <h1>SmartAid</h1>
+        <p>שלום, מתנדב! כאן תוכל לראות את בקשות העזרה הפתוחות.</p>
+      </header>
 
-      <div>
-        <h3>הזמינות שלי</h3>
+      <section className="volunteer-availability">
+        <div>
+          <h2>הזמינות שלי</h2>
+          <p>
+            {isAvailable ? 'זמין לקבלת קריאות' : 'לא זמין'}
+          </p>
+        </div>
 
-        <p>
-          {isAvailable
-            ? 'זמין לקבלת קריאות'
-            : 'לא זמין'}
-        </p>
-
-        <button type="button" onClick={handleToggle}>
+        <button
+          className="volunteer-button"
+          type="button"
+          onClick={handleToggle}
+        >
           שינוי סטטוס זמינות
         </button>
-      </div>
+      </section>
 
-      <div>
+      <section className="volunteer-requests-section">
         <h2>בקשות עזרה פתוחות</h2>
 
         {isLoading && (
-          <p>טוען בקשות מהשרת...</p>
+          <p className="volunteer-message">טוען בקשות מהשרת...</p>
         )}
 
         {error && (
-          <p role="alert">{error}</p>
+          <p className="volunteer-message" role="alert">
+            {error}
+          </p>
         )}
 
         {!isLoading && !error && requests.length === 0 && (
-          <p>אין כרגע בקשות עזרה פתוחות.</p>
+          <p className="volunteer-message">
+            אין כרגע בקשות עזרה פתוחות.
+          </p>
         )}
 
-        {!isLoading && !error && requests.map(request => (
-          <div key={request.id}>
-            <h3>{request.title}</h3>
+        {!isLoading && !error && requests.length > 0 && (
+          <div className="volunteer-requests-grid">
+            {requests.map(request => (
+              <article
+                className="volunteer-request-card"
+                key={request.id}
+              >
+                <h3>{request.title}</h3>
 
-            <p>{request.description}</p>
+                <p className="volunteer-request-description">
+                  {request.description}
+                </p>
 
-            <p>
-              תאריך יצירה:{' '}
-              {new Date(request.createdAt).toLocaleString('he-IL')}
-            </p>
+                <p className="volunteer-request-meta">
+                  תאריך יצירה:{' '}
+                  {new Date(request.createdAt).toLocaleString('he-IL')}
+                </p>
 
-            <p>סטטוס: בקשה חדשה</p>
+                <p className="volunteer-request-meta">
+                  סטטוס: בקשה חדשה
+                </p>
 
-            <button
-              type="button"
-              onClick={() => navigate(`/request-details/${request.id}`)}
-            >
-              צפייה בפרטי הבקשה
-            </button>
+                <button
+                  className="volunteer-button"
+                  type="button"
+                  onClick={() => navigate(`/request-details/${request.id}`)}
+                >
+                  צפייה בפרטי הבקשה
+                </button>
+              </article>
+            ))}
           </div>
-        ))}
-      </div>
+        )}
+      </section>
 
-      <button
-        type="button"
-        onClick={() => navigate('/request')}
-      >
-        פתיחת בקשת עזרה
-      </button>
+      <div className="volunteer-create-request">
+        <button
+          className="volunteer-button"
+          type="button"
+          onClick={() => navigate('/request')}
+        >
+          פתיחת בקשת עזרה
+        </button>
+      </div>
     </div>
   );
+
 }
 
 export default VolunteerHome;

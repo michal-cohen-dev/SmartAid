@@ -1,17 +1,36 @@
 
 import { Link } from 'react-router-dom';
-
+import './MainDashboard.css';
 function MainDashboard() {
   return (
-    <div dir="rtl">
-      <h1>SmartAid</h1>
-      <p>עזרה חכמה. קהילה חזקה.</p>
+    <div className="dashboard-page" dir="rtl">
+      <header className="dashboard-header">
+        <div className="dashboard-brand">
+          <h1>SmartAid</h1>
+          <span>עזרה חכמה. קהילה חזקה.</span>
+        </div>
+      </header>
 
-      <nav>
-        <Link to="/login">התחברות</Link>
-        {' | '}
-        <Link to="/register">הרשמה</Link>
-      </nav>
+      <main className="dashboard-main">
+        <section className="dashboard-welcome">
+          <h2>עוזרים אחד לשני, בקלות ובחכמה</h2>
+
+          <p>
+            SmartAid מחברת בין אנשים שזקוקים לעזרה לבין מתנדבים
+            שרוצים להושיט יד וליצור קהילה חזקה יותר.
+          </p>
+
+          <div className="dashboard-actions">
+            <Link to="/login" className="dashboard-button dashboard-button-primary">
+              התחברות
+            </Link>
+
+            <Link to="/register" className="dashboard-button dashboard-button-secondary">
+              הרשמה
+            </Link>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }

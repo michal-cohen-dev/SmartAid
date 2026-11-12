@@ -1,0 +1,122 @@
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background: #f7f8fa;
+  color: #30343b;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 42px 40px;
+  background: #ffffff;
+  border: 1px solid #e8eaed;
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(30, 40, 55, 0.06);
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-header h1 {
+  margin: 0 0 10px;
+  font-size: 29px;
+  color: #343d49;
+}
+
+.login-header p {
+  margin: 0;
+  color: #737b86;
+  font-size: 16px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.login-field label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #424b57;
+}
+
+.login-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px 14px;
+  border: 1px solid #d9dee5;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #30343b;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.login-field input:focus {
+  border-color: #647b91;
+  box-shadow: 0 0 0 3px rgba(100, 123, 145, 0.12);
+}
+
+.login-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #fff0f0;
+  color: #b42318;
+  font-size: 14px;
+}
+
+.login-submit {
+  width: 100%;
+  padding: 13px;
+  margin-top: 4px;
+  border: none;
+  border-radius: 7px;
+  background: #647b91;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.login-submit:hover:not(:disabled) {
+  background: #526a81;
+}
+
+.login-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.login-register {
+  margin: 26px 0 0;
+  text-align: center;
+  color: #737b86;
+  font-size: 14px;
+}
+
+.login-register a {
+  color: #526a81;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-register a:hover {
+  text-decoration: underline;
+}

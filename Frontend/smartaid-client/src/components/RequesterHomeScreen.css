@@ -1,0 +1,76 @@
+
+.requester-home-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 50px 24px;
+  box-sizing: border-box;
+  background: #f7f8fa;
+  color: #30343b;
+}
+
+.requester-home-container {
+  width: 100%;
+  max-width: 850px;
+}
+
+.requester-home-header {
+  margin-bottom: 34px;
+  text-align: center;
+}
+
+.requester-home-header h1 {
+  margin: 0 0 18px;
+  color: #343d49;
+  font-size: 34px;
+  line-height: 1.4;
+}
+
+.requester-home-header p {
+  max-width: 650px;
+  margin: 0 auto;
+  color: #737b86;
+  font-size: 18px;
+  line-height: 1.8;
+}
+
+.requester-home-card {
+  padding: 42px 40px;
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid #e8eaed;
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(30, 40, 55, 0.06);
+}
+
+.requester-home-card h2 {
+  margin: 0 0 18px;
+  color: #343d49;
+  font-size: 25px;
+}
+
+.requester-home-card p {
+  max-width: 600px;
+  margin: 0 auto;
+  color: #707985;
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.requester-create-button {
+  margin-top: 30px;
+  padding: 14px 32px;
+  border: none;
+  border-radius: 7px;
+  background: #647b91;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.requester-create-button:hover {
+  background: #526a81;
+}

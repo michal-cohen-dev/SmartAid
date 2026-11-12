@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from 'react-router-dom';
+import './AISuggestionsScreen.css';
 
 function AISuggestionsScreen() {
   const navigate = useNavigate();

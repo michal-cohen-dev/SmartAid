@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { apiRequest } from '../services/api';
+import './CreateRequestScreen.css';
 
 interface HelpType {
   id: number;
@@ -139,100 +140,116 @@ function CreateRequestScreen() {
     }
   };
 
+  
   return (
-    <div dir="rtl">
-      <h1>בקשת עזרה חדשה</h1>
-      <p>תארי את הבעיה כדי שנוכל למצוא עבורך עזרה מתאימה</p>
+    <div className="create-request-page" dir="rtl">
+      <main className="create-request-container">
+        <header className="create-request-header">
+          <h1>בקשת עזרה חדשה</h1>
+          <p>
+            תארי את הבעיה כדי שנוכל למצוא עבורך עזרה מתאימה
+          </p>
+        </header>
 
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="title">כותרת הבקשה</label>
-          <input
-            id="title"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="לדוגמה: תקר בגלגל"
-            required
-            minLength={2}
-            maxLength={100}
-          />
-        </div>
+        <section className="create-request-card">
+          <form className="create-request-form" onSubmit={handleSubmit}>
+            <div className="create-request-field">
+              <label htmlFor="title">כותרת הבקשה</label>
+              <input
+                id="title"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="לדוגמה: תקר בגלגל"
+                required
+                minLength={2}
+                maxLength={100}
+              />
+            </div>
 
-        <div>
-          <label htmlFor="description">תיאור הבעיה</label>
-          <textarea
-            id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="תארי מה קרה ואיזו עזרה נדרשת"
-            required
-            minLength={5}
-            maxLength={1000}
-          />
-        </div>
+            <div className="create-request-field">
+              <label htmlFor="description">תיאור הבעיה</label>
+              <textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="תארי מה קרה ואיזו עזרה נדרשת"
+                required
+                minLength={5}
+                maxLength={1000}
+              />
+            </div>
 
-        <div>
-          <label htmlFor="helpType">סוג העזרה</label>
+            <div className="create-request-field">
+              <label htmlFor="helpType">סוג העזרה</label>
 
-          {isLoadingHelpTypes ? (
-            <p>טוען סוגי עזרה...</p>
-          ) : (
-            <select
-              id="helpType"
-              value={helpTypeId}
-              onChange={(e) => setHelpTypeId(e.target.value)}
-              required
+              {isLoadingHelpTypes ? (
+                <p>טוען סוגי עזרה...</p>
+              ) : (
+                <select
+                  id="helpType"
+                  value={helpTypeId}
+                  onChange={(e) => setHelpTypeId(e.target.value)}
+                  required
+                >
+                  <option value="">בחרי סוג עזרה</option>
+                  {helpTypes.map((helpType) => (
+                    <option key={helpType.id} value={helpType.id}>
+                      {helpType.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {!isLoadingHelpTypes && helpTypes.length === 0 && (
+                <p>לא נמצאו סוגי עזרה במערכת.</p>
+              )}
+            </div>
+
+            <div className="create-request-location">
+              <label>מיקום</label>
+
+              <button
+                className="create-request-button"
+                type="button"
+                onClick={handleGetLocation}
+                disabled={isLoadingLocation}
+              >
+                {isLoadingLocation
+                  ? 'מקבל מיקום...'
+                  : 'קבלת המיקום הנוכחי שלי'}
+              </button>
+
+              {locationStatus && (
+                <p className="create-request-status" role="status">
+                  {locationStatus}
+                </p>
+              )}
+            </div>
+
+            {submitError && (
+              <p className="create-request-error" role="alert">
+                {submitError}
+              </p>
+            )}
+
+            <button
+              className="create-request-submit"
+              type="submit"
+              disabled={
+                isSubmitting ||
+                isLoadingHelpTypes ||
+                helpTypes.length === 0
+              }
             >
-              <option value="">בחרי סוג עזרה</option>
-              {helpTypes.map((helpType) => (
-                <option key={helpType.id} value={helpType.id}>
-                  {helpType.name}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {!isLoadingHelpTypes && helpTypes.length === 0 && (
-            <p>לא נמצאו סוגי עזרה במערכת.</p>
-          )}
-        </div>
-
-        <div>
-          <label>מיקום</label>
-
-          <button
-            type="button"
-            onClick={handleGetLocation}
-            disabled={isLoadingLocation}
-          >
-            {isLoadingLocation
-              ? 'מקבל מיקום...'
-              : 'קבלת המיקום הנוכחי שלי'}
-          </button>
-
-          {locationStatus && (
-            <p role="status">{locationStatus}</p>
-          )}
-        </div>
-
-        {submitError && (
-          <p role="alert">{submitError}</p>
-        )}
-
-        <button
-          type="submit"
-          disabled={
-            isSubmitting ||
-            isLoadingHelpTypes ||
-            helpTypes.length === 0
-          }
-        >
-          {isSubmitting ? 'שולח בקשה...' : 'שליחת בקשת עזרה'}
-        </button>
-      </form>
+              {isSubmitting ? 'שולח בקשה...' : 'שליחת בקשת עזרה'}
+            </button>
+          </form>
+        </section>
+      </main>
     </div>
   );
+
 }
 
 export default CreateRequestScreen;

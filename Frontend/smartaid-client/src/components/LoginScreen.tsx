@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiRequest, type AuthResponse } from "../services/api";
+import "./LoginScreen.css";
 
 function LoginScreen() {
   const navigate = useNavigate();
@@ -103,16 +104,17 @@ function LoginScreen() {
     }
   }
 
-  return (
-    <div dir="rtl">
-      <div>
-        <h1>ברוכים הבאים ל־SmartAid</h1>
-        <p>עזרה חכמה. קהילה חזקה.</p>
+    return (
+    <div className="login-page" dir="rtl">
+      <div className="login-card">
+        <header className="login-header">
+          <h1>ברוכים הבאים ל־SmartAid</h1>
+          <p>עזרה חכמה. קהילה חזקה.</p>
+        </header>
 
-        <form onSubmit={handleSubmit}>
-          <div>
+        <form className="login-form" onSubmit={handleSubmit}>
+          <div className="login-field">
             <label htmlFor="loginEmail">אימייל</label>
-
             <input
               id="loginEmail"
               type="email"
@@ -123,9 +125,8 @@ function LoginScreen() {
             />
           </div>
 
-          <div>
+          <div className="login-field">
             <label htmlFor="loginPassword">סיסמה</label>
-
             <input
               id="loginPassword"
               type="password"
@@ -137,17 +138,19 @@ function LoginScreen() {
           </div>
 
           {error && (
-            <p style={{ color: "red" }}>
-              {error}
-            </p>
+            <p className="login-error">{error}</p>
           )}
 
-          <button type="submit" disabled={loading}>
+          <button
+            className="login-submit"
+            type="submit"
+            disabled={loading}
+          >
             {loading ? "מתחבר..." : "התחברות"}
           </button>
         </form>
 
-        <p>
+        <p className="login-register">
           עדיין אין לך חשבון?{" "}
           <Link to="/register">הירשמי עכשיו</Link>
         </p>
