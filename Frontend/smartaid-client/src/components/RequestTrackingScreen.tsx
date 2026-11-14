@@ -76,6 +76,11 @@ function RequestTrackingScreen() {
       description: "בקשת העזרה הזו בוטלה.",
       icon: "✕",
     },
+    4: {
+      title: "המתנדב הגיע ומטפל בבקשה",
+      description: "המתנדב הגיע למקום והחל בטיפול בבקשת העזרה שלך.",
+      icon: "🙋",
+    },
   };
 
   if (loading) {
@@ -127,6 +132,11 @@ function RequestTrackingScreen() {
       icon: "🚗",
     },
     {
+      title: "המתנדב הגיע ומטפל בבקשה",
+      description: "המתנדב הגיע למקום והחל בטיפול.",
+      icon: "🙋",
+    },
+    {
       title: "הטיפול הסתיים",
       description: "בקשת העזרה הושלמה בהצלחה.",
       icon: "✓",
@@ -136,7 +146,8 @@ function RequestTrackingScreen() {
   const currentStep =
     request.status === 0 ? 1 :
     request.status === 1 ? 2 :
-    request.status === 2 ? 3 : -1;
+    request.status === 4 ? 3 :
+    request.status === 2 ? 4 : -1;
 
   return (
     <div dir="rtl" className="tracking-page">
@@ -187,17 +198,19 @@ function RequestTrackingScreen() {
 
             {timelineSteps.map((step, index) => (
               <div
-               className={`timeline-item ${
-  request.status === 2 || index < currentStep
-    ? "completed"
-    : index === currentStep
-    ? "active"
-    : "pending"
-}`}
+                className={`timeline-item ${
+                  request.status === 2 || index < currentStep
+                    ? "completed"
+                    : index === currentStep
+                    ? "active"
+                    : "pending"
+                }`}
                 key={step.title}
               >
                 <div className="timeline-icon">
-                  {index < currentStep ? "✓" : step.icon}
+                  {index < currentStep || request.status === 2
+                    ? "✓"
+                    : step.icon}
                 </div>
 
                 <div className="timeline-content">

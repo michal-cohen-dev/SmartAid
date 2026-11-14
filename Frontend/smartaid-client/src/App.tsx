@@ -16,6 +16,9 @@ import VolunteerReg from './components/VolunteerReg';
 import MyRequestsScreen from './components/MyRequestsScreen';
 import NotFound from './NotFound';
 import VolunteerHistoryScreen from './components/VolunteerHistoryScreen';
+import VolunteerAcceptedRequestsScreen from './components/VolunteerAcceptedRequestsScreen';
+import VolunteerCompletedRequestsScreen from './components/VolunteerCompletedRequestsScreen';
+import ProfileScreen from './components/ProfileScreen';
 
 function App() {
   return (
@@ -23,7 +26,14 @@ function App() {
       <Route path="/" element={<MainDashboard />} />
       <Route path="/login" element={<LoginScreen />} />
       <Route path="/register" element={<RegistrationScreen />} />
-
+<Route
+  path="/volunteer/accepted-requests"
+  element={<VolunteerAcceptedRequestsScreen />}
+/>
+<Route
+  path="/volunteer/completed-requests"
+  element={<VolunteerCompletedRequestsScreen />}
+/>
       <Route element={<AppLayout />}>
         <Route path="/volunteer" element={<VolunteerHome />} />
         <Route path="/volunteer/open-requests" element={<VolunteerHome />} />
@@ -41,6 +51,7 @@ function App() {
         <Route path="/request" element={<CreateRequestScreen />} />
 <Route path="/suggestions/:id" element={<AISuggestionsScreen />} /><Route path="/request-tracking/:id" element={<RequestTrackingScreen />} />
         <Route path="/my-requests" element={<MyRequestsScreen />} />
+            <Route path="/profile" element={<ProfileScreen />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />
