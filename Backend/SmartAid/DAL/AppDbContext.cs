@@ -81,10 +81,17 @@ public class AppDbContext : DbContext
             e.HasIndex(t => t.Name).IsUnique();
 
             e.HasData(
-                new HelpType { Id = 1, Name = "התנעת רכב" },
+                new HelpType { Id = 1, Name = "התנעת רכב וסיוע במצבר" },
                 new HelpType { Id = 2, Name = "החלפת גלגל" },
                 new HelpType { Id = 3, Name = "פתיחת רכב נעול" },
-                new HelpType { Id = 4, Name = "חילוץ רכב תקוע" }
+                new HelpType { Id = 4, Name = "חילוץ רכב תקוע" },
+                new HelpType { Id = 5, Name = "אספקת דלק" },
+                new HelpType { Id = 6, Name = "בדיקת וניפוח לחץ אוויר בצמיגים" },
+                new HelpType { Id = 7, Name = "סיוע במילוי נוזלים ברכב" },
+                new HelpType { Id = 8, Name = "תיאום גרר" },
+                new HelpType { Id = 9, Name = "תקלה מכנית ברכב" },
+                new HelpType { Id = 10, Name = "תקלה במערכת החשמל של הרכב" },
+                new HelpType { Id = 11, Name = "חשד להתחממות הרכב" }        
             );
         });
 
