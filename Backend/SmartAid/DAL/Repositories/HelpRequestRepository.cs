@@ -152,5 +152,24 @@ namespace DAL.Repositories
 
             return rowsAffected == 1;
         }
+
+        public bool TryRateCompletedRequest(
+    int requestId,
+    int userId,
+    int rating)
+        {
+            var rowsAffected = _context.HelpRequests
+                .Where(request =>
+                    request.Id == requestId &&
+                    request.UserId == userId &&
+                    request.Status == RequestStatus.Completed &&
+                    request.Rating == null)
+                .ExecuteUpdate(setters => setters
+                    .SetProperty(
+                        request => request.Rating,
+                        rating));
+
+            return rowsAffected == 1;
+        }
     }
 }

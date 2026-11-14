@@ -16,6 +16,7 @@ namespace DAL.Repositories.Interfaces
         bool TryAssignToVolunteer(int requestId, int volunteerId);
         bool TryMarkInTreatment(int requestId, int volunteerId);
         bool TryCompleteRequest(int requestId, int volunteerId);
+        bool TryRateCompletedRequest(int requestId, int userId, int rating);
         void Add(HelpRequest helpRequest);
         void Update(HelpRequest helpRequest);
         void Delete(int id);

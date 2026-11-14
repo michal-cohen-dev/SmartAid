@@ -312,5 +312,19 @@ namespace BLL.Services
                 requestId,
                 volunteer.Id);
         }
+
+        public bool TryRateCompletedRequest(
+    int requestId,
+    int userId,
+    int rating)
+        {
+            if (rating < 1 || rating > 5)
+                return false;
+
+            return _helpRequestRepository.TryRateCompletedRequest(
+                requestId,
+                userId,
+                rating);
+        }
     }
 }

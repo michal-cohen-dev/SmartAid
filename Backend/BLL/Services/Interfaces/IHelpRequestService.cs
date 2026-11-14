@@ -19,5 +19,6 @@ namespace BLL.Services.Interfaces
         bool TryAssignToVolunteer(int requestId, int userId);
         bool TryMarkInTreatment(int requestId, int userId);
         bool TryCompleteRequest(int requestId, int userId);
+        bool TryRateCompletedRequest(int requestId, int userId, int rating);
     }
 }

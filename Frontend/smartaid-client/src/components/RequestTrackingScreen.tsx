@@ -12,6 +12,7 @@ interface HelpRequest {
   status: number;
   address: string;
   assignedVolunteerName?: string | null;
+  rating?: number | null;
 }
 
 function RequestTrackingScreen() {
@@ -21,6 +22,11 @@ function RequestTrackingScreen() {
   const [request, setRequest] = useState<HelpRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [hoveredRating, setHoveredRating] = useState(0);
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const [ratingMessage, setRatingMessage] = useState("");
 
   useEffect(() => {
     document.title = "מעקב אחר בקשת עזרה | SmartAid";
@@ -51,6 +57,40 @@ function RequestTrackingScreen() {
 
     loadRequest();
   }, [id]);
+
+  const submitRating = async () => {
+    if (!id || selectedRating < 1 || selectedRating > 5) {
+      return;
+    }
+
+    setRatingLoading(true);
+    setRatingMessage("");
+
+    try {
+      await apiRequest(`/api/HelpRequests/${id}/rate`, {
+        method: "POST",
+        body: JSON.stringify({
+          rating: selectedRating,
+        }),
+      });
+
+      setRequest((previous) =>
+        previous
+          ? { ...previous, rating: selectedRating }
+          : previous
+      );
+
+      setRatingMessage("תודה! הדירוג שלך נשמר בהצלחה.");
+    } catch (err) {
+      setRatingMessage(
+        err instanceof Error
+          ? err.message
+          : "לא ניתן לשמור את הדירוג."
+      );
+    } finally {
+      setRatingLoading(false);
+    }
+  };
 
   const statusInfo: Record<
     number,
@@ -219,6 +259,65 @@ function RequestTrackingScreen() {
                 </div>
               </div>
             ))}
+          </section>
+        )}
+
+        {request.status === 2 && (
+          <section className="rating-card">
+            <h2>איך היה השירות שקיבלת?</h2>
+
+            {request.rating != null ? (
+              <>
+                <p>הדירוג שלך נשמר בהצלחה:</p>
+                <div className="rating-stars">
+                  {"★".repeat(request.rating)}
+                  {"☆".repeat(5 - request.rating)}
+                </div>
+              </>
+            ) : (
+              <>
+                <p>נשמח שתדרג את המתנדב שעזר לך.</p>
+
+                <div
+                  className="rating-stars"
+                  onMouseLeave={() => setHoveredRating(0)}
+                >
+                  {[1, 2, 3, 4, 5].map((rating) => (
+                    <button
+                      key={rating}
+                      type="button"
+                      className={
+                        rating <= (hoveredRating || selectedRating)
+                          ? "rating-star selected"
+                          : "rating-star"
+                      }
+                      onMouseEnter={() => setHoveredRating(rating)}
+                      onFocus={() => setHoveredRating(rating)}
+                      onBlur={() => setHoveredRating(0)}
+                      onClick={() => setSelectedRating(rating)}
+                      disabled={ratingLoading}
+                      aria-label={`דירוג ${rating} מתוך 5`}
+                      aria-pressed={selectedRating === rating}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className="tracking-back-button"
+                  onClick={submitRating}
+                  disabled={selectedRating === 0 || ratingLoading}
+                >
+                  {ratingLoading ? "שומר דירוג..." : "שליחת דירוג"}
+                </button>
+
+                {ratingMessage && (
+                  <p className="rating-message">{ratingMessage}</p>
+                )}
+              </>
+            )}
           </section>
         )}
 

@@ -248,6 +248,98 @@
   line-height: 1.7;
 }
 
+/* Rating card */
+
+.rating-card {
+  margin-top: 26px;
+  padding: 30px 24px;
+  background: #ffffff;
+  border: 1px solid #e8eaed;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
+}
+
+.rating-card h2 {
+  margin: 0 0 12px;
+  color: #343d49;
+  font-size: 22px;
+}
+
+.rating-card p {
+  margin: 0;
+  color: #737b86;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.rating-stars {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 22px 0;
+  direction: ltr;
+}
+
+.rating-star {
+  padding: 4px;
+  background: transparent;
+  border: none;
+  color: #d5d9de;
+  font-size: 42px;
+  cursor: pointer;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.rating-star.selected {
+  color: #e8ad35;
+}
+
+.rating-star:hover:not(:disabled) {
+  color: #e8ad35;
+  transform: scale(1.15);
+}
+
+.rating-star:focus-visible {
+  outline: 2px solid #647b91;
+  outline-offset: 4px;
+  border-radius: 5px;
+}
+
+.rating-star:disabled {
+  cursor: not-allowed;
+}
+
+.rating-card .tracking-back-button {
+  min-width: 180px;
+  padding: 12px 26px;
+  border: none;
+  border-radius: 8px;
+  background: #647b91;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.rating-card .tracking-back-button:hover:not(:disabled) {
+  background: #526a81;
+}
+
+.rating-card .tracking-back-button:disabled {
+  background: #b8c2cb;
+  cursor: not-allowed;
+}
+
+.rating-card .rating-message {
+  margin-top: 16px;
+  color: #47805b;
+  font-weight: 600;
+}
+
+/* Mobile */
+
 @media (max-width: 600px) {
   .tracking-page {
     padding: 28px 16px;
@@ -264,5 +356,17 @@
   .tracking-request-card,
   .current-status-card {
     padding: 20px;
+  }
+
+  .rating-card {
+    padding: 24px 16px;
+  }
+
+  .rating-card h2 {
+    font-size: 20px;
+  }
+
+  .rating-star {
+    font-size: 36px;
   }
 }

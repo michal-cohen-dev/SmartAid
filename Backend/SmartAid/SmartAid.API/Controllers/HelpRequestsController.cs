@@ -256,5 +256,35 @@ namespace SmartAid.API.Controllers
                 message = "הטיפול הסתיים בהצלחה."
             });
         }
+
+
+        [HttpPost("{id}/rate")]
+        public ActionResult RateRequest(
+    int id,
+    [FromBody] RateHelpRequestDto ratingDto)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var rated = _helpRequestService.TryRateCompletedRequest(
+                id,
+                userId,
+                ratingDto.Rating);
+
+            if (!rated)
+            {
+                return Conflict(new
+                {
+                    message = "לא ניתן לדרג את הבקשה. ייתכן שהיא לא הושלמה, אינה שייכת לך או שכבר דורגה."
+                });
+            }
+
+            return Ok(new
+            {
+                message = "הדירוג נשמר בהצלחה."
+            });
+        }
     }
 }
