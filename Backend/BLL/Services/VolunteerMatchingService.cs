@@ -35,9 +35,7 @@ namespace BLL.Services
             int helpRequestId,
             CancellationToken cancellationToken = default)
         {
-            // שליפת בקשת העזרה
-            var helpRequest =
-                _helpRequestRepository.GetById(helpRequestId);
+            var helpRequest = _helpRequestRepository.GetById(helpRequestId);
 
             if (helpRequest == null)
                 throw new NotFoundException("Help request not found.");
@@ -50,107 +48,228 @@ namespace BLL.Services
                 throw new BusinessRuleException(
                     "The help request must have a help type.");
 
-            // שליפת המתנדבים הפעילים עם סוגי העזרה והציוד שלהם
-            var volunteers =
-                _volunteerRepository.GetAllWithQualifications();
+            var volunteers = _volunteerRepository.GetAllWithQualifications();
 
-            // איסוף מזהי הציוד הנדרש
             var requiredEquipmentIds = helpRequest.RequiredEquipments
                 .Select(e => e.EquipmentTypeId)
                 .Distinct()
                 .ToList();
 
-            // סינון לפי תנאי הסף
             var eligibleVolunteers = volunteers
                 .Where(volunteer =>
                 {
-                    // התאמה לסוג העזרה
                     bool hasRequiredHelpType =
                         volunteer.VolunteerHelpTypes.Any(
                             ht => ht.HelpTypeId == helpRequest.HelpTypeId);
 
-                    // החזקת כל הציוד הנדרש
                     bool hasAllRequiredEquipment =
                         requiredEquipmentIds.All(requiredId =>
                             volunteer.VolunteerEquipments.Any(
                                 equipment =>
                                     equipment.EquipmentTypeId == requiredId));
 
-                    return hasRequiredHelpType &&
-                           hasAllRequiredEquipment;
+                    return hasRequiredHelpType && hasAllRequiredEquipment;
                 })
                 .ToList();
 
-            // סינון ראשוני לפי מרחק אווירי
             const double maxAirDistanceKm = 15;
 
             var nearbyVolunteers = eligibleVolunteers
                 .Where(volunteer =>
                 {
-                    double? distance = CalculateDistanceKm(
-                        volunteer,
-                        helpRequest);
+                    double? distance = CalculateDistanceKm(volunteer, helpRequest);
 
                     return distance.HasValue &&
                            distance.Value <= maxAirDistanceKm;
                 })
                 .ToList();
 
-            // אין מתנדבים מתאימים
             if (!nearbyVolunteers.Any())
-            {
                 return new List<VolunteerMatchResult>();
-            }
 
-            // יצירת רשימת מיקומי המתנדבים
             var origins = nearbyVolunteers
                 .Select(volunteer => new TomTomLocation(
                     volunteer.Latitude!.Value,
                     volunteer.Longitude!.Value))
                 .ToList();
 
-            // מיקום בקשת העזרה
             var destination = new TomTomLocation(
                 helpRequest.Latitude,
                 helpRequest.Longitude);
 
-            // שליחת כל המתנדבים ל-TomTom בקריאה אחת
             var routes = await _tomTomRoutingService.CalculateRoutesAsync(
                 origins,
                 destination,
                 cancellationToken);
 
-            // שיוך תוצאות המסלול למתנדבים
-            var volunteersWithRoutes = routes
+            var validResults = routes
                 .Where(route =>
                     route.DestinationIndex == 0 &&
                     route.OriginIndex >= 0 &&
                     route.OriginIndex < nearbyVolunteers.Count &&
                     route.TravelTimeInSeconds.HasValue &&
+                    route.DistanceInMeters.HasValue &&
                     string.IsNullOrEmpty(route.ErrorCode))
-                .Select(route => new VolunteerMatchResult
+                .Select(route => new
                 {
                     Volunteer = nearbyVolunteers[route.OriginIndex],
-                    TravelTimeInSeconds = route.TravelTimeInSeconds.Value,
-                    DistanceInMeters = route.DistanceInMeters,
-                    ReliabilityScore =
-                        nearbyVolunteers[route.OriginIndex].ReliabilityScore
+                    Distance = route.DistanceInMeters!.Value,
+                    TravelTime = route.TravelTimeInSeconds!.Value
                 })
                 .ToList();
 
-            return volunteersWithRoutes;
+            if (!validResults.Any())
+                return new List<VolunteerMatchResult>();
+
+            return validResults
+                .Select(x =>
+                {
+                    double distanceScore = Math.Clamp(
+                        100.0 * (15000 - x.Distance) / 15000,
+                        0,
+                        100);
+
+                    double reliabilityScore =
+                        Math.Clamp(x.Volunteer.ReliabilityScore, 0, 100);
+
+                    double matchScore =
+                        distanceScore * 0.8 + reliabilityScore * 0.2;
+
+                    return new VolunteerMatchResult
+                    {
+                        Volunteer = x.Volunteer,
+                        DistanceInMeters = x.Distance,
+                        TravelTimeInSeconds = x.TravelTime,
+                        ReliabilityScore = reliabilityScore,
+                        MatchScore = matchScore
+                    };
+                })
+                .OrderByDescending(x => x.MatchScore)
+                .ToList();
         }
 
-        // חישוב מרחק אווירי באמצעות נוסחת Haversine
+        public async Task<List<HelpRequestMatchResult>>
+            GetEligibleRequestsForVolunteerAsync(
+                int volunteerId,
+                CancellationToken cancellationToken = default)
+        {
+            var volunteer =
+                _volunteerRepository.GetByIdWithQualifications(volunteerId);
+
+            if (volunteer == null || !volunteer.IsActive)
+                return new List<HelpRequestMatchResult>();
+
+            if (volunteer.Latitude == null || volunteer.Longitude == null)
+                return new List<HelpRequestMatchResult>();
+
+            if (_helpRequestRepository.HasActiveAssignment(volunteerId))
+                return new List<HelpRequestMatchResult>();
+
+            var openRequests = _helpRequestRepository.GetOpenRequests();
+
+            var eligibleRequests = openRequests
+                .Where(request =>
+                {
+                    if (request.HelpTypeId == null)
+                        return false;
+
+                    bool hasRequiredHelpType =
+                        volunteer.VolunteerHelpTypes.Any(
+                            ht => ht.HelpTypeId == request.HelpTypeId);
+
+                    var requiredEquipmentIds = request.RequiredEquipments
+                        .Select(e => e.EquipmentTypeId)
+                        .Distinct()
+                        .ToList();
+
+                    bool hasAllRequiredEquipment =
+                        requiredEquipmentIds.All(requiredId =>
+                            volunteer.VolunteerEquipments.Any(
+                                equipment =>
+                                    equipment.EquipmentTypeId == requiredId));
+
+                    return hasRequiredHelpType && hasAllRequiredEquipment;
+                })
+                .Where(request =>
+                {
+                    double? distance = CalculateDistanceKm(volunteer, request);
+
+                    return distance.HasValue && distance.Value <= 15;
+                })
+                .ToList();
+
+            if (!eligibleRequests.Any())
+                return new List<HelpRequestMatchResult>();
+
+            var origin = new TomTomLocation(
+                volunteer.Latitude.Value,
+                volunteer.Longitude.Value);
+
+            var destinations = eligibleRequests
+                .Select(request => new TomTomLocation(
+                    request.Latitude,
+                    request.Longitude))
+                .ToList();
+
+            var routes =
+                await _tomTomRoutingService.CalculateRoutesToMultipleDestinationsAsync(
+                    origin,
+                    destinations,
+                    cancellationToken);
+
+            var validResults = routes
+                .Where(route =>
+                    route.OriginIndex == 0 &&
+                    route.DestinationIndex >= 0 &&
+                    route.DestinationIndex < eligibleRequests.Count &&
+                    route.TravelTimeInSeconds.HasValue &&
+                    route.DistanceInMeters.HasValue &&
+                    string.IsNullOrEmpty(route.ErrorCode))
+                .Select(route => new
+                {
+                    Request = eligibleRequests[route.DestinationIndex],
+                    Distance = route.DistanceInMeters!.Value,
+                    TravelTime = route.TravelTimeInSeconds!.Value
+                })
+                .ToList();
+
+            if (!validResults.Any())
+                return new List<HelpRequestMatchResult>();
+
+            double reliabilityScore =
+                Math.Clamp(volunteer.ReliabilityScore, 0, 100);
+
+            return validResults
+                .Select(x =>
+                {
+                    double distanceScore = Math.Clamp(
+                        100.0 * (15000 - x.Distance) / 15000,
+                        0,
+                        100);
+
+                    double matchScore =
+                        distanceScore * 0.8 + reliabilityScore * 0.2;
+
+                    return new HelpRequestMatchResult
+                    {
+                        HelpRequest = x.Request,
+                        DistanceInMeters = x.Distance,
+                        TravelTimeInSeconds = x.TravelTime,
+                        ReliabilityScore = reliabilityScore,
+                        MatchScore = matchScore
+                    };
+                })
+                .OrderByDescending(x => x.MatchScore)
+                .ToList();
+        }
+
         private static double? CalculateDistanceKm(
             Volunteer volunteer,
             HelpRequest request)
         {
             if (volunteer.Latitude == null ||
                 volunteer.Longitude == null)
-            {
                 return null;
-            }
 
             const double earthRadiusKm = 6371;
 

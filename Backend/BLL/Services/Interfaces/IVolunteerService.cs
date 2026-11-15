@@ -17,5 +17,6 @@ namespace BLL.Services.Interfaces
         void Delete(int id, int currentUserId);
         void DecreaseReliabilityScore(int volunteerId);
         void IncreaseReliabilityScore(int volunteerId);
+        void UpdateLocation(int userId, double latitude, double longitude);
     }
 }

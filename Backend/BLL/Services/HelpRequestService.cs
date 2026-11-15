@@ -1,12 +1,15 @@
 ﻿
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
 using AutoMapper;
 using BLL.Exceptions;
 using BLL.Services.Interfaces;
 using DAL.Entities;
-using DAL.Repositories;
 using DAL.Repositories.Interfaces;
 using DTO;
-using Microsoft.EntityFrameworkCore;
 
 namespace BLL.Services
 {
@@ -15,6 +18,7 @@ namespace BLL.Services
         private readonly IVolunteerRepository _volunteerRepository;
         private readonly IHelpRequestRepository _helpRequestRepository;
         private readonly IVolunteerService _volunteerService;
+        private readonly IVolunteerMatchingService _volunteerMatchingService;
         private readonly IMapper _mapper;
         private readonly IImageService _imageService;
         private readonly IRequestEquipmentRepository _requestEquipmentRepository;
@@ -29,7 +33,8 @@ namespace BLL.Services
             IEquipmentTypeRepository equipmentTypeRepository,
             IHelpTypeRepository helpTypeRepository,
             IVolunteerService volunteerService,
-            IVolunteerRepository volunteerRepository)
+            IVolunteerRepository volunteerRepository,
+            IVolunteerMatchingService volunteerMatchingService)
         {
             _helpRequestRepository = helpRequestRepository;
             _mapper = mapper;
@@ -39,6 +44,7 @@ namespace BLL.Services
             _helpTypeRepository = helpTypeRepository;
             _volunteerService = volunteerService;
             _volunteerRepository = volunteerRepository;
+            _volunteerMatchingService = volunteerMatchingService;
         }
 
         public List<HelpRequestDto> GetAll()
@@ -50,10 +56,8 @@ namespace BLL.Services
         public List<HelpRequestDto> GetByUserId(int userId)
         {
             var requests = _helpRequestRepository.GetByUserId(userId);
-
             return _mapper.Map<List<HelpRequestDto>>(requests);
         }
-
 
         public List<HelpRequestDto> GetByVolunteerId(int userId)
         {
@@ -67,8 +71,9 @@ namespace BLL.Services
             return _mapper.Map<List<HelpRequestDto>>(requests);
         }
 
-
-        public List<HelpRequestPreviewDto> GetOpenForVolunteer(int userId)
+        public async Task<List<HelpRequestPreviewDto>> GetOpenForVolunteerAsync(
+            int userId,
+            CancellationToken cancellationToken = default)
         {
             var volunteer = _volunteerService.GetByUserId(userId);
 
@@ -78,9 +83,13 @@ namespace BLL.Services
             if (_helpRequestRepository.HasActiveAssignment(volunteer.Id))
                 return new List<HelpRequestPreviewDto>();
 
-            var requests = _helpRequestRepository.GetOpenRequests();
+            var matches = await _volunteerMatchingService
+                .GetEligibleRequestsForVolunteerAsync(
+                    volunteer.Id,
+                    cancellationToken);
 
-            var fullDtos = _mapper.Map<List<HelpRequestDto>>(requests);
+            var fullDtos = _mapper.Map<List<HelpRequestDto>>(
+                matches.Select(match => match.HelpRequest).ToList());
 
             return fullDtos.Select(request => new HelpRequestPreviewDto
             {
@@ -93,7 +102,6 @@ namespace BLL.Services
             }).ToList();
         }
 
-
         public HelpRequestDto? GetById(int id)
         {
             var request = _helpRequestRepository.GetById(id);
@@ -104,16 +112,11 @@ namespace BLL.Services
             return _mapper.Map<HelpRequestDto>(request);
         }
 
-
         public bool IsOwner(int requestId, int userId)
         {
             var request = _helpRequestRepository.GetOwned(requestId, userId);
-
             return request != null;
         }
-
-
-
 
         public bool IsAssignedVolunteer(int requestId, int userId)
         {
@@ -129,7 +132,6 @@ namespace BLL.Services
 
             return request.AssignedVolunteerId == volunteer.Id;
         }
-
 
         public int Add(HelpRequestPostDto helpRequestDto, int userId)
         {
@@ -169,10 +171,8 @@ namespace BLL.Services
                     request.ImageName = savedImageName;
                 }
 
-                // שמירת הבקשה וקבלת המזהה שלה
                 _helpRequestRepository.Add(request);
 
-                // שמירת הציוד הנדרש בטבלת RequestEquipments
                 foreach (var equipmentTypeId in equipmentTypeIds)
                 {
                     _requestEquipmentRepository.Add(new RequestEquipment
@@ -198,10 +198,9 @@ namespace BLL.Services
 
                 throw;
             }
+
             return request.Id;
         }
-
-        
 
         public bool Update(
             int id,
@@ -233,7 +232,6 @@ namespace BLL.Services
             existingRequest.Address = helpRequestDto.Address;
             existingRequest.AddressNotes = helpRequestDto.AddressNotes;
 
-            // בדיקה שסוג העזרה קיים במערכת
             var helpType = _helpTypeRepository.GetById(
                 helpRequestDto.HelpTypeId);
 
@@ -281,14 +279,11 @@ namespace BLL.Services
 
         public bool TryAssignToVolunteer(int requestId, int userId)
         {
-            // איתור פרופיל המתנדב לפי המשתמש המחובר
             var volunteer = _volunteerService.GetByUserId(userId);
 
-            // רק מתנדב פעיל יכול לקבל בקשה
             if (volunteer == null || !volunteer.IsActive)
                 return false;
 
-            // הקצאה אטומית: רק מתנדב אחד יוכל לקבל את הבקשה
             return _helpRequestRepository.TryAssignToVolunteer(
                 requestId,
                 volunteer.Id);
@@ -296,14 +291,11 @@ namespace BLL.Services
 
         public bool TryMarkInTreatment(int requestId, int userId)
         {
-            // איתור פרופיל המתנדב לפי המשתמש המחובר
             var volunteer = _volunteerService.GetByUserId(userId);
 
-            // רק מתנדב פעיל יכול לסמן שהגיע
             if (volunteer == null || !volunteer.IsActive)
                 return false;
 
-            // שינוי הסטטוס מ-Assigned ל-InTreatment
             return _helpRequestRepository.TryMarkInTreatment(
                 requestId,
                 volunteer.Id);
@@ -334,9 +326,9 @@ namespace BLL.Services
         }
 
         public bool TryRateCompletedRequest(
-    int requestId,
-    int userId,
-    int rating)
+            int requestId,
+            int userId,
+            int rating)
         {
             if (rating < 1 || rating > 5)
                 return false;
@@ -347,7 +339,6 @@ namespace BLL.Services
                 rating);
         }
 
-
         public bool TryCancelRequest(int requestId, int userId)
         {
             var request = _helpRequestRepository.GetById(requestId);
@@ -355,7 +346,6 @@ namespace BLL.Services
             if (request == null)
                 return false;
 
-            // ביטול מצד מבקש העזרה
             if (request.UserId == userId)
             {
                 return _helpRequestRepository.TryCancelRequest(
@@ -364,7 +354,6 @@ namespace BLL.Services
                     cancelledByVolunteer: false);
             }
 
-            // ביטול מצד מתנדב
             var volunteer = _volunteerService.GetByUserId(userId);
 
             if (volunteer == null ||

@@ -35,15 +35,23 @@ namespace SmartAid.API.Controllers
 
 
         [HttpGet("open")]
-        public ActionResult<IEnumerable<HelpRequestPreviewDto>> GetOpenForVolunteer()
+        public async Task<ActionResult<IEnumerable<HelpRequestPreviewDto>>> GetOpenForVolunteer(
+     CancellationToken cancellationToken)
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (!int.TryParse(userIdClaim, out var userId))
                 return Unauthorized();
 
-            return Ok(_helpRequestService.GetOpenForVolunteer(userId));
+            var requests = await _helpRequestService.GetOpenForVolunteerAsync(
+                userId,
+                cancellationToken);
+
+            return Ok(requests);
         }
+
+
+
 
 
         [Authorize]

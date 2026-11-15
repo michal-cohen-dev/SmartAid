@@ -1,10 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿
+using System.ComponentModel.DataAnnotations;
 
 namespace DTO;
 
@@ -22,6 +17,9 @@ public class VolunteerDto
     [StringLength(20, MinimumLength = 9,
         ErrorMessage = "Phone number must contain between 9 and 20 characters.")]
     public string PhoneNumber { get; set; } = string.Empty;
+
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
 
     public bool IsActive { get; set; }
     public int TotalOffersReceived { get; set; }

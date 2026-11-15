@@ -152,6 +152,9 @@ namespace BLL.Services
                 FullName = user.FullName,
                 PhoneNumber = user.PhoneNumber,
 
+                Latitude = volunteerDto.Latitude,
+                Longitude = volunteerDto.Longitude,
+
                 IsActive = true,
 
                 TotalOffersReceived = 0,
@@ -213,5 +216,30 @@ namespace BLL.Services
         {
             _volunteerRepository.IncreaseReliabilityScore(volunteerId);
         }
+
+
+        public void UpdateLocation(
+            int userId,
+            double latitude,
+            double longitude)
+        {
+            if (latitude < -90 || latitude > 90)
+                throw new ArgumentException("Invalid latitude.");
+
+            if (longitude < -180 || longitude > 180)
+                throw new ArgumentException("Invalid longitude.");
+
+            var volunteer = _volunteerRepository.GetByUserId(userId);
+
+            if (volunteer == null)
+                throw new NotFoundException("Volunteer profile not found.");
+
+            volunteer.Latitude = latitude;
+            volunteer.Longitude = longitude;
+            volunteer.LastLocationUpdatedAt = DateTime.UtcNow;
+
+            _volunteerRepository.Update(volunteer);
+        }
+
     }
 }

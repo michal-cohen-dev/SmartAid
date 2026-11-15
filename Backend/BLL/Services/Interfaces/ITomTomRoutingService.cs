@@ -1,4 +1,8 @@
 ﻿
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+
 using BLL.Services.ExternalServices;
 
 namespace BLL.Services.Interfaces
@@ -8,6 +12,11 @@ namespace BLL.Services.Interfaces
         Task<IReadOnlyList<TomTomRouteResult>> CalculateRoutesAsync(
             IReadOnlyCollection<TomTomLocation> origins,
             TomTomLocation destination,
+            CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyList<TomTomRouteResult>> CalculateRoutesToMultipleDestinationsAsync(
+            TomTomLocation origin,
+            IReadOnlyCollection<TomTomLocation> destinations,
             CancellationToken cancellationToken = default);
     }
 }

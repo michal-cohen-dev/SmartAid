@@ -16,5 +16,7 @@ namespace BLL.Services.Models
         public int? DistanceInMeters { get; set; }
 
         public double ReliabilityScore { get; set; }
+
+        public double MatchScore { get; set; }
     }
 }

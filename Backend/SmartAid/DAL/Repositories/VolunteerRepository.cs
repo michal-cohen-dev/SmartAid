@@ -46,6 +46,9 @@ namespace DAL.Repositories
             {
                 entity.FullName = volunteer.FullName;
                 entity.PhoneNumber = volunteer.PhoneNumber;
+                entity.Latitude = volunteer.Latitude;
+                entity.Longitude = volunteer.Longitude;
+                entity.LastLocationUpdatedAt = volunteer.LastLocationUpdatedAt;
                 entity.IsActive = volunteer.IsActive;
                 entity.TotalOffersReceived = volunteer.TotalOffersReceived;
                 entity.TotalOffersAccepted = volunteer.TotalOffersAccepted;
@@ -170,6 +173,14 @@ namespace DAL.Repositories
         public IDbContextTransaction BeginTransaction()
         {
             return _context.Database.BeginTransaction();
+        }
+
+        public Volunteer? GetByIdWithQualifications(int id)
+        {
+            return _context.Volunteers
+                .Include(v => v.VolunteerHelpTypes)
+                .Include(v => v.VolunteerEquipments)
+                .FirstOrDefault(v => v.Id == id);
         }
     }
 }
