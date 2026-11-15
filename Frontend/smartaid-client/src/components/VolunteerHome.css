@@ -143,3 +143,39 @@
   font-size: 14px;
   color: #526a81;
 }
+
+.volunteer-location-details {
+  margin-top: 14px;
+}
+
+.volunteer-map {
+  margin-top: 18px;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 10px;
+}
+
+.volunteer-map h3 {
+  margin: 0 0 14px;
+  color: #343d49;
+  font-size: 18px;
+}
+
+.volunteer-map iframe {
+  display: block;
+  border: 0;
+  border-radius: 8px;
+}
+
+.volunteer-map a {
+  display: inline-block;
+  margin-top: 12px;
+  color: #176d59;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.volunteer-map a:hover {
+  text-decoration: underline;
+}
