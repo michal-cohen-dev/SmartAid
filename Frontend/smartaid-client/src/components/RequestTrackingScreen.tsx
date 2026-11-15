@@ -355,14 +355,28 @@ useEffect(() => {
         )}
 
         {request.assignedVolunteerName && (
-          <div className="tracking-info">
-            <span>🙋</span>
-            <p>
-              המתנדב המשויך לבקשה:{" "}
-              <strong>{request.assignedVolunteerName}</strong>
-            </p>
-          </div>
-        )}
+  <section className="volunteer-info-card">
+    <div className="volunteer-info-icon">🙋</div>
+
+    <div className="volunteer-info-content">
+      <span className="volunteer-info-label">
+        המתנדב שמטפל בבקשה שלך
+      </span>
+
+      <h3>{request.assignedVolunteerName}</h3>
+
+      <p>
+        {request.status === 1
+          ? "המתנדב אישר את הבקשה ונמצא בדרכו אליך."
+          : request.status === 4
+          ? "המתנדב הגיע אליך ומטפל בבקשה."
+          : request.status === 2
+          ? "המתנדב השלים את הטיפול בבקשה."
+          : "המתנדב משויך לבקשת העזרה שלך."}
+      </p>
+    </div>
+  </section>
+)}
 
         {isCancelled && (
           <div className="tracking-info">

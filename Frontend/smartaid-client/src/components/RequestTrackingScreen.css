@@ -370,3 +370,63 @@
     font-size: 36px;
   }
 }
+
+/* Volunteer information card */
+
+.volunteer-info-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 22px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #dce4eb;
+  border-radius: 10px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
+}
+
+.volunteer-info-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #edf1f4;
+  font-size: 28px;
+}
+
+.volunteer-info-content {
+  flex: 1;
+}
+
+.volunteer-info-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #737b86;
+  font-size: 13px;
+}
+
+.volunteer-info-content h3 {
+  margin: 0 0 7px;
+  color: #343d49;
+  font-size: 20px;
+}
+
+.volunteer-info-content p {
+  margin: 0;
+  color: #626d79;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .volunteer-info-card {
+    padding: 20px;
+  }
+
+  .volunteer-info-content h3 {
+    font-size: 18px;
+  }
+}
