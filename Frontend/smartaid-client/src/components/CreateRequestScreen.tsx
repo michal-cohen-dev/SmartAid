@@ -41,6 +41,9 @@ function CreateRequestScreen() {
   const [longitude, setLongitude] = useState<number | null>(null);
   const [locationStatus, setLocationStatus] = useState('');
 
+  const [address, setAddress] = useState('');
+const [addressNotes, setAddressNotes] = useState('');
+
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [isLoadingHelpTypes, setIsLoadingHelpTypes] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -260,10 +263,11 @@ function CreateRequestScreen() {
       formData.append('Description', description.trim());
       formData.append('Latitude', String(latitude));
       formData.append('Longitude', String(longitude));
-      formData.append(
-        'Address',
-        'מיקום לפי קואורדינטות GPS'
-      );
+      formData.append('Address', address.trim());
+
+if (addressNotes.trim()) {
+  formData.append('AddressNotes', addressNotes.trim());
+}
       formData.append('HelpTypeId', helpTypeId);
 
       const response = await apiRequest<{
@@ -503,28 +507,90 @@ function CreateRequestScreen() {
               </div>
 
               <div className="create-request-location">
-                <label>מיקום</label>
+  <label>מיקום</label>
 
-                <button
-                  className="create-request-button"
-                  type="button"
-                  onClick={handleGetLocation}
-                  disabled={isLoadingLocation}
-                >
-                  {isLoadingLocation
-                    ? 'מקבל מיקום...'
-                    : 'קבלת המיקום הנוכחי שלי'}
-                </button>
+  <button
+    className="create-request-button"
+    type="button"
+    onClick={handleGetLocation}
+    disabled={isLoadingLocation}
+  >
+    {isLoadingLocation
+      ? 'מקבל מיקום...'
+      : 'קבלת המיקום הנוכחי שלי'}
+  </button>
 
-                {locationStatus && (
-                  <p
-                    className="create-request-status"
-                    role="status"
-                  >
-                    {locationStatus}
-                  </p>
-                )}
-              </div>
+  {locationStatus && (
+    <p
+      className="create-request-status"
+      role="status"
+    >
+      {locationStatus}
+    </p>
+  )}
+
+  <div className="create-request-field">
+    <label htmlFor="address">
+      כתובת מדויקת
+    </label>
+
+    <input
+      id="address"
+      type="text"
+      value={address}
+      onChange={(e) => setAddress(e.target.value)}
+      placeholder="לדוגמה: הרצל 10, פתח תקווה"
+      maxLength={300}
+      required
+    />
+  </div>
+
+  <div className="create-request-field">
+    <label htmlFor="addressNotes">
+      הערות למתנדב לגבי המיקום (לא חובה)
+    </label>
+
+    <textarea
+      id="addressNotes"
+      value={addressNotes}
+      onChange={(e) => setAddressNotes(e.target.value)}
+      placeholder="לדוגמה: קומה 2, דירה 5, כניסה מהחצר"
+      maxLength={300}
+    />
+  </div>
+</div>
+
+{/* כאן להדביק את שני השדות החדשים */}
+
+<div className="create-request-field">
+  <label htmlFor="address">
+    כתובת מדויקת
+  </label>
+
+  <input
+    id="address"
+    type="text"
+    value={address}
+    onChange={(e) => setAddress(e.target.value)}
+    placeholder="לדוגמה: הרצל 10, פתח תקווה"
+    maxLength={300}
+    required
+  />
+</div>
+
+<div className="create-request-field">
+  <label htmlFor="addressNotes">
+    הערות למתנדב לגבי המיקום (לא חובה)
+  </label>
+
+  <textarea
+    id="addressNotes"
+    value={addressNotes}
+    onChange={(e) => setAddressNotes(e.target.value)}
+    placeholder="לדוגמה: קומה 2, דירה 5, כניסה מהחצר"
+    maxLength={300}
+  />
+</div>
 
               {submitError && (
                 <p
