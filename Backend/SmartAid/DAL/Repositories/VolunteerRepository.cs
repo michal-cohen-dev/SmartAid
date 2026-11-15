@@ -96,6 +96,15 @@ namespace DAL.Repositories
 
             _context.SaveChanges();
         }
+
+        public List<Volunteer> GetAllWithQualifications()
+        {
+            return _context.Volunteers
+                .Include(v => v.VolunteerHelpTypes)
+                .Include(v => v.VolunteerEquipments)
+                .Where(v => v.IsActive)
+                .ToList();
+        }
     }
 }
 

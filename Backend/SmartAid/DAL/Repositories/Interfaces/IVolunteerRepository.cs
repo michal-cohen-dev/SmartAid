@@ -20,5 +20,6 @@ namespace DAL.Repositories.Interfaces
      Volunteer volunteer,
      List<int> equipmentTypeIds,
      List<int> helpTypeIds);
+        List<Volunteer> GetAllWithQualifications();
     }
 }

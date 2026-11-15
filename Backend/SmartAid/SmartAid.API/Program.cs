@@ -123,6 +123,10 @@ builder.Services.AddScoped<IRequestEquipmentService, RequestEquipmentService>();
 builder.Services.AddScoped<IRequestOfferService, RequestOfferService>();
 builder.Services.AddScoped<IEquipmentTypeService, EquipmentTypeService>();
 
+builder.Services.AddScoped<
+    IVolunteerMatchingService,
+    VolunteerMatchingService>();
+
 // TomTom
 builder.Services.AddHttpClient<
     ITomTomRoutingService,
