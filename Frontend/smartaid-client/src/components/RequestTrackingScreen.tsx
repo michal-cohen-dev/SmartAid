@@ -29,34 +29,56 @@ function RequestTrackingScreen() {
   const [ratingMessage, setRatingMessage] = useState("");
 
   useEffect(() => {
-    document.title = "מעקב אחר בקשת עזרה | SmartAid";
+  document.title = "מעקב אחר בקשת עזרה | SmartAid";
 
-    const loadRequest = async () => {
-      if (!id || !Number.isInteger(Number(id)) || Number(id) <= 0) {
-        setError("מזהה הבקשה אינו תקין.");
-        setLoading(false);
-        return;
-      }
+  if (!id || !Number.isInteger(Number(id)) || Number(id) <= 0) {
+    setError("מזהה הבקשה אינו תקין.");
+    setLoading(false);
+    return;
+  }
 
-      try {
-        const data = await apiRequest<HelpRequest>(
-          `/api/HelpRequests/${id}`
-        );
+  let isMounted = true;
 
+  const loadRequest = async (showLoading = false) => {
+    if (showLoading) {
+      setLoading(true);
+    }
+
+    try {
+      const data = await apiRequest<HelpRequest>(
+        `/api/HelpRequests/${id}`
+      );
+
+      if (isMounted) {
         setRequest(data);
-      } catch (err) {
+        setError("");
+      }
+    } catch (err) {
+      if (isMounted) {
         setError(
           err instanceof Error
             ? err.message
             : "לא ניתן לטעון את פרטי הבקשה."
         );
-      } finally {
+      }
+    } finally {
+      if (isMounted && showLoading) {
         setLoading(false);
       }
-    };
+    }
+  };
 
+  loadRequest(true);
+
+  const intervalId = window.setInterval(() => {
     loadRequest();
-  }, [id]);
+  }, 5000);
+
+  return () => {
+    isMounted = false;
+    window.clearInterval(intervalId);
+  };
+}, [id]);
 
   const submitRating = async () => {
     if (!id || selectedRating < 1 || selectedRating > 5) {
