@@ -67,26 +67,33 @@ namespace DAL.Repositories
                 _context.SaveChanges();
             }
         }
-    
 
-    public void AddWithEquipment(
-    Volunteer volunteer,
-    List<int> equipmentTypeIds)
+
+        public void AddWithEquipmentAndHelpTypes(
+         Volunteer volunteer,
+         List<int> equipmentTypeIds,
+         List<int> helpTypeIds)
         {
             _context.Volunteers.Add(volunteer);
 
-            foreach (var equipmentTypeId in equipmentTypeIds)
+            foreach (var equipmentTypeId in equipmentTypeIds.Distinct())
             {
-                var volunteerEquipment = new VolunteerEquipment
+                volunteer.VolunteerEquipments.Add(new VolunteerEquipment
                 {
                     Volunteer = volunteer,
                     EquipmentTypeId = equipmentTypeId
-                };
-
-                _context.VolunteerEquipments.Add(volunteerEquipment);
+                });
             }
 
-            // שמירת המתנדב וכל פריטי הציוד יחד
+            foreach (var helpTypeId in helpTypeIds.Distinct())
+            {
+                volunteer.VolunteerHelpTypes.Add(new VolunteerHelpType
+                {
+                    Volunteer = volunteer,
+                    HelpTypeId = helpTypeId
+                });
+            }
+
             _context.SaveChanges();
         }
     }

@@ -1,14 +1,20 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿
+using System.ComponentModel.DataAnnotations;
 
 namespace DTO;
 
 public class HelpRequestUpdateDto
 {
+    [Required(ErrorMessage = "Title is required.")]
+    [StringLength(100, MinimumLength = 2,
+        ErrorMessage = "Title must contain between 2 and 100 characters.")]
+    public string Title { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Description is required.")]
+    [StringLength(1000, MinimumLength = 5,
+        ErrorMessage = "Description must contain between 5 and 1000 characters.")]
+    public string Description { get; set; } = string.Empty;
+
     [Range(-90, 90,
         ErrorMessage = "Latitude must be between -90 and 90.")]
     public double Latitude { get; set; }
@@ -25,6 +31,12 @@ public class HelpRequestUpdateDto
     [StringLength(300,
         ErrorMessage = "Address notes cannot exceed 300 characters.")]
     public string? AddressNotes { get; set; }
+
+    [Required(ErrorMessage = "Help type is required.")]
+    [Range(1, int.MaxValue,
+    ErrorMessage = "A valid help type must be selected.")]
+    public int HelpTypeId { get; set; }
+
 
     [MaxLength(20,
         ErrorMessage = "You cannot select more than 20 equipment types.")]

@@ -8,7 +8,8 @@ namespace DAL.Entities
         Open = 0,
         Assigned = 1,
         Completed = 2,
-        Cancelled = 3
+        Cancelled = 3,
+        InTreatment = 4
     }
 
     public class HelpRequest
@@ -18,6 +19,10 @@ namespace DAL.Entities
         // FK למשתמש פותח הקריאה
         public int UserId { get; set; }
         public User User { get; set; } = null!;
+
+        // כותרת ותיאור של בקשת העזרה
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
 
         // מיקום גיאוגרפי עבור אלגוריתם המרחק והניווט
         public double Latitude { get; set; }
@@ -29,6 +34,11 @@ namespace DAL.Entities
         // הערות מיקום נוספות (למשל: קומה/דירה, או תיאור השוליים בכביש)
         public string? AddressNotes { get; set; }
         public string? ImageName { get; set; }
+
+        public int? HelpTypeId { get; set; }
+        public HelpType? HelpType { get; set; }
+
+
 
         public RequestStatus Status { get; set; } = RequestStatus.Open;
 

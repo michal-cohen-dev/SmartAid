@@ -1,0 +1,122 @@
+
+.registration-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background: #f7f8fa;
+  color: #30343b;
+}
+
+.registration-card {
+  width: 100%;
+  max-width: 500px;
+  padding: 40px;
+  background: #ffffff;
+  border: 1px solid #e8eaed;
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(30, 40, 55, 0.06);
+}
+
+.registration-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.registration-header h1 {
+  margin: 0 0 10px;
+  font-size: 29px;
+  color: #343d49;
+}
+
+.registration-header p {
+  margin: 0;
+  color: #737b86;
+  font-size: 16px;
+}
+
+.registration-form {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+
+.registration-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.registration-field label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #424b57;
+}
+
+.registration-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid #d9dee5;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #30343b;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.registration-field input:focus {
+  border-color: #647b91;
+  box-shadow: 0 0 0 3px rgba(100, 123, 145, 0.12);
+}
+
+.registration-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #fff0f0;
+  color: #b42318;
+  font-size: 14px;
+}
+
+.registration-submit {
+  width: 100%;
+  padding: 13px;
+  margin-top: 5px;
+  border: none;
+  border-radius: 7px;
+  background: #647b91;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.registration-submit:hover:not(:disabled) {
+  background: #526a81;
+}
+
+.registration-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.registration-login {
+  margin: 25px 0 0;
+  text-align: center;
+  color: #737b86;
+  font-size: 14px;
+}
+
+.registration-login a {
+  color: #526a81;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.registration-login a:hover {
+  text-decoration: underline;
+}

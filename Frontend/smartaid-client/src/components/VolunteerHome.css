@@ -1,0 +1,130 @@
+
+.volunteer-page {
+  min-height: 100vh;
+  padding: 36px 6%;
+  background: #f7f8fa;
+  color: #30343b;
+  box-sizing: border-box;
+}
+
+.volunteer-header {
+  margin-bottom: 30px;
+}
+
+.volunteer-header h1 {
+  margin: 0 0 8px;
+  color: #424b57;
+  font-size: 30px;
+}
+
+.volunteer-header p {
+  margin: 0;
+  color: #737b86;
+  font-size: 16px;
+}
+
+.volunteer-availability {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 28px;
+  margin-bottom: 38px;
+  background: #ffffff;
+  border: 1px solid #e8eaed;
+  border-radius: 12px;
+}
+
+.volunteer-availability h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  color: #343d49;
+}
+
+.volunteer-availability p {
+  margin: 0;
+  color: #647b91;
+  font-size: 15px;
+}
+
+.volunteer-button {
+  padding: 11px 20px;
+  border: 1px solid #647b91;
+  border-radius: 7px;
+  background: #647b91;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.volunteer-button:hover {
+  background: #526a81;
+}
+
+.volunteer-requests-section h2 {
+  margin: 0 0 22px;
+  color: #343d49;
+  font-size: 24px;
+}
+
+.volunteer-requests-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.volunteer-request-card {
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #e8eaed;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(30, 40, 55, 0.04);
+}
+
+.volunteer-request-card h3 {
+  margin: 0 0 12px;
+  color: #343d49;
+  font-size: 19px;
+}
+
+.volunteer-request-description {
+  margin: 0 0 18px;
+  color: #626d79;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.volunteer-request-meta {
+  margin: 8px 0;
+  color: #737b86;
+  font-size: 13px;
+}
+
+.volunteer-request-card .volunteer-button {
+  margin-top: 14px;
+}
+
+.volunteer-message {
+  padding: 22px;
+  background: #ffffff;
+  border: 1px solid #e8eaed;
+  border-radius: 10px;
+  color: #737b86;
+}
+
+.volunteer-create-request {
+  margin-top: 34px;
+}
+
+@media (max-width: 800px) {
+  .volunteer-requests-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .volunteer-availability {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

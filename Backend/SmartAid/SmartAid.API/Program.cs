@@ -1,28 +1,33 @@
+
 using BLL.MappingProfiles;
 using BLL.Services;
 using BLL.Services.Interfaces;
+using BLL.Services.ExternalServices;
 using DAL;
 using DAL.Repositories;
 using DAL.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using SmartAid.API.Filters;
-using BLL.Services.ExternalServices;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
+// API Keys diagnostics
 Console.WriteLine(
     $"TomTom key loaded: {!string.IsNullOrWhiteSpace(builder.Configuration["TomTom:ApiKey"])}");
+
+var geminiApiKey = builder.Configuration["Gemini:ApiKey"];
+Console.WriteLine($"Gemini API key loaded: {!string.IsNullOrWhiteSpace(geminiApiKey)}");
+
 Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
 Console.WriteLine($"UserSecretsId: {builder.Configuration["UserSecretsId"]}");
 
+// JWT Configuration
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var jwtKey = builder.Configuration["Jwt:Key"];
 
@@ -33,6 +38,7 @@ if (string.IsNullOrWhiteSpace(jwtKey) ||
         "JWT Key is missing or too short. Configure Jwt__Key.");
 }
 
+// Authentication
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -55,6 +61,7 @@ builder.Services
         };
     });
 
+// Authorization
 builder.Services.AddAuthorization(options =>
 {
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
@@ -62,14 +69,28 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
-// äâãøú úé÷ééú äúîåðåú
+// CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("ReactClient", policy =>
+    {
+        policy
+            .WithOrigins(
+                "http://localhost:5173",
+                "https://smartaid-client.runasp.net")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
+// Images folder
 var imagesFolder = Path.GetFullPath(Path.Combine(
     builder.Environment.ContentRootPath,
     builder.Configuration["ImagesFolder"] ?? "../Images"));
 
 Directory.CreateDirectory(imagesFolder);
 
-// øéùåí ä-DbContext ìîñã äðúåðéí
+// Database
 var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
 
 if (string.IsNullOrWhiteSpace(connStr))
@@ -82,46 +103,64 @@ if (string.IsNullOrWhiteSpace(connStr))
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connStr));
 
-// øéùåí ä-AutoMapper áöåøä ðôøãú åú÷éðä
-builder.Services.AddAutoMapper(cfg => {
+// AutoMapper
+builder.Services.AddAutoMapper(cfg =>
+{
     cfg.AddProfile<MappingProfile>();
 });
 
-// øéùåí 7 ä-Repositories á-Dependency Injection (AddScoped)
+// Repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IVolunteerRepository, VolunteerRepository>();
 builder.Services.AddScoped<IEquipmentTypeRepository, EquipmentTypeRepository>();
+builder.Services.AddScoped<IHelpTypeRepository, HelpTypeRepository>();
 builder.Services.AddScoped<IVolunteerEquipmentRepository, VolunteerEquipmentRepository>();
 builder.Services.AddScoped<IHelpRequestRepository, HelpRequestRepository>();
 builder.Services.AddScoped<IRequestEquipmentRepository, RequestEquipmentRepository>();
 builder.Services.AddScoped<IRequestOfferRepository, RequestOfferRepository>();
+
+// Services
 builder.Services.AddScoped<IVolunteerService, VolunteerService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IHelpRequestService, HelpRequestService>();
 builder.Services.AddScoped<IRequestEquipmentService, RequestEquipmentService>();
 builder.Services.AddScoped<IRequestOfferService, RequestOfferService>();
 builder.Services.AddScoped<IEquipmentTypeService, EquipmentTypeService>();
+builder.Services.AddScoped<IVolunteerEquipmentService, VolunteerEquipmentService>();
+
+// TomTom
 builder.Services.AddHttpClient<
     ITomTomRoutingService,
     TomTomRoutingService>(client =>
     {
         client.BaseAddress = new Uri("https://api.tomtom.com/");
     });
-builder.Services.AddScoped<IVolunteerEquipmentService, VolunteerEquipmentService>();
+
+// AI Image Analysis
+builder.Services.AddHttpClient<
+    IImageAnalysisService,
+    ImageAnalysisService>();
+
+// Image Service
 builder.Services.AddSingleton<IImageService>(
     new ImageService(imagesFolder));
+
+// Authentication Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+
 builder.Services.AddScoped<IPasswordHasher<DAL.Entities.User>,
     PasswordHasher<DAL.Entities.User>>();
 
-
+// Controllers
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<GlobalExceptionFilter>();
 });
+
 builder.Services.AddEndpointsApiExplorer();
 
+// Swagger
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -150,23 +189,30 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-
 var app = builder.Build();
 
-//if (app.Environment.IsDevelopment())
-//{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-//}
+// Swagger
+app.UseSwagger();
+app.UseSwaggerUI();
+
+// Static images
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(imagesFolder),
     RequestPath = "/images"
 });
+
 app.UseHttpsRedirection();
+
+// CORS must run before authentication and authorization
+app.UseCors("ReactClient");
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
+
+// TomTom diagnostic endpoint
 if (app.Environment.IsDevelopment())
 {
     app.MapGet("/debug/tomtom", async (
@@ -188,4 +234,5 @@ if (app.Environment.IsDevelopment())
         return Results.Ok(results);
     }).AllowAnonymous();
 }
+
 app.Run();
