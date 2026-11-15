@@ -27,3 +27,9 @@ jobs:
       - name: Publish API
         run: dotnet publish Backend/SmartAid/SmartAid.API/SmartAid.API.csproj --configuration Release --output ./publish
 
+      - name: Upload API Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartaid-api-publish
+          path: ./publish
+          if-no-files-found: error
