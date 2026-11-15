@@ -6,6 +6,53 @@ export interface AuthResponse {
   token: string;
 }
 
+
+export class ApiError extends Error {
+  public readonly status: number;
+  public readonly details?: unknown;
+
+  constructor(
+    message: string,
+    status: number,
+    details?: unknown
+  ) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.details = details;
+  }
+}
+
+
+function getErrorMessage(data: unknown, status: number): string {
+  if (typeof data === "string" && data.trim()) {
+    return data;
+  }
+
+  if (data && typeof data === "object") {
+    const body = data as Record<string, unknown>;
+
+    if (typeof body.message === "string") return body.message;
+    if (typeof body.title === "string") return body.title;
+
+    if (body.errors && typeof body.errors === "object") {
+      const errors = Object.values(
+        body.errors as Record<string, unknown>
+      ).flatMap((value) =>
+        Array.isArray(value) ? value : [value]
+      );
+
+      const messages = errors.filter(
+        (value): value is string => typeof value === "string"
+      );
+
+      if (messages.length > 0) return messages.join("\n");
+    }
+  }
+
+  return `שגיאת שרת: ${status}`;
+}
+
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -19,7 +66,6 @@ export async function apiRequest<T>(
   const token = sessionStorage.getItem("token");
   const headers = new Headers(options.headers);
 
-  // הגדרת JSON רק כאשר הבקשה מכילה גוף שאינו FormData
   if (
     options.body &&
     !(options.body instanceof FormData) &&
@@ -28,20 +74,31 @@ export async function apiRequest<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  // הוספת JWT לבקשות של משתמש מחובר
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  let response: Response;
 
-  // קריאת התשובה מהשרת
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw error;
+    }
+
+    throw new ApiError(
+      "לא ניתן להתחבר לשרת. בדקי את החיבור לאינטרנט ונסי שוב.",
+      0
+    );
+  }
+
   const responseText = await response.text();
 
-  let data: any = null;
+  let data: unknown = null;
 
   if (responseText) {
     try {
@@ -51,15 +108,12 @@ export async function apiRequest<T>(
     }
   }
 
-  // טיפול בשגיאות שהתקבלו מהשרת
   if (!response.ok) {
-    const errorMessage =
-      data?.title ||
-      data?.message ||
-      (typeof data === "string" ? data : null) ||
-      `שגיאת שרת: ${response.status}`;
-
-    throw new Error(errorMessage);
+    throw new ApiError(
+      getErrorMessage(data, response.status),
+      response.status,
+      data
+    );
   }
 
   return data as T;

@@ -2,10 +2,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiRequest, type AuthResponse } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 import "./RegistrationScreen.css";
 
 function RegistrationScreen() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -55,7 +57,12 @@ function RegistrationScreen() {
         }
       );
 
-      sessionStorage.setItem("token", response.token);
+      if (!response.token) {
+        throw new Error("לא התקבל Token מהשרת.");
+      }
+
+      // שמירת הטוקן דרך מנגנון האימות המרכזי
+      login(response.token);
 
       navigate("/requester");
     } catch (err) {
@@ -69,7 +76,6 @@ function RegistrationScreen() {
     }
   }
 
-  
   return (
     <div className="registration-page" dir="rtl">
       <div className="registration-card">
@@ -165,7 +171,6 @@ function RegistrationScreen() {
       </div>
     </div>
   );
-
 }
 
 export default RegistrationScreen;

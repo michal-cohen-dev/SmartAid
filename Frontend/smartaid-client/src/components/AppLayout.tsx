@@ -1,6 +1,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 function AppLayout() {
   const navigate = useNavigate();
@@ -9,40 +10,9 @@ function AppLayout() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
-  function checkIfVolunteer(): boolean {
-    const token = sessionStorage.getItem("token");
+  
 
-    if (!token) return false;
-
-    try {
-      const payload = token.split(".")[1];
-      if (!payload) return false;
-
-      const base64 = payload
-        .replace(/-/g, "+")
-        .replace(/_/g, "/")
-        .padEnd(Math.ceil(payload.length / 4) * 4, "=");
-
-      const binary = atob(base64);
-      const bytes = Uint8Array.from(
-        binary,
-        (character) => character.charCodeAt(0)
-      );
-
-      const decodedPayload = JSON.parse(
-        new TextDecoder().decode(bytes)
-      );
-
-      return (
-        decodedPayload.isVolunteer === true ||
-        String(decodedPayload.isVolunteer).toLowerCase() === "true"
-      );
-    } catch {
-      return false;
-    }
-  }
-
-  const hasVolunteerRole = checkIfVolunteer();
+  const { isVolunteer: hasVolunteerRole } = useAuth();
 
   const isVolunteerPage =
     location.pathname === "/" ||
