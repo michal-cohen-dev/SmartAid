@@ -1,0 +1,44 @@
+
+name: Build SmartAid API
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore
+        run: dotnet restore Backend/SmartAid/SmartAid.sln
+
+      - name: Build
+        run: dotnet build Backend/SmartAid/SmartAid.sln --configuration Release --no-restore
+
+      - name: Publish API
+        run: dotnet publish Backend/SmartAid/SmartAid.API/SmartAid.API.csproj --configuration Release --output ./publish
+
+      - name: Upload API Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartaid-api-publish
+          path: ./publish
+          if-no-files-found: error
+
+      - name: Deploy to MonsterASP
+        uses: rasmusbuchholdt/simply-web-deploy@2.1.0
+        with:
+          website-name: ${{ secrets.WEBSITE_NAME }}
+          server-computer-name: ${{ secrets.SERVER_COMPUTER_NAME }}
+          server-username: ${{ secrets.SERVER_USERNAME }}
+          server-password: ${{ secrets.SERVER_PASSWORD }}
+          source-path: '\publish\'

@@ -2,6 +2,7 @@
 using BLL.MappingProfiles;
 using BLL.Services;
 using BLL.Services.Interfaces;
+using BLL.Services.ExternalServices;
 using DAL;
 using DAL.Repositories;
 using DAL.Repositories.Interfaces;
@@ -13,10 +14,10 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using SmartAid.API.Filters;
-using BLL.Services.ExternalServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// API Keys diagnostics
 Console.WriteLine(
     $"TomTom key loaded: {!string.IsNullOrWhiteSpace(builder.Configuration["TomTom:ApiKey"])}");
 
@@ -26,6 +27,7 @@ Console.WriteLine($"Gemini API key loaded: {!string.IsNullOrWhiteSpace(geminiApi
 Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
 Console.WriteLine($"UserSecretsId: {builder.Configuration["UserSecretsId"]}");
 
+// JWT Configuration
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var jwtKey = builder.Configuration["Jwt:Key"];
 
@@ -73,7 +75,9 @@ builder.Services.AddCors(options =>
     options.AddPolicy("ReactClient", policy =>
     {
         policy
-            .WithOrigins("http://localhost:5173")
+            .WithOrigins(
+                "http://localhost:5173",
+                "https://smartaid-client.runasp.net")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -122,6 +126,7 @@ builder.Services.AddScoped<IHelpRequestService, HelpRequestService>();
 builder.Services.AddScoped<IRequestEquipmentService, RequestEquipmentService>();
 builder.Services.AddScoped<IRequestOfferService, RequestOfferService>();
 builder.Services.AddScoped<IEquipmentTypeService, EquipmentTypeService>();
+builder.Services.AddScoped<IVolunteerEquipmentService, VolunteerEquipmentService>();
 
 // TomTom
 builder.Services.AddHttpClient<
@@ -136,11 +141,11 @@ builder.Services.AddHttpClient<
     IImageAnalysisService,
     ImageAnalysisService>();
 
-builder.Services.AddScoped<IVolunteerEquipmentService, VolunteerEquipmentService>();
-
+// Image Service
 builder.Services.AddSingleton<IImageService>(
     new ImageService(imagesFolder));
 
+// Authentication Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 
@@ -155,6 +160,7 @@ builder.Services.AddControllers(options =>
 
 builder.Services.AddEndpointsApiExplorer();
 
+// Swagger
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -185,12 +191,11 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// Swagger
+app.UseSwagger();
+app.UseSwaggerUI();
 
+// Static images
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(imagesFolder),
@@ -207,6 +212,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// TomTom diagnostic endpoint
 if (app.Environment.IsDevelopment())
 {
     app.MapGet("/debug/tomtom", async (
