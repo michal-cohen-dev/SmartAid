@@ -21,28 +21,55 @@ function VolunteerAcceptedRequestsScreen() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    document.title = "קריאות שנעניתי להן | SmartAid";
+  document.title = "קריאות שנעניתי להן | SmartAid";
 
-    const loadRequests = async () => {
-      try {
-        const data = await apiRequest<HelpRequest[]>(
-          "/api/HelpRequests/volunteer/my"
+  let isMounted = true;
+
+  const loadRequests = async (showLoading = false) => {
+    try {
+      if (showLoading) {
+        setLoading(true);
+      }
+
+      setError("");
+
+      const data = await apiRequest<HelpRequest[]>(
+        "/api/HelpRequests/volunteer/my"
+      );
+
+      if (isMounted) {
+        setRequests(
+          data.filter(
+            request => request.status === 1 || request.status === 4
+          )
         );
-
-        setRequests(data.filter(request => request.status === 1 || request.status === 4));
-      } catch (err) {
+      }
+    } catch (err) {
+      if (isMounted) {
         setError(
           err instanceof Error
             ? err.message
             : "אירעה שגיאה בטעינת הקריאות."
         );
-      } finally {
+      }
+    } finally {
+      if (isMounted && showLoading) {
         setLoading(false);
       }
-    };
+    }
+  };
 
+  loadRequests(true);
+
+  const intervalId = window.setInterval(() => {
     loadRequests();
-  }, []);
+  }, 15000);
+
+  return () => {
+    isMounted = false;
+    window.clearInterval(intervalId);
+  };
+}, []);
 
   return (
     <main className="my-requests-screen" dir="rtl">

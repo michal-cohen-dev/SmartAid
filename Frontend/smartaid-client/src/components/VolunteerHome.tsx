@@ -33,49 +33,57 @@ function VolunteerHome() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // טעינת בקשות עזרה פתוחות
-  useEffect(() => {
-    let isMounted = true;
+  // טעינת בקשות עזרה פתוחות ורענון אוטומטי
+useEffect(() => {
+  let isMounted = true;
 
-    const loadRequests = async () => {
-      try {
+  const loadRequests = async (showLoading = false) => {
+    try {
+      if (showLoading) {
         setIsLoading(true);
-        setError('');
+      }
 
-        const data = await apiRequest<HelpRequest[]>(
-          '/api/HelpRequests/open'
+      setError('');
+
+      const data = await apiRequest<HelpRequest[]>(
+        '/api/HelpRequests/open'
+      );
+
+      if (isMounted) {
+        const validRequests = data.filter(
+          request =>
+            request.title?.trim() &&
+            request.description?.trim()
         );
 
-        if (isMounted) {
-          const validRequests = data.filter(
-            request =>
-              request.title?.trim() &&
-              request.description?.trim()
-          );
-
-          setRequests(validRequests);
-        }
-      } catch (error) {
-        if (isMounted) {
-          setError(
-            error instanceof Error
-              ? error.message
-              : 'אירעה שגיאה בטעינת בקשות העזרה.'
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        setRequests(validRequests);
       }
-    };
+    } catch (error) {
+      if (isMounted) {
+        setError(
+          error instanceof Error
+            ? error.message
+            : 'אירעה שגיאה בטעינת בקשות העזרה.'
+        );
+      }
+    } finally {
+      if (isMounted && showLoading) {
+        setIsLoading(false);
+      }
+    }
+  };
 
+  loadRequests(true);
+
+  const intervalId = window.setInterval(() => {
     loadRequests();
+  }, 15000);
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  return () => {
+    isMounted = false;
+    window.clearInterval(intervalId);
+  };
+}, []);
 
   // מעקב רציף אחר מיקום המתנדב
   useEffect(() => {
