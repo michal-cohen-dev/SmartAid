@@ -3,10 +3,11 @@ name: Build and Deploy SmartAid
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, deploy-client ]
 
 jobs:
   build:
+    if: github.ref == 'refs/heads/main'
     name: Build and Deploy API
     runs-on: windows-latest
 
