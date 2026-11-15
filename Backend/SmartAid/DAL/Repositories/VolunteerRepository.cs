@@ -1,9 +1,9 @@
-﻿
-using System.Collections.Generic;
-using System.Linq;
-using DAL.Entities;
+﻿using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DAL.Repositories
 {
@@ -68,7 +68,6 @@ namespace DAL.Repositories
             }
         }
 
-
         public void IncrementTotalCompleted(int volunteerId)
         {
             _context.Volunteers
@@ -78,7 +77,6 @@ namespace DAL.Repositories
                         v => v.TotalCompleted,
                         v => v.TotalCompleted + 1));
         }
-
 
         public void IncrementTotalOffersReceived(int volunteerId)
         {
@@ -100,11 +98,10 @@ namespace DAL.Repositories
                         v => v.TotalOffersAccepted + 1));
         }
 
-
         public void AddWithEquipmentAndHelpTypes(
-         Volunteer volunteer,
-         List<int> equipmentTypeIds,
-         List<int> helpTypeIds)
+            Volunteer volunteer,
+            List<int> equipmentTypeIds,
+            List<int> helpTypeIds)
         {
             _context.Volunteers.Add(volunteer);
 
@@ -137,7 +134,42 @@ namespace DAL.Repositories
                 .Where(v => v.IsActive)
                 .ToList();
         }
+
+        public void DecreaseReliabilityScore(int volunteerId)
+        {
+            _context.Volunteers
+                .Where(v => v.Id == volunteerId)
+                .ExecuteUpdate(setters => setters
+                    .SetProperty(
+                        v => v.ReliabilityScore,
+                        v => (v.ReliabilityScore <= 0
+                            ? 0
+                            : v.ReliabilityScore > 100
+                                ? 100
+                                : v.ReliabilityScore) *
+                             (1 - (10.0 / (v.TotalOffersReceived + 1) / 100))));
+        }
+
+        public void IncreaseReliabilityScore(int volunteerId)
+        {
+            _context.Volunteers
+                .Where(v => v.Id == volunteerId)
+                .ExecuteUpdate(setters => setters
+                    .SetProperty(
+                        v => v.ReliabilityScore,
+                        v => v.ReliabilityScore <= 0
+                            ? 0
+                            : v.ReliabilityScore >= 100
+                                ? 100
+                                : v.ReliabilityScore +
+                                  (100 - v.ReliabilityScore) *
+                                  (10.0 / (v.TotalOffersReceived + 1) / 100)));
+        }
+
+
+        public IDbContextTransaction BeginTransaction()
+        {
+            return _context.Database.BeginTransaction();
+        }
     }
 }
-
-  

@@ -203,5 +203,15 @@ namespace BLL.Services
 
             _volunteerRepository.Delete(id);
         }
+
+        public void DecreaseReliabilityScore(int volunteerId)
+        {
+            _volunteerRepository.DecreaseReliabilityScore(volunteerId);
+        }
+
+        public void IncreaseReliabilityScore(int volunteerId)
+        {
+            _volunteerRepository.IncreaseReliabilityScore(volunteerId);
+        }
     }
 }

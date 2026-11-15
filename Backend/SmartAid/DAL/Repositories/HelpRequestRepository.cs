@@ -193,6 +193,40 @@ namespace DAL.Repositories
         }
 
 
+
+        public bool TryCancelRequest(
+    int requestId,
+    int userId,
+    bool cancelledByVolunteer)
+        {
+            var query = _context.HelpRequests
+                .Where(request => request.Id == requestId);
+
+            if (cancelledByVolunteer)
+            {
+                query = query.Where(request =>
+                    request.AssignedVolunteer != null &&
+                    request.AssignedVolunteer.UserId == userId &&
+                    (request.Status == RequestStatus.Assigned ||
+                     request.Status == RequestStatus.InTreatment));
+            }
+            else
+            {
+                query = query.Where(request =>
+                    request.UserId == userId &&
+                    (request.Status == RequestStatus.Open ||
+                     request.Status == RequestStatus.Assigned));
+            }
+
+            var rowsAffected = query.ExecuteUpdate(setters => setters
+                .SetProperty(
+                    request => request.Status,
+                    RequestStatus.Cancelled));
+
+            return rowsAffected == 1;
+        }
+
+
         public bool HasActiveAssignment(int volunteerId)
         {
             return _context.HelpRequests.Any(request =>
