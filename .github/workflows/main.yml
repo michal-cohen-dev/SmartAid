@@ -1,5 +1,5 @@
 
-name: Build SmartAid API
+name: Build and Deploy SmartAid
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
 
 jobs:
   build:
+    name: Build and Deploy API
     runs-on: windows-latest
 
     steps:
@@ -34,7 +35,7 @@ jobs:
           path: ./publish
           if-no-files-found: error
 
-      - name: Deploy to MonsterASP
+      - name: Deploy API to MonsterASP
         uses: rasmusbuchholdt/simply-web-deploy@2.1.0
         with:
           website-name: ${{ secrets.WEBSITE_NAME }}
@@ -42,3 +43,37 @@ jobs:
           server-username: ${{ secrets.SERVER_USERNAME }}
           server-password: ${{ secrets.SERVER_PASSWORD }}
           source-path: '\publish\'
+
+  deploy-client:
+    name: Build and Deploy React Client
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Frontend/smartaid-client/package-lock.json
+
+      - name: Install dependencies
+        working-directory: Frontend/smartaid-client
+        run: npm ci
+
+      - name: Build React Client
+        working-directory: Frontend/smartaid-client
+        run: npm run build
+
+      - name: Deploy Client to MonsterASP
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.CLIENT_FTP_HOST }}
+          username: ${{ secrets.CLIENT_FTP_USERNAME }}
+          password: ${{ secrets.CLIENT_FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: Frontend/smartaid-client/dist/
+          server-dir: /wwwroot/
