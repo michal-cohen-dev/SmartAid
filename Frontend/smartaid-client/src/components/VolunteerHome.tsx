@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../services/api';
@@ -27,6 +26,7 @@ function VolunteerHome() {
     useState<VolunteerLocation | null>(null);
 
   const [locationError, setLocationError] = useState('');
+  const [locationSaveError, setLocationSaveError] = useState('');
   const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   const [requests, setRequests] = useState<HelpRequest[]>([]);
@@ -34,62 +34,63 @@ function VolunteerHome() {
   const [error, setError] = useState('');
 
   // טעינת בקשות עזרה פתוחות ורענון אוטומטי
-useEffect(() => {
-  let isMounted = true;
+  useEffect(() => {
+    let isMounted = true;
 
-  const loadRequests = async (showLoading = false) => {
-    try {
-      if (showLoading) {
-        setIsLoading(true);
-      }
+    const loadRequests = async (showLoading = false) => {
+      try {
+        if (showLoading) {
+          setIsLoading(true);
+        }
 
-      setError('');
+        setError('');
 
-      const data = await apiRequest<HelpRequest[]>(
-        '/api/HelpRequests/open'
-      );
-
-      if (isMounted) {
-        const validRequests = data.filter(
-          request =>
-            request.title?.trim() &&
-            request.description?.trim()
+        const data = await apiRequest<HelpRequest[]>(
+          '/api/HelpRequests/open'
         );
 
-        setRequests(validRequests);
+        if (isMounted) {
+          const validRequests = data.filter(
+            request =>
+              request.title?.trim() &&
+              request.description?.trim()
+          );
+
+          setRequests(validRequests);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setError(
+            error instanceof Error
+              ? error.message
+              : 'אירעה שגיאה בטעינת בקשות העזרה.'
+          );
+        }
+      } finally {
+        if (isMounted && showLoading) {
+          setIsLoading(false);
+        }
       }
-    } catch (error) {
-      if (isMounted) {
-        setError(
-          error instanceof Error
-            ? error.message
-            : 'אירעה שגיאה בטעינת בקשות העזרה.'
-        );
-      }
-    } finally {
-      if (isMounted && showLoading) {
-        setIsLoading(false);
-      }
-    }
-  };
+    };
 
-  loadRequests(true);
+    loadRequests(true);
 
-  const intervalId = window.setInterval(() => {
-    loadRequests();
-  }, 15000);
+    const intervalId = window.setInterval(() => {
+      loadRequests();
+    }, 15000);
 
-  return () => {
-    isMounted = false;
-    window.clearInterval(intervalId);
-  };
-}, []);
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
-  // מעקב רציף אחר מיקום המתנדב
+  // מעקב רציף אחר מיקום המתנדב ושליחתו לשרת
   useEffect(() => {
     if (!isAvailable) {
       setLocation(null);
       setLocationError('');
+      setLocationSaveError('');
       setIsGettingLocation(false);
       return;
     }
@@ -104,17 +105,64 @@ useEffect(() => {
 
     setIsGettingLocation(true);
     setLocationError('');
+    setLocationSaveError('');
+
+    let lastLocationSentAt = 0;
+    let isSavingLocation = false;
+    let isActive = true;
 
     const watchId = navigator.geolocation.watchPosition(
       position => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
         setLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
+          latitude,
+          longitude,
           accuracy: position.coords.accuracy,
         });
 
         setLocationError('');
         setIsGettingLocation(false);
+
+        const now = Date.now();
+
+        // שליחת המיקום לשרת לכל היותר פעם ב-10 שניות
+        if (
+          now - lastLocationSentAt >= 10000 &&
+          !isSavingLocation
+        ) {
+          lastLocationSentAt = now;
+          isSavingLocation = true;
+
+          apiRequest<{ message: string }>(
+            '/api/Volunteers/me/location',
+            {
+              method: 'PUT',
+              body: JSON.stringify({
+                latitude,
+                longitude,
+              }),
+            }
+          )
+            .then(() => {
+              if (isActive) {
+                setLocationSaveError('');
+              }
+            })
+            .catch(error => {
+              if (isActive) {
+                setLocationSaveError(
+                  error instanceof Error
+                    ? `המיקום זוהה, אך לא נשמר בשרת: ${error.message}`
+                    : 'לא הצלחנו לשמור את המיקום בשרת.'
+                );
+              }
+            })
+            .finally(() => {
+              isSavingLocation = false;
+            });
+        }
       },
       error => {
         setIsGettingLocation(false);
@@ -138,6 +186,7 @@ useEffect(() => {
     );
 
     return () => {
+      isActive = false;
       navigator.geolocation.clearWatch(watchId);
     };
   }, [isAvailable]);
@@ -178,45 +227,49 @@ useEffect(() => {
                 <p role="alert">{locationError}</p>
               )}
 
+              {locationSaveError && (
+                <p role="alert">{locationSaveError}</p>
+              )}
+
               {location && (
-  <div className="volunteer-location-details">
-    <p>המיקום שלך זוהה בהצלחה!</p>
+                <div className="volunteer-location-details">
+                  <p>המיקום שלך זוהה בהצלחה!</p>
 
-    <p>
-      קו רוחב: {location.latitude.toFixed(6)}
-    </p>
+                  <p>
+                    קו רוחב: {location.latitude.toFixed(6)}
+                  </p>
 
-    <p>
-      קו אורך: {location.longitude.toFixed(6)}
-    </p>
+                  <p>
+                    קו אורך: {location.longitude.toFixed(6)}
+                  </p>
 
-    <p>
-      רמת דיוק משוערת: {Math.round(location.accuracy)} מטר
-    </p>
+                  <p>
+                    רמת דיוק משוערת: {Math.round(location.accuracy)} מטר
+                  </p>
 
-    <div className="volunteer-map">
-      <h3>המיקום הנוכחי שלך</h3>
+                  <div className="volunteer-map">
+                    <h3>המיקום הנוכחי שלך</h3>
 
-      <iframe
-        title="המיקום הנוכחי של המתנדב"
-        src={`https://maps.google.com/maps?q=${location.latitude},${location.longitude}&z=16&output=embed`}
-        width="100%"
-        height="300"
-        loading="lazy"
-        referrerPolicy="no-referrer-when-downgrade"
-        allowFullScreen
-      />
+                    <iframe
+                      title="המיקום הנוכחי של המתנדב"
+                      src={`https://maps.google.com/maps?q=${location.latitude},${location.longitude}&z=16&output=embed`}
+                      width="100%"
+                      height="300"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      allowFullScreen
+                    />
 
-      <a
-        href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        פתיחה ב־Google Maps
-      </a>
-    </div>
-  </div>
-)}
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      פתיחה ב־Google Maps
+                    </a>
+                  </div>
+                </div>
+              )}
 
             </div>
           )}
@@ -271,16 +324,16 @@ useEffect(() => {
                 </p>
 
                 {Array.isArray(request.requiredEquipmentNames) &&
-  request.requiredEquipmentNames.length > 0 && (
-    <div className="volunteer-request-equipment">
-      <strong>ציוד נדרש:</strong>
-      <ul>
-        {request.requiredEquipmentNames.map((name, index) => (
-          <li key={`${name}-${index}`}>{name}</li>
-        ))}
-      </ul>
-    </div>
-  )}
+                  request.requiredEquipmentNames.length > 0 && (
+                    <div className="volunteer-request-equipment">
+                      <strong>ציוד נדרש:</strong>
+                      <ul>
+                        {request.requiredEquipmentNames.map((name, index) => (
+                          <li key={`${name}-${index}`}>{name}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
                 <p className="volunteer-request-meta">
                   תאריך יצירה:{' '}

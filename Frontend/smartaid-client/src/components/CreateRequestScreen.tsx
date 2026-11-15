@@ -561,20 +561,6 @@ if (addressNotes.trim()) {
 </div>
 
 
-<div className="create-request-field">
-  <label htmlFor="addressNotes">
-    הערות למתנדב לגבי המיקום (לא חובה)
-  </label>
-
-  <textarea
-    id="addressNotes"
-    value={addressNotes}
-    onChange={(e) => setAddressNotes(e.target.value)}
-    placeholder="לדוגמה: קומה 2, דירה 5, כניסה מהחצר"
-    maxLength={300}
-  />
-</div>
-
               {submitError && (
                 <p
                   className="create-request-error"
