@@ -1,4 +1,3 @@
-
 using BLL.MappingProfiles;
 using BLL.Services;
 using BLL.Services.Interfaces;
@@ -17,7 +16,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// External API configuration status
+// API Keys diagnostics
 Console.WriteLine(
     $"TomTom key loaded: {!string.IsNullOrWhiteSpace(builder.Configuration["TomTom:ApiKey"])}");
 
@@ -47,16 +46,12 @@ builder.Services
         {
             ValidateIssuer = true,
             ValidIssuer = jwtSettings["Issuer"],
-
             ValidateAudience = true,
             ValidAudience = jwtSettings["Audience"],
-
             ValidateLifetime = true,
-
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(jwtKey)),
-
             ClockSkew = TimeSpan.FromMinutes(1)
         };
     });
@@ -197,7 +192,7 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Swagger - Development only
+// Swagger
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -213,7 +208,7 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseHttpsRedirection();
 
-// CORS must run before authentication and authorization
+// CORS before authentication and authorization
 app.UseCors("ReactClient");
 
 app.UseAuthentication();
@@ -221,7 +216,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// TomTom debug endpoint - Development only
+// TomTom debug endpoint
 if (app.Environment.IsDevelopment())
 {
     app.MapGet("/debug/tomtom", async (

@@ -19,12 +19,71 @@ namespace SmartAid.API.Controllers
             _helpRequestService = helpRequestService;
         }
 
+
+
+
+
+
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public ActionResult<IEnumerable<HelpRequestDto>> GetAll()
         {
             return Ok(_helpRequestService.GetAll());
         }
+
+
+
+
+        [HttpGet("open")]
+        public async Task<ActionResult<IEnumerable<HelpRequestPreviewDto>>> GetOpenForVolunteer(
+     CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var requests = await _helpRequestService.GetOpenForVolunteerAsync(
+                userId,
+                cancellationToken);
+
+            return Ok(requests);
+        }
+
+
+
+
+
+        [Authorize]
+        [HttpGet("my")]
+        public IActionResult GetMyRequests()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!int.TryParse(userIdClaim, out int userId))
+            {
+                return Unauthorized();
+            }
+
+            var requests = _helpRequestService.GetByUserId(userId);
+
+            return Ok(requests);
+        }
+
+        [HttpGet("volunteer/my")]
+        public IActionResult GetMyVolunteerRequests()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var requests = _helpRequestService.GetByVolunteerId(userId);
+
+            return Ok(requests);
+        }
+
+
 
         [HttpGet("{id}")]
         public ActionResult<HelpRequestDto> GetById(int id)
@@ -36,7 +95,11 @@ namespace SmartAid.API.Controllers
                 if (!int.TryParse(userIdClaim, out var userId))
                     return Unauthorized();
 
-                if (!_helpRequestService.IsAssignedVolunteer(id, userId))
+                bool isOwner = _helpRequestService.IsOwner(id, userId);
+                bool isAssignedVolunteer =
+                    _helpRequestService.IsAssignedVolunteer(id, userId);
+
+                if (!isOwner && !isAssignedVolunteer)
                     return NotFound();
             }
 
@@ -53,6 +116,8 @@ namespace SmartAid.API.Controllers
             return Ok(request);
         }
 
+
+
         [HttpPost]
         [Consumes("multipart/form-data")]
         public ActionResult Add([FromForm] HelpRequestPostDto helpRequestDto)
@@ -62,14 +127,16 @@ namespace SmartAid.API.Controllers
             if (!int.TryParse(userIdClaim, out var userId))
                 return Unauthorized();
 
-            // מזהה המשתמש נלקח מה-Token ולא מהבקשה
-            _helpRequestService.Add(helpRequestDto, userId);
+            // שמירת הבקשה וקבלת המזהה שנוצר
+            var requestId = _helpRequestService.Add(helpRequestDto, userId);
 
             return Ok(new
             {
-                message = "Help request added successfully."
+                message = "Help request added successfully.",
+                id = requestId
             });
         }
+
 
         [HttpPut("{id}")]
         public ActionResult Update(int id, [FromBody] HelpRequestUpdateDto helpRequestDto)
@@ -117,6 +184,137 @@ namespace SmartAid.API.Controllers
             {
                 message = "Help request deleted successfully."
             });
+        }
+
+
+        [HttpPost("{id}/accept")]
+        public ActionResult AcceptRequest(int id)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var accepted = _helpRequestService.TryAssignToVolunteer(
+                id,
+                userId);
+
+            if (!accepted)
+            {
+                return Conflict(new
+                {
+                    message = "הבקשה כבר אינה זמינה או שאין לך הרשאה לקבל אותה."
+                });
+            }
+
+            return Ok(new
+            {
+                message = "הבקשה הוקצתה אליך בהצלחה."
+            });
+        }
+
+        [HttpPost("{id}/arrive")]
+        public ActionResult MarkArrived(int id)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var marked = _helpRequestService.TryMarkInTreatment(
+                id,
+                userId);
+
+            if (!marked)
+            {
+                return Conflict(new
+                {
+                    message = "לא ניתן לסמן הגעה. ייתכן שהבקשה אינה משויכת אליך או שכבר שונה הסטטוס שלה."
+                });
+            }
+
+            return Ok(new
+            {
+                message = "הגעתך סומנה בהצלחה."
+            });
+        }
+
+        [HttpPost("{id}/complete")]
+        public ActionResult CompleteRequest(int id)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var completed = _helpRequestService.TryCompleteRequest(
+                id,
+                userId);
+
+            if (!completed)
+            {
+                return Conflict(new
+                {
+                    message = "לא ניתן לסיים את הטיפול. ייתכן שהבקשה אינה משויכת אליך או שעדיין לא סומנה הגעה."
+                });
+            }
+
+            return Ok(new
+            {
+                message = "הטיפול הסתיים בהצלחה."
+            });
+        }
+
+
+        [HttpPost("{id}/rate")]
+        public ActionResult RateRequest(
+    int id,
+    [FromBody] RateHelpRequestDto ratingDto)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var rated = _helpRequestService.TryRateCompletedRequest(
+                id,
+                userId,
+                ratingDto.Rating);
+
+            if (!rated)
+            {
+                return Conflict(new
+                {
+                    message = "לא ניתן לדרג את הבקשה. ייתכן שהיא לא הושלמה, אינה שייכת לך או שכבר דורגה."
+                });
+            }
+
+            return Ok(new
+            {
+                message = "הדירוג נשמר בהצלחה."
+            });
+        }
+
+        [HttpPost("{id}/cancel")]
+        public IActionResult Cancel(int id)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null ||
+                !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return Unauthorized();
+            }
+
+            bool cancelled = _helpRequestService.TryCancelRequest(id, userId);
+
+            if (!cancelled)
+            {
+                return BadRequest(
+                    "לא ניתן לבטל את הבקשה. ייתכן שהיא כבר בוטלה או שהמשתמש אינו מורשה לבטל אותה.");
+            }
+
+            return Ok("הבקשה בוטלה בהצלחה.");
         }
     }
 }

@@ -81,6 +81,9 @@ namespace BLL.Services
             };
 
             _requestOfferRepository.Add(offer);
+
+            _volunteerRepository.IncrementTotalOffersReceived(
+                volunteer.Id);
         }
 
         public void Update(int id, RequestOfferDto requestOfferDto)
@@ -99,9 +102,21 @@ namespace BLL.Services
                 throw new ArgumentException("Invalid offer status.");
             }
 
-            existingOffer.Status = (OfferStatus)requestOfferDto.Status;
+            var previousStatus = existingOffer.Status;
+            var newStatus = (OfferStatus)requestOfferDto.Status;
+
+            existingOffer.Status = newStatus;
 
             _requestOfferRepository.Update(existingOffer);
+
+            // Increase the counter only when moving
+            // from Pending to Accepted.
+            if (previousStatus == OfferStatus.Pending &&
+                newStatus == OfferStatus.Accepted)
+            {
+                _volunteerRepository.IncrementTotalOffersAccepted(
+                    existingOffer.VolunteerId);
+            }
         }
 
         public void Delete(int id)

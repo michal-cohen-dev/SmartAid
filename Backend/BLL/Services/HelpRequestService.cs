@@ -1,21 +1,29 @@
 ﻿
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
 using AutoMapper;
+using BLL.Exceptions;
+using BLL.Services.Interfaces;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
-using BLL.Services.Interfaces;
-using BLL.Exceptions;
 
 namespace BLL.Services
 {
     public class HelpRequestService : IHelpRequestService
     {
+        private readonly IVolunteerRepository _volunteerRepository;
         private readonly IHelpRequestRepository _helpRequestRepository;
         private readonly IVolunteerService _volunteerService;
+        private readonly IVolunteerMatchingService _volunteerMatchingService;
         private readonly IMapper _mapper;
         private readonly IImageService _imageService;
         private readonly IRequestEquipmentRepository _requestEquipmentRepository;
         private readonly IEquipmentTypeRepository _equipmentTypeRepository;
+        private readonly IHelpTypeRepository _helpTypeRepository;
 
         public HelpRequestService(
             IHelpRequestRepository helpRequestRepository,
@@ -23,20 +31,75 @@ namespace BLL.Services
             IImageService imageService,
             IRequestEquipmentRepository requestEquipmentRepository,
             IEquipmentTypeRepository equipmentTypeRepository,
-            IVolunteerService volunteerService)
+            IHelpTypeRepository helpTypeRepository,
+            IVolunteerService volunteerService,
+            IVolunteerRepository volunteerRepository,
+            IVolunteerMatchingService volunteerMatchingService)
         {
             _helpRequestRepository = helpRequestRepository;
             _mapper = mapper;
             _imageService = imageService;
             _requestEquipmentRepository = requestEquipmentRepository;
             _equipmentTypeRepository = equipmentTypeRepository;
+            _helpTypeRepository = helpTypeRepository;
             _volunteerService = volunteerService;
+            _volunteerRepository = volunteerRepository;
+            _volunteerMatchingService = volunteerMatchingService;
         }
 
         public List<HelpRequestDto> GetAll()
         {
             var requests = _helpRequestRepository.GetAll();
             return _mapper.Map<List<HelpRequestDto>>(requests);
+        }
+
+        public List<HelpRequestDto> GetByUserId(int userId)
+        {
+            var requests = _helpRequestRepository.GetByUserId(userId);
+            return _mapper.Map<List<HelpRequestDto>>(requests);
+        }
+
+        public List<HelpRequestDto> GetByVolunteerId(int userId)
+        {
+            var volunteer = _volunteerService.GetByUserId(userId);
+
+            if (volunteer == null)
+                return new List<HelpRequestDto>();
+
+            var requests = _helpRequestRepository.GetByVolunteerId(volunteer.Id);
+
+            return _mapper.Map<List<HelpRequestDto>>(requests);
+        }
+
+        public async Task<List<HelpRequestPreviewDto>> GetOpenForVolunteerAsync(
+            int userId,
+            CancellationToken cancellationToken = default)
+        {
+            var volunteer = _volunteerService.GetByUserId(userId);
+
+            if (volunteer == null || !volunteer.IsActive)
+                return new List<HelpRequestPreviewDto>();
+
+            if (_helpRequestRepository.HasActiveAssignment(volunteer.Id))
+                return new List<HelpRequestPreviewDto>();
+
+            var matches = await _volunteerMatchingService
+                .GetEligibleRequestsForVolunteerAsync(
+                    volunteer.Id,
+                    cancellationToken);
+
+            var fullDtos = _mapper.Map<List<HelpRequestDto>>(
+                matches.Select(match => match.HelpRequest).ToList());
+
+            return fullDtos.Select(request => new HelpRequestPreviewDto
+            {
+                Id = request.Id,
+                Title = request.Title,
+                Description = request.Description,
+                CreatedAt = request.CreatedAt,
+                RequiredEquipmentTypeIds = request.RequiredEquipmentTypeIds,
+                RequiredEquipmentNames = request.RequiredEquipmentNames
+            }).ToList();
         }
 
         public HelpRequestDto? GetById(int id)
@@ -47,6 +110,12 @@ namespace BLL.Services
                 return null;
 
             return _mapper.Map<HelpRequestDto>(request);
+        }
+
+        public bool IsOwner(int requestId, int userId)
+        {
+            var request = _helpRequestRepository.GetOwned(requestId, userId);
+            return request != null;
         }
 
         public bool IsAssignedVolunteer(int requestId, int userId)
@@ -64,7 +133,7 @@ namespace BLL.Services
             return request.AssignedVolunteerId == volunteer.Id;
         }
 
-        public void Add(HelpRequestPostDto helpRequestDto, int userId)
+        public int Add(HelpRequestPostDto helpRequestDto, int userId)
         {
             var equipmentTypeIds = helpRequestDto.RequiredEquipmentTypeIds
                 .Distinct()
@@ -79,8 +148,18 @@ namespace BLL.Services
                 }
             }
 
+            var helpType = _helpTypeRepository.GetById(
+                helpRequestDto.HelpTypeId);
+
+            if (helpType == null)
+            {
+                throw new BusinessRuleException(
+                    $"Help type with ID {helpRequestDto.HelpTypeId} does not exist.");
+            }
+
             var request = _mapper.Map<HelpRequest>(helpRequestDto);
             request.UserId = userId;
+            request.HelpTypeId = helpRequestDto.HelpTypeId;
 
             string? savedImageName = null;
 
@@ -93,6 +172,15 @@ namespace BLL.Services
                 }
 
                 _helpRequestRepository.Add(request);
+
+                foreach (var equipmentTypeId in equipmentTypeIds)
+                {
+                    _requestEquipmentRepository.Add(new RequestEquipment
+                    {
+                        HelpRequestId = request.Id,
+                        EquipmentTypeId = equipmentTypeId
+                    });
+                }
             }
             catch
             {
@@ -110,6 +198,8 @@ namespace BLL.Services
 
                 throw;
             }
+
+            return request.Id;
         }
 
         public bool Update(
@@ -135,10 +225,23 @@ namespace BLL.Services
                 }
             }
 
+            existingRequest.Title = helpRequestDto.Title;
+            existingRequest.Description = helpRequestDto.Description;
             existingRequest.Latitude = helpRequestDto.Latitude;
             existingRequest.Longitude = helpRequestDto.Longitude;
             existingRequest.Address = helpRequestDto.Address;
             existingRequest.AddressNotes = helpRequestDto.AddressNotes;
+
+            var helpType = _helpTypeRepository.GetById(
+                helpRequestDto.HelpTypeId);
+
+            if (helpType == null)
+            {
+                throw new BusinessRuleException(
+                    $"Help type with ID {helpRequestDto.HelpTypeId} does not exist.");
+            }
+
+            existingRequest.HelpTypeId = helpRequestDto.HelpTypeId;
 
             var existingEquipments =
                 _requestEquipmentRepository.GetByHelpRequestId(id);
@@ -170,6 +273,108 @@ namespace BLL.Services
                 return false;
 
             _helpRequestRepository.Delete(id);
+
+            return true;
+        }
+
+        public bool TryAssignToVolunteer(int requestId, int userId)
+        {
+            var volunteer = _volunteerService.GetByUserId(userId);
+
+            if (volunteer == null || !volunteer.IsActive)
+                return false;
+
+            return _helpRequestRepository.TryAssignToVolunteer(
+                requestId,
+                volunteer.Id);
+        }
+
+        public bool TryMarkInTreatment(int requestId, int userId)
+        {
+            var volunteer = _volunteerService.GetByUserId(userId);
+
+            if (volunteer == null || !volunteer.IsActive)
+                return false;
+
+            return _helpRequestRepository.TryMarkInTreatment(
+                requestId,
+                volunteer.Id);
+        }
+
+        public bool TryCompleteRequest(int requestId, int userId)
+        {
+            var volunteer = _volunteerService.GetByUserId(userId);
+
+            if (volunteer == null || !volunteer.IsActive)
+                return false;
+
+            using var transaction = _volunteerRepository.BeginTransaction();
+
+            bool completed = _helpRequestRepository.TryCompleteRequest(
+                requestId,
+                volunteer.Id);
+
+            if (!completed)
+                return false;
+
+            _volunteerRepository.IncrementTotalCompleted(volunteer.Id);
+            _volunteerService.IncreaseReliabilityScore(volunteer.Id);
+
+            transaction.Commit();
+
+            return true;
+        }
+
+        public bool TryRateCompletedRequest(
+            int requestId,
+            int userId,
+            int rating)
+        {
+            if (rating < 1 || rating > 5)
+                return false;
+
+            return _helpRequestRepository.TryRateCompletedRequest(
+                requestId,
+                userId,
+                rating);
+        }
+
+        public bool TryCancelRequest(int requestId, int userId)
+        {
+            var request = _helpRequestRepository.GetById(requestId);
+
+            if (request == null)
+                return false;
+
+            if (request.UserId == userId)
+            {
+                return _helpRequestRepository.TryCancelRequest(
+                    requestId,
+                    userId,
+                    cancelledByVolunteer: false);
+            }
+
+            var volunteer = _volunteerService.GetByUserId(userId);
+
+            if (volunteer == null ||
+                request.AssignedVolunteerId != volunteer.Id)
+            {
+                return false;
+            }
+
+            using var transaction = _volunteerRepository.BeginTransaction();
+
+            bool cancelled = _helpRequestRepository.TryCancelRequest(
+                requestId,
+                userId,
+                cancelledByVolunteer: true);
+
+            if (!cancelled)
+                return false;
+
+            _volunteerService.DecreaseReliabilityScore(volunteer.Id);
+
+            transaction.Commit();
 
             return true;
         }

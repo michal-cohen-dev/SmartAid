@@ -1,0 +1,98 @@
+
+.dashboard-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f7f8fa;
+  color: #30343b;
+}
+
+.dashboard-header {
+  padding: 28px 7%;
+  background: #ffffff;
+  border-bottom: 1px solid #e8eaed;
+}
+
+.dashboard-brand h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: #424b57;
+}
+
+.dashboard-brand span {
+  display: block;
+  margin-top: 5px;
+  color: #737b86;
+  font-size: 15px;
+}
+
+.dashboard-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+}
+
+.dashboard-welcome {
+  width: 100%;
+  max-width: 680px;
+  padding: 56px 48px;
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid #e8eaed;
+  border-radius: 16px;
+  box-shadow: 0 8px 28px rgba(30, 40, 55, 0.06);
+}
+
+.dashboard-welcome h2 {
+  margin: 0 0 20px;
+  font-size: 32px;
+  line-height: 1.4;
+  color: #343d49;
+}
+
+.dashboard-welcome p {
+  max-width: 540px;
+  margin: 0 auto;
+  color: #707985;
+  font-size: 18px;
+  line-height: 1.8;
+}
+
+.dashboard-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 36px;
+}
+
+.dashboard-button {
+  min-width: 140px;
+  padding: 13px 28px;
+  border: 1px solid #647b91;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background 0.2s, color 0.2s;
+}
+
+.dashboard-button-primary {
+  background: #647b91;
+  color: #ffffff;
+}
+
+.dashboard-button-primary:hover {
+  background: #526a81;
+}
+
+.dashboard-button-secondary {
+  background: #ffffff;
+  color: #526a81;
+}
+
+.dashboard-button-secondary:hover {
+  background: #f0f3f6;
+}

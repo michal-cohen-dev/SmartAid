@@ -4,6 +4,7 @@ using System.Linq;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace DAL.Repositories.Interfaces
 {
@@ -16,6 +17,19 @@ namespace DAL.Repositories.Interfaces
         void Add(Volunteer volunteer);
         void Update(Volunteer volunteer);
         void Delete(int id);
-        void AddWithEquipment(Volunteer volunteer, List<int> equipmentTypeIds);
+        void IncrementTotalCompleted(int volunteerId);
+        void IncrementTotalOffersReceived(int volunteerId);
+        void IncrementTotalOffersAccepted(int volunteerId);
+        void DecreaseReliabilityScore(int volunteerId);
+        void IncreaseReliabilityScore(int volunteerId);
+        IDbContextTransaction BeginTransaction();
+
+        void AddWithEquipmentAndHelpTypes(
+     Volunteer volunteer,
+     List<int> equipmentTypeIds,
+     List<int> helpTypeIds);
+        List<Volunteer> GetAllWithQualifications();
+
+        Volunteer? GetByIdWithQualifications(int id);
     }
 }

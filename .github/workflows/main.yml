@@ -1,0 +1,80 @@
+name: Build and Deploy SmartAid
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build and Deploy API
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore
+        run: dotnet restore Backend/SmartAid/SmartAid.sln
+
+      - name: Build
+        run: dotnet build Backend/SmartAid/SmartAid.sln --configuration Release --no-restore
+
+      - name: Publish API
+        run: dotnet publish Backend/SmartAid/SmartAid.API/SmartAid.API.csproj --configuration Release --output ./publish
+
+      - name: Upload API Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartaid-api-publish
+          path: ./publish
+          if-no-files-found: error
+
+      - name: Deploy API to MonsterASP
+        uses: rasmusbuchholdt/simply-web-deploy@2.1.0
+        with:
+          website-name: ${{ secrets.WEBSITE_NAME }}
+          server-computer-name: ${{ secrets.SERVER_COMPUTER_NAME }}
+          server-username: ${{ secrets.SERVER_USERNAME }}
+          server-password: ${{ secrets.SERVER_PASSWORD }}
+          source-path: '\publish\'
+
+  deploy-client:
+    name: Build and Deploy React Client
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Frontend/smartaid-client/package-lock.json
+
+      - name: Install dependencies
+        working-directory: Frontend/smartaid-client
+        run: npm ci
+
+      - name: Build React Client
+        working-directory: Frontend/smartaid-client
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+        run: npm run build
+
+      - name: Deploy Client to MonsterASP
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.CLIENT_FTP_HOST }}
+          username: ${{ secrets.CLIENT_FTP_USERNAME }}
+          password: ${{ secrets.CLIENT_FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: Frontend/smartaid-client/dist/
+          server-dir: /wwwroot/

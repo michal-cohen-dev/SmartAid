@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 
 namespace DAL.Entities
@@ -8,7 +9,8 @@ namespace DAL.Entities
         Open = 0,
         Assigned = 1,
         Completed = 2,
-        Cancelled = 3
+        Cancelled = 3,
+        InTreatment = 4
     }
 
     public class HelpRequest
@@ -19,25 +21,30 @@ namespace DAL.Entities
         public int UserId { get; set; }
         public User User { get; set; } = null!;
 
-        // מיקום גיאוגרפי עבור אלגוריתם המרחק והניווט
+        // כותרת ותיאור של בקשת העזרה
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+
+        // מיקום גיאוגרפי
         public double Latitude { get; set; }
         public double Longitude { get; set; }
 
-        // תיאור מיקום טקסטואלי לצפייה על ידי מתנדבים ומשתמשים
+        // כתובת
         public string Address { get; set; } = string.Empty;
-
-        // הערות מיקום נוספות (למשל: קומה/דירה, או תיאור השוליים בכביש)
         public string? AddressNotes { get; set; }
         public string? ImageName { get; set; }
 
+        public int? HelpTypeId { get; set; }
+        public HelpType? HelpType { get; set; }
+
         public RequestStatus Status { get; set; } = RequestStatus.Open;
 
-        // FK למתנדב שתפס את הקריאה (Nullable)
+        // המתנדב שהוקצה לקריאה
         public int? AssignedVolunteerId { get; set; }
         public Volunteer? AssignedVolunteer { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public int? Rating { get; set; } // דירוג שניתן בסיום הקריאה (1-5)
+        public int? Rating { get; set; }
 
         // Navigation Properties
         public List<RequestEquipment> RequiredEquipments { get; set; } = new();

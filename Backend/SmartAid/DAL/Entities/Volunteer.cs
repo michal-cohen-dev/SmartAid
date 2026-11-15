@@ -22,6 +22,13 @@ namespace DAL.Entities
         public string PhoneNumber { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
 
+        // המיקום האחרון של המתנדב
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
+
+        // מועד עדכון המיקום האחרון
+        public DateTime? LastLocationUpdatedAt { get; set; }
+
         // שדות לחישוב מדד אמינות
         public int TotalOffersReceived { get; set; } = 0;
         public int TotalOffersAccepted { get; set; } = 0;
@@ -29,6 +36,8 @@ namespace DAL.Entities
         public double ReliabilityScore { get; set; } = 100.0;
 
         // Navigation Properties
+
+        public List<VolunteerHelpType> VolunteerHelpTypes { get; set; } = new();
         public List<VolunteerEquipment> VolunteerEquipments { get; set; } = new();
         public List<HelpRequest> AssignedRequests { get; set; } = new();
         public List<RequestOffer> RequestOffers { get; set; } = new();

@@ -122,5 +122,28 @@ namespace SmartAid.API.Controllers
 
             return Ok(volunteer);
         }
+
+
+
+        [HttpPut("me/location")]
+        public ActionResult UpdateMyLocation(
+            [FromBody] UpdateVolunteerLocationDto locationDto)
+        {
+            var currentUserId = GetCurrentUserId();
+
+            if (currentUserId == null)
+                return Unauthorized();
+
+            _volunteerService.UpdateLocation(
+                currentUserId.Value,
+                locationDto.Latitude!.Value,
+                locationDto.Longitude!.Value);
+
+            return Ok(new
+            {
+                message = "Volunteer location updated successfully."
+            });
+        }
+
     }
 }
