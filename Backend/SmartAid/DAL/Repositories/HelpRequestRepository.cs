@@ -4,6 +4,7 @@ using System.Linq;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace DAL.Repositories
 {
@@ -106,6 +107,20 @@ namespace DAL.Repositories
 
         public bool TryAssignToVolunteer(int requestId, int volunteerId)
         {
+            // פתיחת טרנזקציה כדי למנוע קבלת שתי משימות במקביל
+            using var transaction =
+                _context.Database.BeginTransaction(IsolationLevel.Serializable);
+
+            // בדיקה האם למתנדב כבר יש משימה פעילה
+            bool hasActiveAssignment = _context.HelpRequests.Any(request =>
+                request.AssignedVolunteerId == volunteerId &&
+                (request.Status == RequestStatus.Assigned ||
+                 request.Status == RequestStatus.InTreatment));
+
+            if (hasActiveAssignment)
+                return false;
+
+            // הקצאת המשימה רק אם היא עדיין פתוחה
             var rowsAffected = _context.HelpRequests
                 .Where(request =>
                     request.Id == requestId &&
@@ -119,7 +134,12 @@ namespace DAL.Repositories
                         request => request.Status,
                         RequestStatus.Assigned));
 
-            return rowsAffected == 1;
+            if (rowsAffected != 1)
+                return false;
+
+            transaction.Commit();
+
+            return true;
         }
 
 
@@ -170,6 +190,27 @@ namespace DAL.Repositories
                         rating));
 
             return rowsAffected == 1;
+        }
+
+
+        public bool HasActiveAssignment(int volunteerId)
+        {
+            return _context.HelpRequests.Any(request =>
+                request.AssignedVolunteerId == volunteerId &&
+                (request.Status == RequestStatus.Assigned ||
+                 request.Status == RequestStatus.InTreatment));
+        }
+
+
+        public List<int> GetRatingsByVolunteerId(int volunteerId)
+        {
+            return _context.HelpRequests
+                .Where(hr =>
+                    hr.AssignedVolunteerId == volunteerId &&
+                    hr.Status == RequestStatus.Completed &&
+                    hr.Rating != null)
+                .Select(hr => hr.Rating!.Value)
+                .ToList();
         }
     }
 }

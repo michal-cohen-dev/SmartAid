@@ -69,6 +69,38 @@ namespace DAL.Repositories
         }
 
 
+        public void IncrementTotalCompleted(int volunteerId)
+        {
+            _context.Volunteers
+                .Where(v => v.Id == volunteerId)
+                .ExecuteUpdate(setters => setters
+                    .SetProperty(
+                        v => v.TotalCompleted,
+                        v => v.TotalCompleted + 1));
+        }
+
+
+        public void IncrementTotalOffersReceived(int volunteerId)
+        {
+            _context.Volunteers
+                .Where(v => v.Id == volunteerId)
+                .ExecuteUpdate(setters => setters
+                    .SetProperty(
+                        v => v.TotalOffersReceived,
+                        v => v.TotalOffersReceived + 1));
+        }
+
+        public void IncrementTotalOffersAccepted(int volunteerId)
+        {
+            _context.Volunteers
+                .Where(v => v.Id == volunteerId)
+                .ExecuteUpdate(setters => setters
+                    .SetProperty(
+                        v => v.TotalOffersAccepted,
+                        v => v.TotalOffersAccepted + 1));
+        }
+
+
         public void AddWithEquipmentAndHelpTypes(
          Volunteer volunteer,
          List<int> equipmentTypeIds,
