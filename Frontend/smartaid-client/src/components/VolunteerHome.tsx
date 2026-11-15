@@ -171,22 +171,44 @@ function VolunteerHome() {
               )}
 
               {location && (
-                <div>
-                  <p>המיקום האחרון התקבל בהצלחה!</p>
+  <div className="volunteer-location-details">
+    <p>המיקום שלך זוהה בהצלחה!</p>
 
-                  <p>
-                    קו רוחב: {location.latitude.toFixed(6)}
-                  </p>
+    <p>
+      קו רוחב: {location.latitude.toFixed(6)}
+    </p>
 
-                  <p>
-                    קו אורך: {location.longitude.toFixed(6)}
-                  </p>
+    <p>
+      קו אורך: {location.longitude.toFixed(6)}
+    </p>
 
-                  <p>
-                    רמת דיוק משוערת: {Math.round(location.accuracy)} מטר
-                  </p>
-                </div>
-              )}
+    <p>
+      רמת דיוק משוערת: {Math.round(location.accuracy)} מטר
+    </p>
+
+    <div className="volunteer-map">
+      <h3>המיקום הנוכחי שלך</h3>
+
+      <iframe
+        title="המיקום הנוכחי של המתנדב"
+        src={`https://maps.google.com/maps?q=${location.latitude},${location.longitude}&z=16&output=embed`}
+        width="100%"
+        height="300"
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+        allowFullScreen
+      />
+
+      <a
+        href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        פתיחה ב־Google Maps
+      </a>
+    </div>
+  </div>
+)}
 
             </div>
           )}
