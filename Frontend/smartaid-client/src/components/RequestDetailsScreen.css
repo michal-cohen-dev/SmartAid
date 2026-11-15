@@ -309,3 +309,14 @@
     margin-right: auto;
   }
 }
+
+.request-image {
+  display: block;
+  width: 100%;
+  max-width: 500px;
+  max-height: 400px;
+  object-fit: contain;
+  border-radius: 14px;
+  border: 1px solid #e4eaf1;
+  margin-top: 12px;
+}

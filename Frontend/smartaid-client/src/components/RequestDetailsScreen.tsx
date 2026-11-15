@@ -263,6 +263,17 @@ function RequestDetailsScreen() {
             </p>
           </div>
 
+          {details?.imageName && (
+  <div className="details-section">
+    <h3>תמונה שצורפה לבקשה</h3>
+    <img
+      className="request-image"
+      src={`${import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '')}/images/${details.imageName}`}
+      alt="תמונה שצורפה לבקשת העזרה"
+    />
+  </div>
+)}
+
           <div className="details-section">
             <h3>ציוד נדרש</h3>
 

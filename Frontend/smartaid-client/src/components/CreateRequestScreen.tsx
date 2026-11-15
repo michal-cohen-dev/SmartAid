@@ -237,6 +237,10 @@ function CreateRequestScreen() {
     try {
       const formData = new FormData();
 
+      if (selectedImage) {
+  formData.append('ImageFile', selectedImage);
+}
+
       formData.append('Title', title.trim());
       formData.append('Description', description.trim());
       formData.append('Latitude', String(latitude));
