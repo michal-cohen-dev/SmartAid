@@ -270,6 +270,18 @@ useEffect(() => {
                   {request.description}
                 </p>
 
+                {Array.isArray(request.requiredEquipmentNames) &&
+  request.requiredEquipmentNames.length > 0 && (
+    <div className="volunteer-request-equipment">
+      <strong>ציוד נדרש:</strong>
+      <ul>
+        {request.requiredEquipmentNames.map((name, index) => (
+          <li key={`${name}-${index}`}>{name}</li>
+        ))}
+      </ul>
+    </div>
+  )}
+
                 <p className="volunteer-request-meta">
                   תאריך יצירה:{' '}
                   {new Date(request.createdAt).toLocaleString('he-IL')}

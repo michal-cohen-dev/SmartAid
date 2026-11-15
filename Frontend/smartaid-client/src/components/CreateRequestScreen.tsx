@@ -560,23 +560,6 @@ if (addressNotes.trim()) {
   </div>
 </div>
 
-{/* כאן להדביק את שני השדות החדשים */}
-
-<div className="create-request-field">
-  <label htmlFor="address">
-    כתובת מדויקת
-  </label>
-
-  <input
-    id="address"
-    type="text"
-    value={address}
-    onChange={(e) => setAddress(e.target.value)}
-    placeholder="לדוגמה: הרצל 10, פתח תקווה"
-    maxLength={300}
-    required
-  />
-</div>
 
 <div className="create-request-field">
   <label htmlFor="addressNotes">

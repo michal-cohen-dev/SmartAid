@@ -16,9 +16,10 @@ interface HelpRequest {
 
 const statusDetails: Record<number, { label: string; className: string }> = {
   0: { label: "פתוחה", className: "open" },
-  1: { label: "שויך מתנדב", className: "assigned" },
+  1: { label: "המתנדב בדרך", className: "assigned" },
   2: { label: "הושלמה", className: "completed" },
   3: { label: "בוטלה", className: "cancelled" },
+  4: { label: "בטיפול", className: "in-treatment" },
 };
 
 function MyRequestsScreen() {

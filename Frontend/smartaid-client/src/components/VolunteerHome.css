@@ -179,3 +179,36 @@
 .volunteer-map a:hover {
   text-decoration: underline;
 }
+
+.volunteer-request-equipment {
+  margin: 14px 0 18px;
+  padding: 12px 16px;
+  background: #f3f6f8;
+  border: 1px solid #e1e7ec;
+  border-radius: 8px;
+}
+
+.volunteer-request-equipment strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #343d49;
+  font-size: 14px;
+}
+
+.volunteer-request-equipment ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.volunteer-request-equipment li {
+  padding: 5px 10px;
+  background: #ffffff;
+  border: 1px solid #dce4ea;
+  border-radius: 20px;
+  color: #526a81;
+  font-size: 13px;
+}
