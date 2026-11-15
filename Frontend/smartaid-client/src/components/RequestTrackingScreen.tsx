@@ -28,7 +28,7 @@ function RequestTrackingScreen() {
   const [ratingLoading, setRatingLoading] = useState(false);
   const [ratingMessage, setRatingMessage] = useState("");
 
-  useEffect(() => {
+useEffect(() => {
   document.title = "מעקב אחר בקשת עזרה | SmartAid";
 
   if (!id || !Number.isInteger(Number(id)) || Number(id) <= 0) {
@@ -38,6 +38,7 @@ function RequestTrackingScreen() {
   }
 
   let isMounted = true;
+  let intervalId: number | undefined;
 
   const loadRequest = async (showLoading = false) => {
     if (showLoading) {
@@ -52,6 +53,13 @@ function RequestTrackingScreen() {
       if (isMounted) {
         setRequest(data);
         setError("");
+
+        // מפסיקים לרענן כשהקריאה הסתיימה או בוטלה
+        if (data.status === 2 || data.status === 3) {
+          if (intervalId !== undefined) {
+            window.clearInterval(intervalId);
+          }
+        }
       }
     } catch (err) {
       if (isMounted) {
@@ -70,13 +78,16 @@ function RequestTrackingScreen() {
 
   loadRequest(true);
 
-  const intervalId = window.setInterval(() => {
+  intervalId = window.setInterval(() => {
     loadRequest();
   }, 5000);
 
   return () => {
     isMounted = false;
-    window.clearInterval(intervalId);
+
+    if (intervalId !== undefined) {
+      window.clearInterval(intervalId);
+    }
   };
 }, [id]);
 
