@@ -62,14 +62,14 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
-// äâãøú úé÷ééú äúîåğåú
+// Ã¤Ã¢Ã£Ã¸Ãº ÃºÃ©Ã·Ã©Ã©Ãº Ã¤ÃºÃ®Ã¥Ã°Ã¥Ãº
 var imagesFolder = Path.GetFullPath(Path.Combine(
     builder.Environment.ContentRootPath,
     builder.Configuration["ImagesFolder"] ?? "../Images"));
 
 Directory.CreateDirectory(imagesFolder);
 
-// øéùåí ä-DbContext ìîñã äğúåğéí
+// Ã¸Ã©Ã¹Ã¥Ã­ Ã¤-DbContext Ã¬Ã®Ã±Ã£ Ã¤Ã°ÃºÃ¥Ã°Ã©Ã­
 var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
 
 if (string.IsNullOrWhiteSpace(connStr))
@@ -82,12 +82,12 @@ if (string.IsNullOrWhiteSpace(connStr))
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connStr));
 
-// øéùåí ä-AutoMapper áöåøä ğôøãú åú÷éğä
+// Ã¸Ã©Ã¹Ã¥Ã­ Ã¤-AutoMapper Ã¡Ã¶Ã¥Ã¸Ã¤ Ã°Ã´Ã¸Ã£Ãº Ã¥ÃºÃ·Ã©Ã°Ã¤
 builder.Services.AddAutoMapper(cfg => {
     cfg.AddProfile<MappingProfile>();
 });
 
-// øéùåí 7 ä-Repositories á-Dependency Injection (AddScoped)
+// Ã¸Ã©Ã¹Ã¥Ã­ 7 Ã¤-Repositories Ã¡-Dependency Injection (AddScoped)
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IVolunteerRepository, VolunteerRepository>();
 builder.Services.AddScoped<IEquipmentTypeRepository, EquipmentTypeRepository>();
@@ -153,11 +153,11 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
+//if (app.Environment.IsDevelopment())
+//{
     app.UseSwagger();
     app.UseSwaggerUI();
-}
+//}
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(imagesFolder),
