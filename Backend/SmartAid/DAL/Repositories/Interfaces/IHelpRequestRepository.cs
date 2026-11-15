@@ -22,5 +22,9 @@ namespace DAL.Repositories.Interfaces
         void Add(HelpRequest helpRequest);
         void Update(HelpRequest helpRequest);
         void Delete(int id);
+        bool TryCancelRequest(
+    int requestId,
+    int userId,
+    bool cancelledByVolunteer);
     }
 }

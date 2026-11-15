@@ -15,5 +15,7 @@ namespace BLL.Services.Interfaces
 
         void Update(int id, VolunteerDto volunteerDto, int currentUserId);
         void Delete(int id, int currentUserId);
+        void DecreaseReliabilityScore(int volunteerId);
+        void IncreaseReliabilityScore(int volunteerId);
     }
 }

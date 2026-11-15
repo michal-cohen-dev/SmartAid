@@ -20,6 +20,7 @@ namespace BLL.Services
         private readonly IRequestEquipmentRepository _requestEquipmentRepository;
         private readonly IEquipmentTypeRepository _equipmentTypeRepository;
         private readonly IHelpTypeRepository _helpTypeRepository;
+
         public HelpRequestService(
             IHelpRequestRepository helpRequestRepository,
             IMapper mapper,
@@ -315,18 +316,21 @@ namespace BLL.Services
             if (volunteer == null || !volunteer.IsActive)
                 return false;
 
-            // ניסיון להשלים את המשימה
+            using var transaction = _volunteerRepository.BeginTransaction();
+
             bool completed = _helpRequestRepository.TryCompleteRequest(
                 requestId,
                 volunteer.Id);
 
-            // עדכון המונה רק אם ההשלמה הצליחה
-            if (completed)
-            {
-                _volunteerRepository.IncrementTotalCompleted(volunteer.Id);
-            }
+            if (!completed)
+                return false;
 
-            return completed;
+            _volunteerRepository.IncrementTotalCompleted(volunteer.Id);
+            _volunteerService.IncreaseReliabilityScore(volunteer.Id);
+
+            transaction.Commit();
+
+            return true;
         }
 
         public bool TryRateCompletedRequest(
@@ -341,6 +345,49 @@ namespace BLL.Services
                 requestId,
                 userId,
                 rating);
+        }
+
+
+        public bool TryCancelRequest(int requestId, int userId)
+        {
+            var request = _helpRequestRepository.GetById(requestId);
+
+            if (request == null)
+                return false;
+
+            // ביטול מצד מבקש העזרה
+            if (request.UserId == userId)
+            {
+                return _helpRequestRepository.TryCancelRequest(
+                    requestId,
+                    userId,
+                    cancelledByVolunteer: false);
+            }
+
+            // ביטול מצד מתנדב
+            var volunteer = _volunteerService.GetByUserId(userId);
+
+            if (volunteer == null ||
+                request.AssignedVolunteerId != volunteer.Id)
+            {
+                return false;
+            }
+
+            using var transaction = _volunteerRepository.BeginTransaction();
+
+            bool cancelled = _helpRequestRepository.TryCancelRequest(
+                requestId,
+                userId,
+                cancelledByVolunteer: true);
+
+            if (!cancelled)
+                return false;
+
+            _volunteerService.DecreaseReliabilityScore(volunteer.Id);
+
+            transaction.Commit();
+
+            return true;
         }
     }
 }
