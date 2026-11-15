@@ -13,6 +13,7 @@ interface ImageAnalysisResult {
   problemName: string;
   description: string;
   category: string;
+  helpTypeId: number | null;
   riskLevel: string;
   recommendation: string;
   safeActions: string[];
@@ -72,6 +73,7 @@ function CreateRequestScreen() {
     setSubmitError('');
     setAnalysis(null);
     setHasAnalyzed(false);
+    setHelpTypeId('');
 
     if (!file) {
       setSelectedImage(null);
@@ -124,9 +126,21 @@ function CreateRequestScreen() {
 
       setAnalysis(result);
 
-      // מילוי אוטומטי של הכותרת והתיאור לפי תוצאות ה-AI
+     
       setTitle(result.problemName || '');
       setDescription(result.description || '');
+
+      // בחירת סוג העזרה לפי המזהה שהחזיר ה-AI
+      if (
+        result.helpTypeId !== null &&
+        result.helpTypeId !== undefined &&
+        result.helpTypeId >= 1 &&
+        result.helpTypeId <= 11
+      ) {
+        setHelpTypeId(String(result.helpTypeId));
+      } else {
+        setHelpTypeId('');
+      }
 
       setHasAnalyzed(true);
       setIsManualMode(false);
@@ -147,6 +161,7 @@ function CreateRequestScreen() {
     setHasAnalyzed(false);
     setTitle('');
     setDescription('');
+    setHelpTypeId('');
     setSubmitError('');
   };
 
@@ -266,7 +281,7 @@ function CreateRequestScreen() {
       setSubmitError(
         error instanceof Error
           ? error.message
-          : 'אירעה שגיאה בשליחת בקשת העזרה.'
+          : 'אירעה שגיאה בשליחת הבקשה.'
       );
     } finally {
       setIsSubmitting(false);
@@ -391,6 +406,7 @@ function CreateRequestScreen() {
                   setSelectedImage(null);
                   setTitle('');
                   setDescription('');
+                  setHelpTypeId('');
                 }}
               >
                 העלאת תמונה אחרת
@@ -415,7 +431,7 @@ function CreateRequestScreen() {
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="לדוגמה: דלת ארון שאינה נסגרת"
+                  placeholder="לדוגמה: הרכב אינו מניע"
                   required
                   minLength={2}
                   maxLength={100}
@@ -477,6 +493,13 @@ function CreateRequestScreen() {
                       לא נמצאו סוגי עזרה במערכת.
                     </p>
                   )}
+
+                {hasAnalyzed && !helpTypeId && (
+                  <p>
+                    ה-AI לא הצליח לזהות סוג עזרה מתאים.
+                    אנא בחרי את סוג העזרה באופן ידני.
+                  </p>
+                )}
               </div>
 
               <div className="create-request-location">

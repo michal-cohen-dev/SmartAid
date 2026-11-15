@@ -44,7 +44,6 @@ public class ImageAnalysisService : IImageAnalysisService
             throw new ArgumentException("Unsupported image type.");
 
         using var memoryStream = new MemoryStream();
-
         await image.CopyToAsync(memoryStream, cancellationToken);
 
         var base64Image = Convert.ToBase64String(

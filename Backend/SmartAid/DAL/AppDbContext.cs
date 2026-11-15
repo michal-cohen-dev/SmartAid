@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<RequestOffer> RequestOffers { get; set; }
     public DbSet<HelpType> HelpTypes { get; set; }
     public DbSet<VolunteerHelpType> VolunteerHelpTypes { get; set; }
+    public DbSet<PendingImageAnalysis> PendingImageAnalyses { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -177,6 +178,21 @@ public class AppDbContext : DbContext
 
             // the same request is never offered twice to the same volunteer
             e.HasIndex(o => new { o.HelpRequestId, o.VolunteerId }).IsUnique();
+        });
+
+        // ---------- PendingImageAnalysis ----------
+        modelBuilder.Entity<PendingImageAnalysis>(e =>
+        {
+            e.Property(p => p.RiskLevel)
+                .IsRequired()
+                .HasMaxLength(20);
+
+            e.HasOne(p => p.User)
+                .WithMany()
+                .HasForeignKey(p => p.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(p => new { p.UserId, p.ExpiresAt });
         });
     }
 }
