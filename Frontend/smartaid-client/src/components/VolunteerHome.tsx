@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../services/api';
@@ -13,20 +12,37 @@ interface HelpRequest {
   requiredEquipmentNames: string[];
 }
 
+interface VolunteerLocation {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+}
+
 function VolunteerHome() {
   const navigate = useNavigate();
 
-  const [isAvailable, setIsAvailable] = useState(true);
+  const [isAvailable, setIsAvailable] = useState(false);
+  const [location, setLocation] =
+    useState<VolunteerLocation | null>(null);
+
+  const [locationError, setLocationError] = useState('');
+  const [locationSaveError, setLocationSaveError] = useState('');
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+
   const [requests, setRequests] = useState<HelpRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // טעינת בקשות עזרה פתוחות ורענון אוטומטי
   useEffect(() => {
     let isMounted = true;
 
-    const loadRequests = async () => {
+    const loadRequests = async (showLoading = false) => {
       try {
-        setIsLoading(true);
+        if (showLoading) {
+          setIsLoading(true);
+        }
+
         setError('');
 
         const data = await apiRequest<HelpRequest[]>(
@@ -51,37 +67,212 @@ function VolunteerHome() {
           );
         }
       } finally {
-        if (isMounted) {
+        if (isMounted && showLoading) {
           setIsLoading(false);
         }
       }
     };
 
-    loadRequests();
+    loadRequests(true);
+
+    const intervalId = window.setInterval(() => {
+      loadRequests();
+    }, 15000);
 
     return () => {
       isMounted = false;
+      window.clearInterval(intervalId);
     };
   }, []);
+
+  // מעקב רציף אחר מיקום המתנדב ושליחתו לשרת
+  useEffect(() => {
+    if (!isAvailable) {
+      setLocation(null);
+      setLocationError('');
+      setLocationSaveError('');
+      setIsGettingLocation(false);
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setLocationError(
+        'הדפדפן אינו תומך בקבלת מיקום.'
+      );
+      setIsAvailable(false);
+      return;
+    }
+
+    setIsGettingLocation(true);
+    setLocationError('');
+    setLocationSaveError('');
+
+    let lastLocationSentAt = 0;
+    let isSavingLocation = false;
+    let isActive = true;
+
+    const watchId = navigator.geolocation.watchPosition(
+      position => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+        setLocation({
+          latitude,
+          longitude,
+          accuracy: position.coords.accuracy,
+        });
+
+        setLocationError('');
+        setIsGettingLocation(false);
+
+        const now = Date.now();
+
+        // שליחת המיקום לשרת לכל היותר פעם ב-10 שניות
+        if (
+          now - lastLocationSentAt >= 10000 &&
+          !isSavingLocation
+        ) {
+          lastLocationSentAt = now;
+          isSavingLocation = true;
+
+          apiRequest<{ message: string }>(
+            '/api/Volunteers/me/location',
+            {
+              method: 'PUT',
+              body: JSON.stringify({
+                latitude,
+                longitude,
+              }),
+            }
+          )
+            .then(() => {
+              if (isActive) {
+                setLocationSaveError('');
+              }
+            })
+            .catch(error => {
+              if (isActive) {
+                setLocationSaveError(
+                  error instanceof Error
+                    ? `המיקום זוהה, אך לא נשמר בשרת: ${error.message}`
+                    : 'לא הצלחנו לשמור את המיקום בשרת.'
+                );
+              }
+            })
+            .finally(() => {
+              isSavingLocation = false;
+            });
+        }
+      },
+      error => {
+        setIsGettingLocation(false);
+
+        if (error.code === error.PERMISSION_DENIED) {
+          setLocationError(
+            'לא ניתנה הרשאה לקבלת מיקום.'
+          );
+          setIsAvailable(false);
+        } else {
+          setLocationError(
+            'לא הצלחנו לקבל את המיקום כרגע. ננסה שוב.'
+          );
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 15000,
+      }
+    );
+
+    return () => {
+      isActive = false;
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, [isAvailable]);
 
   function handleToggle() {
     setIsAvailable(previous => !previous);
   }
 
-  
   return (
     <div className="volunteer-page" dir="rtl">
+
       <header className="volunteer-header">
         <h1>SmartAid</h1>
-        <p>שלום, מתנדב! כאן תוכל לראות את בקשות העזרה הפתוחות.</p>
+        <p>
+          שלום, מתנדב! כאן תוכל לראות את בקשות העזרה הפתוחות.
+        </p>
       </header>
 
       <section className="volunteer-availability">
+
         <div>
           <h2>הזמינות שלי</h2>
+
           <p>
-            {isAvailable ? 'זמין לקבלת קריאות' : 'לא זמין'}
+            {isAvailable
+              ? 'זמין לקבלת קריאות'
+              : 'לא זמין'}
           </p>
+
+          {isAvailable && (
+            <div className="volunteer-location-status">
+
+              {isGettingLocation && (
+                <p>מאתר את המיקום שלך...</p>
+              )}
+
+              {locationError && (
+                <p role="alert">{locationError}</p>
+              )}
+
+              {locationSaveError && (
+                <p role="alert">{locationSaveError}</p>
+              )}
+
+              {location && (
+                <div className="volunteer-location-details">
+                  <p>המיקום שלך זוהה בהצלחה!</p>
+
+                  <p>
+                    קו רוחב: {location.latitude.toFixed(6)}
+                  </p>
+
+                  <p>
+                    קו אורך: {location.longitude.toFixed(6)}
+                  </p>
+
+                  <p>
+                    רמת דיוק משוערת: {Math.round(location.accuracy)} מטר
+                  </p>
+
+                  <div className="volunteer-map">
+                    <h3>המיקום הנוכחי שלך</h3>
+
+                    <iframe
+                      title="המיקום הנוכחי של המתנדב"
+                      src={`https://maps.google.com/maps?q=${location.latitude},${location.longitude}&z=16&output=embed`}
+                      width="100%"
+                      height="300"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      allowFullScreen
+                    />
+
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      פתיחה ב־Google Maps
+                    </a>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          )}
         </div>
 
         <button
@@ -89,15 +280,21 @@ function VolunteerHome() {
           type="button"
           onClick={handleToggle}
         >
-          שינוי סטטוס זמינות
+          {isAvailable
+            ? 'הפסקת זמינות'
+            : 'הפעלה וקבלת מיקום'}
         </button>
+
       </section>
 
       <section className="volunteer-requests-section">
+
         <h2>בקשות עזרה פתוחות</h2>
 
         {isLoading && (
-          <p className="volunteer-message">טוען בקשות מהשרת...</p>
+          <p className="volunteer-message">
+            טוען בקשות מהשרת...
+          </p>
         )}
 
         {error && (
@@ -114,6 +311,7 @@ function VolunteerHome() {
 
         {!isLoading && !error && requests.length > 0 && (
           <div className="volunteer-requests-grid">
+
             {requests.map(request => (
               <article
                 className="volunteer-request-card"
@@ -124,6 +322,18 @@ function VolunteerHome() {
                 <p className="volunteer-request-description">
                   {request.description}
                 </p>
+
+                {Array.isArray(request.requiredEquipmentNames) &&
+                  request.requiredEquipmentNames.length > 0 && (
+                    <div className="volunteer-request-equipment">
+                      <strong>ציוד נדרש:</strong>
+                      <ul>
+                        {request.requiredEquipmentNames.map((name, index) => (
+                          <li key={`${name}-${index}`}>{name}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
                 <p className="volunteer-request-meta">
                   תאריך יצירה:{' '}
@@ -137,14 +347,19 @@ function VolunteerHome() {
                 <button
                   className="volunteer-button"
                   type="button"
-                  onClick={() => navigate(`/request-details/${request.id}`)}
+                  onClick={() =>
+                    navigate(`/request-details/${request.id}`)
+                  }
                 >
                   צפייה בפרטי הבקשה
                 </button>
+
               </article>
             ))}
+
           </div>
         )}
+
       </section>
 
       <div className="volunteer-create-request">
@@ -156,9 +371,9 @@ function VolunteerHome() {
           פתיחת בקשת עזרה
         </button>
       </div>
+
     </div>
   );
-
 }
 
 export default VolunteerHome;

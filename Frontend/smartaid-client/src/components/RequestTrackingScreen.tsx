@@ -28,35 +28,68 @@ function RequestTrackingScreen() {
   const [ratingLoading, setRatingLoading] = useState(false);
   const [ratingMessage, setRatingMessage] = useState("");
 
-  useEffect(() => {
-    document.title = "מעקב אחר בקשת עזרה | SmartAid";
+useEffect(() => {
+  document.title = "מעקב אחר בקשת עזרה | SmartAid";
 
-    const loadRequest = async () => {
-      if (!id || !Number.isInteger(Number(id)) || Number(id) <= 0) {
-        setError("מזהה הבקשה אינו תקין.");
-        setLoading(false);
-        return;
-      }
+  if (!id || !Number.isInteger(Number(id)) || Number(id) <= 0) {
+    setError("מזהה הבקשה אינו תקין.");
+    setLoading(false);
+    return;
+  }
 
-      try {
-        const data = await apiRequest<HelpRequest>(
-          `/api/HelpRequests/${id}`
-        );
+  let isMounted = true;
+  let intervalId: number | undefined;
 
+  const loadRequest = async (showLoading = false) => {
+    if (showLoading) {
+      setLoading(true);
+    }
+
+    try {
+      const data = await apiRequest<HelpRequest>(
+        `/api/HelpRequests/${id}`
+      );
+
+      if (isMounted) {
         setRequest(data);
-      } catch (err) {
+        setError("");
+
+        // מפסיקים לרענן כשהקריאה הסתיימה או בוטלה
+        if (data.status === 2 || data.status === 3) {
+          if (intervalId !== undefined) {
+            window.clearInterval(intervalId);
+          }
+        }
+      }
+    } catch (err) {
+      if (isMounted) {
         setError(
           err instanceof Error
             ? err.message
             : "לא ניתן לטעון את פרטי הבקשה."
         );
-      } finally {
+      }
+    } finally {
+      if (isMounted && showLoading) {
         setLoading(false);
       }
-    };
+    }
+  };
 
+  loadRequest(true);
+
+  intervalId = window.setInterval(() => {
     loadRequest();
-  }, [id]);
+  }, 5000);
+
+  return () => {
+    isMounted = false;
+
+    if (intervalId !== undefined) {
+      window.clearInterval(intervalId);
+    }
+  };
+}, [id]);
 
   const submitRating = async () => {
     if (!id || selectedRating < 1 || selectedRating > 5) {
@@ -322,14 +355,28 @@ function RequestTrackingScreen() {
         )}
 
         {request.assignedVolunteerName && (
-          <div className="tracking-info">
-            <span>🙋</span>
-            <p>
-              המתנדב המשויך לבקשה:{" "}
-              <strong>{request.assignedVolunteerName}</strong>
-            </p>
-          </div>
-        )}
+  <section className="volunteer-info-card">
+    <div className="volunteer-info-icon">🙋</div>
+
+    <div className="volunteer-info-content">
+      <span className="volunteer-info-label">
+        המתנדב שמטפל בבקשה שלך
+      </span>
+
+      <h3>{request.assignedVolunteerName}</h3>
+
+      <p>
+        {request.status === 1
+          ? "המתנדב אישר את הבקשה ונמצא בדרכו אליך."
+          : request.status === 4
+          ? "המתנדב הגיע אליך ומטפל בבקשה."
+          : request.status === 2
+          ? "המתנדב השלים את הטיפול בבקשה."
+          : "המתנדב משויך לבקשת העזרה שלך."}
+      </p>
+    </div>
+  </section>
+)}
 
         {isCancelled && (
           <div className="tracking-info">

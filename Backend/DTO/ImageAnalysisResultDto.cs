@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-
 namespace DTO;
 
 public class ImageAnalysisResultDto
@@ -14,6 +13,8 @@ public class ImageAnalysisResultDto
     public string Description { get; set; } = string.Empty;
 
     public string Category { get; set; } = string.Empty;
+
+    public int? HelpTypeId { get; set; }
 
     public string RiskLevel { get; set; } = string.Empty;
 

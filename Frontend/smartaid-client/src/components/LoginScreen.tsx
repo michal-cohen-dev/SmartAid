@@ -2,48 +2,17 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiRequest, type AuthResponse } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 import "./LoginScreen.css";
 
 function LoginScreen() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  function getIsVolunteer(token: string): boolean {
-    const parts = token.split(".");
-    const payload = parts[1];
-
-    if (!payload) {
-      throw new Error("התקבל Token לא תקין מהשרת.");
-    }
-
-    // המרת Base64URL ל-Base64 והשלמת Padding
-    const base64 = payload
-      .replace(/-/g, "+")
-      .replace(/_/g, "/")
-      .padEnd(Math.ceil(payload.length / 4) * 4, "=");
-
-    // פענוח תקין גם כאשר ה-Token מכיל תווים בעברית
-    const binary = atob(base64);
-    const bytes = Uint8Array.from(
-      binary,
-      (character) => character.charCodeAt(0)
-    );
-
-    const decodedPayload = JSON.parse(
-      new TextDecoder().decode(bytes)
-    );
-
-    const isVolunteer = decodedPayload.isVolunteer;
-
-    return (
-      isVolunteer === true ||
-      String(isVolunteer).toLowerCase() === "true"
-    );
-  }
 
   async function handleSubmit(
     event: React.FormEvent<HTMLFormElement>
@@ -77,14 +46,44 @@ function LoginScreen() {
         throw new Error("לא התקבל Token מהשרת.");
       }
 
-      // זיהוי סוג המשתמש לפי ה-Token שהשרת החזיר
-      const isVolunteer = getIsVolunteer(response.token);
+      // שמירת הטוקן דרך מנגנון האימות המרכזי
+      login(response.token);
 
-      // שמירת ה-Token לאחר פענוח מוצלח
-      sessionStorage.setItem("token", response.token);
+      // זיהוי סוג המשתמש מתוך AuthContext
+      const decodedIsVolunteer =
+        (() => {
+          try {
+            const payload = response.token.split(".")[1];
+            if (!payload) return false;
 
-      // ניווט בהתאם לסוג המשתמש
-      if (isVolunteer) {
+            const base64 = payload
+              .replace(/-/g, "+")
+              .replace(/_/g, "/")
+              .padEnd(
+                Math.ceil(payload.length / 4) * 4,
+                "="
+              );
+
+            const binary = atob(base64);
+            const bytes = Uint8Array.from(
+              binary,
+              (character) => character.charCodeAt(0)
+            );
+
+            const decoded = JSON.parse(
+              new TextDecoder().decode(bytes)
+            );
+
+            return (
+              decoded.isVolunteer === true ||
+              String(decoded.isVolunteer).toLowerCase() === "true"
+            );
+          } catch {
+            return false;
+          }
+        })();
+
+      if (decodedIsVolunteer) {
         navigate("/volunteer");
       } else {
         navigate("/requester");
@@ -96,15 +95,12 @@ function LoginScreen() {
           ? err.message
           : "אירעה שגיאה בהתחברות. נסי שוב."
       );
-
-      sessionStorage.removeItem("token");
-
     } finally {
       setLoading(false);
     }
   }
 
-    return (
+  return (
     <div className="login-page" dir="rtl">
       <div className="login-card">
         <header className="login-header">

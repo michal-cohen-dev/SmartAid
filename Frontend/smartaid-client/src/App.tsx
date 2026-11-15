@@ -20,38 +20,115 @@ import VolunteerAcceptedRequestsScreen from './components/VolunteerAcceptedReque
 import VolunteerCompletedRequestsScreen from './components/VolunteerCompletedRequestsScreen';
 import ProfileScreen from './components/ProfileScreen';
 
+import ProtectedRoute from './routes/ProtectedRoute';
+
 function App() {
   return (
     <Routes>
+      {/* מסכים ציבוריים */}
       <Route path="/" element={<MainDashboard />} />
       <Route path="/login" element={<LoginScreen />} />
       <Route path="/register" element={<RegistrationScreen />} />
-<Route
-  path="/volunteer/accepted-requests"
-  element={<VolunteerAcceptedRequestsScreen />}
-/>
-<Route
-  path="/volunteer/completed-requests"
-  element={<VolunteerCompletedRequestsScreen />}
-/>
-      <Route element={<AppLayout />}>
-        <Route path="/volunteer" element={<VolunteerHome />} />
-        <Route path="/volunteer/open-requests" element={<VolunteerHome />} />
-<Route
-  path="/volunteer/history"
-  element={<VolunteerHistoryScreen />}
-/>
+
+      {/* מסכים למתנדבים בלבד */}
+      <Route
+        path="/volunteer/accepted-requests"
+        element={
+          <ProtectedRoute requireVolunteer>
+            <VolunteerAcceptedRequestsScreen />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/volunteer/completed-requests"
+        element={
+          <ProtectedRoute requireVolunteer>
+            <VolunteerCompletedRequestsScreen />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* כל המסכים הפנימיים דורשים התחברות */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
+        {/* מסכי מתנדב */}
+        <Route
+          path="/volunteer"
+          element={
+            <ProtectedRoute requireVolunteer>
+              <VolunteerHome />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/volunteer/open-requests"
+          element={
+            <ProtectedRoute requireVolunteer>
+              <VolunteerHome />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/volunteer/history"
+          element={
+            <ProtectedRoute requireVolunteer>
+              <VolunteerHistoryScreen />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/request-details/:id"
+          element={
+            <ProtectedRoute requireVolunteer>
+              <RequestDetailsScreen />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* מסכי משתמש */}
         <Route
           path="/volunteer-registration"
           element={<VolunteerReg />}
         />
 
-        <Route path="/request-details/:id" element={<RequestDetailsScreen />} />
-        <Route path="/requester" element={<RequesterHomeScreen />} />
-        <Route path="/request" element={<CreateRequestScreen />} />
-<Route path="/suggestions/:id" element={<AISuggestionsScreen />} /><Route path="/request-tracking/:id" element={<RequestTrackingScreen />} />
-        <Route path="/my-requests" element={<MyRequestsScreen />} />
-            <Route path="/profile" element={<ProfileScreen />} />
+        <Route
+          path="/requester"
+          element={<RequesterHomeScreen />}
+        />
+
+        <Route
+          path="/request"
+          element={<CreateRequestScreen />}
+        />
+
+        <Route
+          path="/suggestions/:id"
+          element={<AISuggestionsScreen />}
+        />
+
+        <Route
+          path="/request-tracking/:id"
+          element={<RequestTrackingScreen />}
+        />
+
+        <Route
+          path="/my-requests"
+          element={<MyRequestsScreen />}
+        />
+
+        <Route
+          path="/profile"
+          element={<ProfileScreen />}
+        />
       </Route>
 
       <Route path="*" element={<NotFound />} />

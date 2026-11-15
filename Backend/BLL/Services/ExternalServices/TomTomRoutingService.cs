@@ -1,7 +1,14 @@
 ﻿
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
+
 using Microsoft.Extensions.Configuration;
 using BLL.Services.Interfaces;
 
@@ -24,8 +31,10 @@ namespace BLL.Services.ExternalServices
             _apiKey = configuration["TomTom:ApiKey"]
                 ?? throw new InvalidOperationException(
                     "TomTom API key is missing. Configure TomTom:ApiKey.");
-            Console.WriteLine($"TomTom API key loaded: {!string.IsNullOrWhiteSpace(_apiKey)}");
-            Console.WriteLine($"TomTom API key length: {_apiKey.Length}");
+
+            Console.WriteLine(
+                $"TomTom API key loaded: {!string.IsNullOrWhiteSpace(_apiKey)}");
+
             if (string.IsNullOrWhiteSpace(_apiKey))
             {
                 throw new InvalidOperationException(
@@ -87,15 +96,79 @@ namespace BLL.Services.ExternalServices
                     }
                 },
 
-                Options = new TomTomOptions
-                {
-                    DepartAt = "now",
-                    Traffic = "live",
-                    TravelMode = "car",
-                    RouteType = "fastest"
-                }
+                Options = CreateOptions()
             };
 
+            return await SendMatrixRequestAsync(
+                requestBody,
+                cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<TomTomRouteResult>>
+            CalculateRoutesToMultipleDestinationsAsync(
+                TomTomLocation origin,
+                IReadOnlyCollection<TomTomLocation> destinations,
+                CancellationToken cancellationToken = default)
+        {
+            if (destinations == null || destinations.Count == 0)
+            {
+                throw new ArgumentException(
+                    "At least one destination is required.",
+                    nameof(destinations));
+            }
+
+            if (destinations.Count > 100)
+            {
+                throw new ArgumentException(
+                    "The synchronous Matrix API supports up to 100 routes.",
+                    nameof(destinations));
+            }
+
+            ValidateLocation(origin);
+
+            foreach (var destination in destinations)
+            {
+                ValidateLocation(destination);
+            }
+
+            var requestBody = new TomTomMatrixRequest
+            {
+                Origins = new List<TomTomPointWrapper>
+                {
+                    new()
+                    {
+                        Point = new TomTomPoint
+                        {
+                            Latitude = origin.Latitude,
+                            Longitude = origin.Longitude
+                        }
+                    }
+                },
+
+                Destinations = destinations
+                    .Select(location => new TomTomPointWrapper
+                    {
+                        Point = new TomTomPoint
+                        {
+                            Latitude = location.Latitude,
+                            Longitude = location.Longitude
+                        }
+                    })
+                    .ToList(),
+
+                Options = CreateOptions()
+            };
+
+            return await SendMatrixRequestAsync(
+                requestBody,
+                cancellationToken);
+        }
+
+        private async Task<IReadOnlyList<TomTomRouteResult>>
+            SendMatrixRequestAsync(
+                TomTomMatrixRequest requestBody,
+                CancellationToken cancellationToken)
+        {
             var requestUrl =
                 $"routing/matrix/2?key={Uri.EscapeDataString(_apiKey)}";
 
@@ -140,8 +213,24 @@ namespace BLL.Services.ExternalServices
                 .ToList();
         }
 
+        private static TomTomOptions CreateOptions()
+        {
+            return new TomTomOptions
+            {
+                DepartAt = "now",
+                Traffic = "live",
+                TravelMode = "car",
+                RouteType = "fastest"
+            };
+        }
+
         private static void ValidateLocation(TomTomLocation location)
         {
+            if (location == null)
+            {
+                throw new ArgumentNullException(nameof(location));
+            }
+
             if (location.Latitude < -90 || location.Latitude > 90)
             {
                 throw new ArgumentOutOfRangeException(

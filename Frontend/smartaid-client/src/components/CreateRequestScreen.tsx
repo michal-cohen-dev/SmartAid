@@ -13,6 +13,7 @@ interface ImageAnalysisResult {
   problemName: string;
   description: string;
   category: string;
+  helpTypeId: number | null;
   riskLevel: string;
   recommendation: string;
   safeActions: string[];
@@ -39,6 +40,9 @@ function CreateRequestScreen() {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [locationStatus, setLocationStatus] = useState('');
+
+  const [address, setAddress] = useState('');
+const [addressNotes, setAddressNotes] = useState('');
 
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [isLoadingHelpTypes, setIsLoadingHelpTypes] = useState(true);
@@ -72,6 +76,7 @@ function CreateRequestScreen() {
     setSubmitError('');
     setAnalysis(null);
     setHasAnalyzed(false);
+    setHelpTypeId('');
 
     if (!file) {
       setSelectedImage(null);
@@ -124,9 +129,21 @@ function CreateRequestScreen() {
 
       setAnalysis(result);
 
-      // מילוי אוטומטי של הכותרת והתיאור לפי תוצאות ה-AI
+     
       setTitle(result.problemName || '');
       setDescription(result.description || '');
+
+      // בחירת סוג העזרה לפי המזהה שהחזיר ה-AI
+      if (
+        result.helpTypeId !== null &&
+        result.helpTypeId !== undefined &&
+        result.helpTypeId >= 1 &&
+        result.helpTypeId <= 11
+      ) {
+        setHelpTypeId(String(result.helpTypeId));
+      } else {
+        setHelpTypeId('');
+      }
 
       setHasAnalyzed(true);
       setIsManualMode(false);
@@ -147,6 +164,7 @@ function CreateRequestScreen() {
     setHasAnalyzed(false);
     setTitle('');
     setDescription('');
+    setHelpTypeId('');
     setSubmitError('');
   };
 
@@ -237,14 +255,19 @@ function CreateRequestScreen() {
     try {
       const formData = new FormData();
 
+      if (selectedImage) {
+  formData.append('ImageFile', selectedImage);
+}
+
       formData.append('Title', title.trim());
       formData.append('Description', description.trim());
       formData.append('Latitude', String(latitude));
       formData.append('Longitude', String(longitude));
-      formData.append(
-        'Address',
-        'מיקום לפי קואורדינטות GPS'
-      );
+      formData.append('Address', address.trim());
+
+if (addressNotes.trim()) {
+  formData.append('AddressNotes', addressNotes.trim());
+}
       formData.append('HelpTypeId', helpTypeId);
 
       const response = await apiRequest<{
@@ -262,7 +285,7 @@ function CreateRequestScreen() {
       setSubmitError(
         error instanceof Error
           ? error.message
-          : 'אירעה שגיאה בשליחת בקשת העזרה.'
+          : 'אירעה שגיאה בשליחת הבקשה.'
       );
     } finally {
       setIsSubmitting(false);
@@ -387,6 +410,7 @@ function CreateRequestScreen() {
                   setSelectedImage(null);
                   setTitle('');
                   setDescription('');
+                  setHelpTypeId('');
                 }}
               >
                 העלאת תמונה אחרת
@@ -411,7 +435,7 @@ function CreateRequestScreen() {
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="לדוגמה: דלת ארון שאינה נסגרת"
+                  placeholder="לדוגמה: הרכב אינו מניע"
                   required
                   minLength={2}
                   maxLength={100}
@@ -473,31 +497,69 @@ function CreateRequestScreen() {
                       לא נמצאו סוגי עזרה במערכת.
                     </p>
                   )}
-              </div>
 
-              <div className="create-request-location">
-                <label>מיקום</label>
-
-                <button
-                  className="create-request-button"
-                  type="button"
-                  onClick={handleGetLocation}
-                  disabled={isLoadingLocation}
-                >
-                  {isLoadingLocation
-                    ? 'מקבל מיקום...'
-                    : 'קבלת המיקום הנוכחי שלי'}
-                </button>
-
-                {locationStatus && (
-                  <p
-                    className="create-request-status"
-                    role="status"
-                  >
-                    {locationStatus}
+                {hasAnalyzed && !helpTypeId && (
+                  <p>
+                    ה-AI לא הצליח לזהות סוג עזרה מתאים.
+                    אנא בחרי את סוג העזרה באופן ידני.
                   </p>
                 )}
               </div>
+
+              <div className="create-request-location">
+  <label>מיקום</label>
+
+  <button
+    className="create-request-button"
+    type="button"
+    onClick={handleGetLocation}
+    disabled={isLoadingLocation}
+  >
+    {isLoadingLocation
+      ? 'מקבל מיקום...'
+      : 'קבלת המיקום הנוכחי שלי'}
+  </button>
+
+  {locationStatus && (
+    <p
+      className="create-request-status"
+      role="status"
+    >
+      {locationStatus}
+    </p>
+  )}
+
+  <div className="create-request-field">
+    <label htmlFor="address">
+      כתובת מדויקת
+    </label>
+
+    <input
+      id="address"
+      type="text"
+      value={address}
+      onChange={(e) => setAddress(e.target.value)}
+      placeholder="לדוגמה: הרצל 10, פתח תקווה"
+      maxLength={300}
+      required
+    />
+  </div>
+
+  <div className="create-request-field">
+    <label htmlFor="addressNotes">
+      הערות למתנדב לגבי המיקום (לא חובה)
+    </label>
+
+    <textarea
+      id="addressNotes"
+      value={addressNotes}
+      onChange={(e) => setAddressNotes(e.target.value)}
+      placeholder="לדוגמה: קומה 2, דירה 5, כניסה מהחצר"
+      maxLength={300}
+    />
+  </div>
+</div>
+
 
               {submitError && (
                 <p

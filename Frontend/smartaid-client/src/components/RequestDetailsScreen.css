@@ -309,3 +309,106 @@
     margin-right: auto;
   }
 }
+
+.request-image {
+  display: block;
+  width: 100%;
+  max-width: 500px;
+  max-height: 400px;
+  object-fit: contain;
+  border-radius: 14px;
+  border: 1px solid #e4eaf1;
+  margin-top: 12px;
+}
+
+/* אזור ניווט למיקום מבקש העזרה */
+.request-navigation {
+  margin-top: 24px;
+  padding: 24px;
+  background: #eef7f4;
+  border: 1px solid #d5e9e1;
+  border-radius: 16px;
+}
+
+.request-navigation h3 {
+  margin: 0 0 10px;
+  color: #176d59;
+  font-size: 19px;
+}
+
+.request-navigation p {
+  margin: 0 0 18px;
+  color: #60796f;
+  line-height: 1.7;
+}
+
+.navigation-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.navigation-buttons a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 13px 20px;
+  border-radius: 10px;
+  background: #23866e;
+  color: white;
+  text-decoration: none;
+  font-weight: 700;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.navigation-buttons a:hover {
+  background: #176d59;
+  transform: translateY(-2px);
+}
+
+.navigation-buttons a:focus-visible {
+  outline: 3px solid #8bc9b5;
+  outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+  .request-navigation {
+    padding: 18px;
+  }
+
+  .navigation-buttons {
+    flex-direction: column;
+  }
+
+  .navigation-buttons a {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+.request-map-section {
+  margin-top: 24px;
+  padding: 22px;
+  background: #f7f9fb;
+  border: 1px solid #e4eaf1;
+  border-radius: 16px;
+}
+
+.request-map-section h3 {
+  margin: 0 0 16px;
+  color: #20334d;
+  font-size: 19px;
+}
+
+.request-map-section iframe {
+  display: block;
+  border: 0;
+  border-radius: 12px;
+}
+
+.request-map-section p {
+  margin: 12px 0 0;
+  color: #718096;
+  font-size: 13px;
+  line-height: 1.6;
+}

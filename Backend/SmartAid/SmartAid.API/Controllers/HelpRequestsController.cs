@@ -35,15 +35,23 @@ namespace SmartAid.API.Controllers
 
 
         [HttpGet("open")]
-        public ActionResult<IEnumerable<HelpRequestPreviewDto>> GetOpenForVolunteer()
+        public async Task<ActionResult<IEnumerable<HelpRequestPreviewDto>>> GetOpenForVolunteer(
+     CancellationToken cancellationToken)
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (!int.TryParse(userIdClaim, out var userId))
                 return Unauthorized();
 
-            return Ok(_helpRequestService.GetOpenForVolunteer(userId));
+            var requests = await _helpRequestService.GetOpenForVolunteerAsync(
+                userId,
+                cancellationToken);
+
+            return Ok(requests);
         }
+
+
+
 
 
         [Authorize]
@@ -285,6 +293,28 @@ namespace SmartAid.API.Controllers
             {
                 message = "הדירוג נשמר בהצלחה."
             });
+        }
+
+        [HttpPost("{id}/cancel")]
+        public IActionResult Cancel(int id)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null ||
+                !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return Unauthorized();
+            }
+
+            bool cancelled = _helpRequestService.TryCancelRequest(id, userId);
+
+            if (!cancelled)
+            {
+                return BadRequest(
+                    "לא ניתן לבטל את הבקשה. ייתכן שהיא כבר בוטלה או שהמשתמש אינו מורשה לבטל אותה.");
+            }
+
+            return Ok("הבקשה בוטלה בהצלחה.");
         }
     }
 }

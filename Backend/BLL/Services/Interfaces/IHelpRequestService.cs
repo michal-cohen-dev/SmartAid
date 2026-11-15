@@ -1,4 +1,8 @@
 ﻿
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+
 using DTO;
 
 namespace BLL.Services.Interfaces
@@ -7,7 +11,11 @@ namespace BLL.Services.Interfaces
     {
         List<HelpRequestDto> GetAll();
         HelpRequestDto? GetById(int id);
-        List<HelpRequestPreviewDto> GetOpenForVolunteer(int userId);
+
+        Task<List<HelpRequestPreviewDto>> GetOpenForVolunteerAsync(
+            int userId,
+            CancellationToken cancellationToken = default);
+
         List<HelpRequestDto> GetByUserId(int userId);
         List<HelpRequestDto> GetByVolunteerId(int userId);
 
@@ -20,5 +28,6 @@ namespace BLL.Services.Interfaces
         bool TryMarkInTreatment(int requestId, int userId);
         bool TryCompleteRequest(int requestId, int userId);
         bool TryRateCompletedRequest(int requestId, int userId, int rating);
+        bool TryCancelRequest(int requestId, int userId);
     }
 }
