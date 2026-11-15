@@ -3,6 +3,7 @@ using AutoMapper;
 using BLL.Exceptions;
 using BLL.Services.Interfaces;
 using DAL.Entities;
+using DAL.Repositories;
 using DAL.Repositories.Interfaces;
 using DTO;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,7 @@ namespace BLL.Services
 {
     public class HelpRequestService : IHelpRequestService
     {
+        private readonly IVolunteerRepository _volunteerRepository;
         private readonly IHelpRequestRepository _helpRequestRepository;
         private readonly IVolunteerService _volunteerService;
         private readonly IMapper _mapper;
@@ -25,7 +27,8 @@ namespace BLL.Services
             IRequestEquipmentRepository requestEquipmentRepository,
             IEquipmentTypeRepository equipmentTypeRepository,
             IHelpTypeRepository helpTypeRepository,
-            IVolunteerService volunteerService)
+            IVolunteerService volunteerService,
+            IVolunteerRepository volunteerRepository)
         {
             _helpRequestRepository = helpRequestRepository;
             _mapper = mapper;
@@ -34,6 +37,7 @@ namespace BLL.Services
             _equipmentTypeRepository = equipmentTypeRepository;
             _helpTypeRepository = helpTypeRepository;
             _volunteerService = volunteerService;
+            _volunteerRepository = volunteerRepository;
         }
 
         public List<HelpRequestDto> GetAll()
@@ -68,6 +72,9 @@ namespace BLL.Services
             var volunteer = _volunteerService.GetByUserId(userId);
 
             if (volunteer == null || !volunteer.IsActive)
+                return new List<HelpRequestPreviewDto>();
+
+            if (_helpRequestRepository.HasActiveAssignment(volunteer.Id))
                 return new List<HelpRequestPreviewDto>();
 
             var requests = _helpRequestRepository.GetOpenRequests();
@@ -308,9 +315,18 @@ namespace BLL.Services
             if (volunteer == null || !volunteer.IsActive)
                 return false;
 
-            return _helpRequestRepository.TryCompleteRequest(
+            // ניסיון להשלים את המשימה
+            bool completed = _helpRequestRepository.TryCompleteRequest(
                 requestId,
                 volunteer.Id);
+
+            // עדכון המונה רק אם ההשלמה הצליחה
+            if (completed)
+            {
+                _volunteerRepository.IncrementTotalCompleted(volunteer.Id);
+            }
+
+            return completed;
         }
 
         public bool TryRateCompletedRequest(

@@ -16,6 +16,9 @@ namespace DAL.Repositories.Interfaces
         void Add(Volunteer volunteer);
         void Update(Volunteer volunteer);
         void Delete(int id);
+        void IncrementTotalCompleted(int volunteerId);
+        void IncrementTotalOffersReceived(int volunteerId);
+        void IncrementTotalOffersAccepted(int volunteerId);
         void AddWithEquipmentAndHelpTypes(
      Volunteer volunteer,
      List<int> equipmentTypeIds,
