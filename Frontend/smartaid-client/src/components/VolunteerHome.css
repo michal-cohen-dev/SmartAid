@@ -128,3 +128,18 @@
     flex-direction: column;
   }
 }
+
+
+.volunteer-location-status {
+  margin-top: 14px;
+  padding: 12px 16px;
+  background: #f7f8fa;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+}
+
+.volunteer-location-status p {
+  margin: 6px 0;
+  font-size: 14px;
+  color: #526a81;
+}
