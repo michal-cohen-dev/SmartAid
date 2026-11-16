@@ -1,3 +1,4 @@
+
 using BLL.MappingProfiles;
 using BLL.Services;
 using BLL.Services.Interfaces;
@@ -12,8 +13,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using SmartAid.API.Filters;
-using System.Text;
 using SmartAid.API.BackgroundServices;
+using SmartAid.API.Hubs;
+using System.Text;
+using SmartAid.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -55,6 +58,25 @@ builder.Services
                 Encoding.UTF8.GetBytes(jwtKey)),
             ClockSkew = TimeSpan.FromMinutes(1)
         };
+
+        // Allow SignalR to receive the JWT from the connection query string.
+        // This is restricted to the notifications Hub only.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/hubs/notifications"))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            }
+        };
     });
 
 // Authorization
@@ -76,7 +98,8 @@ builder.Services.AddCors(options =>
                 "https://smartaid-client.runasp.net"
             )
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -163,6 +186,9 @@ builder.Services.AddControllers(options =>
 
 builder.Services.AddEndpointsApiExplorer();
 
+// SignalR
+builder.Services.AddSignalR();
+
 // Swagger
 builder.Services.AddSwaggerGen(options =>
 {
@@ -191,7 +217,7 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 });
-
+builder.Services.AddScoped<IVolunteerNotificationService, VolunteerNotificationService>();
 var app = builder.Build();
 
 // Swagger
@@ -217,6 +243,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// SignalR notifications Hub
+app.MapHub<NotificationsHub>("/hubs/notifications");
 
 // TomTom debug endpoint
 if (app.Environment.IsDevelopment())

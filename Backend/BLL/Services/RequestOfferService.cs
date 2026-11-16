@@ -23,19 +23,22 @@ namespace BLL.Services
         private readonly IVolunteerRepository _volunteerRepository;
         private readonly IVolunteerMatchingService _volunteerMatchingService;
         private readonly IMapper _mapper;
+        private readonly IVolunteerNotificationService _volunteerNotificationService;
 
         public RequestOfferService(
             IRequestOfferRepository requestOfferRepository,
             IHelpRequestRepository helpRequestRepository,
             IVolunteerRepository volunteerRepository,
             IVolunteerMatchingService volunteerMatchingService,
-            IMapper mapper)
+            IMapper mapper,
+            IVolunteerNotificationService volunteerNotificationService)
         {
             _requestOfferRepository = requestOfferRepository;
             _helpRequestRepository = helpRequestRepository;
             _volunteerRepository = volunteerRepository;
             _volunteerMatchingService = volunteerMatchingService;
             _mapper = mapper;
+            _volunteerNotificationService = volunteerNotificationService;
         }
 
         public List<RequestOfferDto> GetAll()
@@ -122,10 +125,10 @@ namespace BLL.Services
 
 
 
-        public Task<bool> CreateOfferForVolunteerAsync(
-     int helpRequestId,
-     int volunteerId,
-     CancellationToken cancellationToken = default)
+        public async Task<bool> CreateOfferForVolunteerAsync(
+    int helpRequestId,
+    int volunteerId,
+    CancellationToken cancellationToken = default)
         {
             if (helpRequestId <= 0)
                 throw new ArgumentException("Invalid help request ID.");
@@ -140,7 +143,7 @@ namespace BLL.Services
 
             if (helpRequest.Status != RequestStatus.Open ||
                 helpRequest.AssignedVolunteerId != null)
-                return Task.FromResult(false);
+                return false;
 
             var volunteer = _volunteerRepository.GetById(volunteerId);
 
@@ -148,7 +151,7 @@ namespace BLL.Services
                 throw new NotFoundException("Volunteer not found.");
 
             if (!volunteer.IsActive)
-                return Task.FromResult(false);
+                return false;
 
             var offer = new RequestOffer
             {
@@ -158,14 +161,19 @@ namespace BLL.Services
 
             bool added = _requestOfferRepository.TryAddIfCapacityAvailable(
                 offer,
-                5);
+                MaxActiveOffers);
 
             if (!added)
-                return Task.FromResult(false);
+                return false;
 
             _volunteerRepository.IncrementTotalOffersReceived(volunteer.Id);
 
-            return Task.FromResult(true);
+            await _volunteerNotificationService.NotifyNewOfferAsync(
+                volunteer.Id,
+                helpRequest.Id,
+                cancellationToken);
+
+            return true;
         }
 
 
@@ -283,6 +291,10 @@ namespace BLL.Services
 
                     _volunteerRepository.IncrementTotalOffersReceived(
                         match.Volunteer.Id);
+                    await _volunteerNotificationService.NotifyNewOfferAsync(
+    match.Volunteer.Id,
+    helpRequestId,
+    cancellationToken);
                 }
             }
 
