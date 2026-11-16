@@ -190,7 +190,7 @@ namespace SmartAid.API.Controllers
 
             return Ok(new
             {
-                message = "Help request deleted successfully."
+                message = "Help request cancelled successfully."
             });
         }
 

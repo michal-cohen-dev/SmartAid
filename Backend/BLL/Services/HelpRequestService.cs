@@ -312,14 +312,12 @@ namespace BLL.Services
 
         public bool Delete(int id, int userId)
         {
-            var existingRequest = _helpRequestRepository.GetOwned(id, userId);
-
-            if (existingRequest == null)
-                return false;
-
-            _helpRequestRepository.Delete(id);
-
-            return true;
+            // Instead of physically deleting the request,
+            // cancel it and preserve its history.
+            return _helpRequestRepository.TryCancelRequest(
+                id,
+                userId,
+                cancelledByVolunteer: false);
         }
 
         public bool TryAssignToVolunteer(int requestId, int userId)
