@@ -133,8 +133,14 @@ namespace BLL.Services
             return request.AssignedVolunteerId == volunteer.Id;
         }
 
-        public int Add(HelpRequestPostDto helpRequestDto, int userId)
+
+        public Task<int> Add(
+            HelpRequestPostDto helpRequestDto,
+            int userId,
+            CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var equipmentTypeIds = helpRequestDto.RequiredEquipmentTypeIds
                 .Distinct()
                 .ToList();
@@ -199,8 +205,9 @@ namespace BLL.Services
                 throw;
             }
 
-            return request.Id;
+            return Task.FromResult(request.Id);
         }
+
 
         public bool Update(
             int id,

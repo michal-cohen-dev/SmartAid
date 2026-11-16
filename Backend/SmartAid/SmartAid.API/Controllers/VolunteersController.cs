@@ -4,6 +4,8 @@ using DTO;
 using BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace SmartAid.API.Controllers
 {
@@ -148,24 +150,25 @@ namespace SmartAid.API.Controllers
 
 
         [HttpPut("me/availability")]
-        public ActionResult UpdateMyAvailability(
-            [FromBody] UpdateVolunteerAvailabilityDto availabilityDto)
+        public async Task<ActionResult> UpdateMyAvailability(
+    [FromBody] UpdateVolunteerAvailabilityDto availabilityDto,
+    CancellationToken cancellationToken)
         {
             var currentUserId = GetCurrentUserId();
 
             if (currentUserId == null)
                 return Unauthorized();
 
-            _volunteerService.UpdateAvailability(
+            await _volunteerService.UpdateAvailabilityAsync(
                 currentUserId.Value,
-                availabilityDto.IsAvailable);
+                availabilityDto.IsAvailable,
+                cancellationToken);
 
             return Ok(new
             {
                 message = "Volunteer availability updated successfully."
             });
         }
-
 
     }
 }

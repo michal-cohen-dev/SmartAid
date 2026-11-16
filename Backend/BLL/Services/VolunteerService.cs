@@ -5,6 +5,8 @@ using DAL.Repositories.Interfaces;
 using DTO;
 using BLL.Services.Interfaces;
 using BLL.Exceptions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace BLL.Services
 {
@@ -15,19 +17,25 @@ namespace BLL.Services
         private readonly IEquipmentTypeRepository _equipmentTypeRepository;
         private readonly IMapper _mapper;
         private readonly IHelpTypeRepository _helpTypeRepository;
+        private readonly IVolunteerMatchingService _volunteerMatchingService;
+        private readonly IRequestOfferService _requestOfferService;
 
         public VolunteerService(
-            IVolunteerRepository volunteerRepository,
-            IUserRepository userRepository,
-            IEquipmentTypeRepository equipmentTypeRepository,
-            IHelpTypeRepository helpTypeRepository,
-            IMapper mapper)
+     IVolunteerRepository volunteerRepository,
+     IUserRepository userRepository,
+     IEquipmentTypeRepository equipmentTypeRepository,
+     IHelpTypeRepository helpTypeRepository,
+     IMapper mapper,
+     IVolunteerMatchingService volunteerMatchingService,
+     IRequestOfferService requestOfferService)
         {
             _volunteerRepository = volunteerRepository;
             _userRepository = userRepository;
             _equipmentTypeRepository = equipmentTypeRepository;
             _helpTypeRepository = helpTypeRepository;
             _mapper = mapper;
+            _volunteerMatchingService = volunteerMatchingService;
+            _requestOfferService = requestOfferService;
         }
 
         public List<VolunteerDto> GetAll()
@@ -236,8 +244,13 @@ namespace BLL.Services
             _volunteerRepository.Update(volunteer);
         }
 
-        public void UpdateAvailability(int userId, bool isAvailable)
+        public async Task UpdateAvailabilityAsync(
+    int userId,
+    bool isAvailable,
+    CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var volunteer = _volunteerRepository.GetByUserId(userId);
 
             if (volunteer == null)
@@ -262,6 +275,25 @@ namespace BLL.Services
             volunteer.IsActive = isAvailable;
 
             _volunteerRepository.Update(volunteer);
+
+            if (!isAvailable)
+                return;
+
+            var eligibleRequests =
+                await _volunteerMatchingService
+                    .GetEligibleRequestsForVolunteerAsync(
+                        volunteer.Id,
+                        cancellationToken);
+
+            foreach (var match in eligibleRequests)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                await _requestOfferService.CreateOfferForVolunteerAsync(
+                    match.HelpRequest.Id,
+                    volunteer.Id,
+                    cancellationToken);
+            }
         }
     }
 }

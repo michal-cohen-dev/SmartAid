@@ -1,29 +1,40 @@
 ﻿
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using AutoMapper;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
 using BLL.Services.Interfaces;
 using BLL.Exceptions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace BLL.Services
 {
     public class RequestOfferService : IRequestOfferService
     {
+        private const int MaxActiveOffers = 5;
+
         private readonly IRequestOfferRepository _requestOfferRepository;
         private readonly IHelpRequestRepository _helpRequestRepository;
         private readonly IVolunteerRepository _volunteerRepository;
+        private readonly IVolunteerMatchingService _volunteerMatchingService;
         private readonly IMapper _mapper;
 
         public RequestOfferService(
             IRequestOfferRepository requestOfferRepository,
             IHelpRequestRepository helpRequestRepository,
             IVolunteerRepository volunteerRepository,
+            IVolunteerMatchingService volunteerMatchingService,
             IMapper mapper)
         {
             _requestOfferRepository = requestOfferRepository;
             _helpRequestRepository = helpRequestRepository;
             _volunteerRepository = volunteerRepository;
+            _volunteerMatchingService = volunteerMatchingService;
             _mapper = mapper;
         }
 
@@ -81,17 +92,66 @@ namespace BLL.Services
             };
 
             bool added = _requestOfferRepository.TryAddIfCapacityAvailable(
-    offer,
-    5);
+                offer,
+                MaxActiveOffers);
+
+            if (added)
+            {
+                _volunteerRepository.IncrementTotalOffersReceived(
+                    volunteer.Id);
+            }
+        }
+
+
+
+
+        public Task<bool> CreateOfferForVolunteerAsync(
+     int helpRequestId,
+     int volunteerId,
+     CancellationToken cancellationToken = default)
+        {
+            if (helpRequestId <= 0)
+                throw new ArgumentException("Invalid help request ID.");
+
+            if (volunteerId <= 0)
+                throw new ArgumentException("Invalid volunteer ID.");
+
+            var helpRequest = _helpRequestRepository.GetById(helpRequestId);
+
+            if (helpRequest == null)
+                throw new NotFoundException("Help request not found.");
+
+            if (helpRequest.Status != RequestStatus.Open ||
+                helpRequest.AssignedVolunteerId != null)
+                return Task.FromResult(false);
+
+            var volunteer = _volunteerRepository.GetById(volunteerId);
+
+            if (volunteer == null)
+                throw new NotFoundException("Volunteer not found.");
+
+            if (!volunteer.IsActive)
+                return Task.FromResult(false);
+
+            var offer = new RequestOffer
+            {
+                HelpRequestId = helpRequest.Id,
+                VolunteerId = volunteer.Id
+            };
+
+            bool added = _requestOfferRepository.TryAddIfCapacityAvailable(
+                offer,
+                5);
 
             if (!added)
-            {
-                return;
-            }
+                return Task.FromResult(false);
 
-            _volunteerRepository.IncrementTotalOffersReceived(
-                volunteer.Id);
+            _volunteerRepository.IncrementTotalOffersReceived(volunteer.Id);
+
+            return Task.FromResult(true);
         }
+
+
 
         public void Update(int id, RequestOfferDto requestOfferDto)
         {
@@ -116,8 +176,6 @@ namespace BLL.Services
 
             _requestOfferRepository.Update(existingOffer);
 
-            // Increase the counter only when moving
-            // from Pending to Accepted.
             if (previousStatus == OfferStatus.Pending &&
                 newStatus == OfferStatus.Accepted)
             {
@@ -126,9 +184,10 @@ namespace BLL.Services
             }
         }
 
-
-
-        public bool TryDeclineOffer(int offerId, int userId)
+        public async Task<bool> TryDeclineOfferAsync(
+            int offerId,
+            int userId,
+            CancellationToken cancellationToken = default)
         {
             if (offerId <= 0)
                 throw new ArgumentException("Invalid request offer ID.");
@@ -141,12 +200,77 @@ namespace BLL.Services
             if (volunteer == null)
                 throw new NotFoundException("Volunteer profile not found.");
 
-            return _requestOfferRepository.TryDeclineOffer(
+            var offer = _requestOfferRepository.GetById(offerId);
+
+            if (offer == null)
+                throw new NotFoundException("Request offer not found.");
+
+            bool declined = _requestOfferRepository.TryDeclineOffer(
                 offerId,
                 volunteer.Id);
+
+            if (!declined)
+                return false;
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            await CreateOffersForRequestAsync(
+                offer.HelpRequestId,
+                cancellationToken);
+
+            return true;
         }
 
+        public async Task<int> CreateOffersForRequestAsync(
+            int helpRequestId,
+            CancellationToken cancellationToken = default)
+        {
+            if (helpRequestId <= 0)
+                throw new ArgumentException("Invalid help request ID.");
 
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var helpRequest = _helpRequestRepository.GetById(helpRequestId);
+
+            if (helpRequest == null)
+                throw new NotFoundException("Help request not found.");
+
+            if (helpRequest.Status != RequestStatus.Open)
+                return 0;
+
+            var matches =
+                await _volunteerMatchingService.GetEligibleVolunteersAsync(
+                    helpRequestId,
+                    cancellationToken);
+
+            int createdOffers = 0;
+
+            foreach (var match in matches)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var offer = new RequestOffer
+                {
+                    HelpRequestId = helpRequestId,
+                    VolunteerId = match.Volunteer.Id
+                };
+
+                bool added =
+                    _requestOfferRepository.TryAddIfCapacityAvailable(
+                        offer,
+                        MaxActiveOffers);
+
+                if (added)
+                {
+                    createdOffers++;
+
+                    _volunteerRepository.IncrementTotalOffersReceived(
+                        match.Volunteer.Id);
+                }
+            }
+
+            return createdOffers;
+        }
 
         public void Delete(int id)
         {

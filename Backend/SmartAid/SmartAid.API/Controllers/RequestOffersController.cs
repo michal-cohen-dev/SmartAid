@@ -1,4 +1,7 @@
 ﻿
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using DTO;
 using BLL.Services.Interfaces;
@@ -14,17 +17,18 @@ namespace SmartAid.API.Controllers
     {
         private readonly IRequestOfferService _requestOfferService;
 
-        public RequestOffersController(IRequestOfferService requestOfferService)
+        public RequestOffersController(
+            IRequestOfferService requestOfferService)
         {
             _requestOfferService = requestOfferService;
         }
+
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public ActionResult<IEnumerable<RequestOfferDto>> GetAll()
         {
             return Ok(_requestOfferService.GetAll());
         }
-
 
         [Authorize(Roles = "Admin")]
         [HttpGet("{id}")]
@@ -44,7 +48,8 @@ namespace SmartAid.API.Controllers
         }
 
         [HttpPost]
-        public ActionResult Add([FromBody] RequestOfferDto requestOfferDto)
+        public ActionResult Add(
+            [FromBody] RequestOfferDto requestOfferDto)
         {
             return StatusCode(403, new
             {
@@ -52,9 +57,10 @@ namespace SmartAid.API.Controllers
             });
         }
 
-
         [HttpPut("{id}")]
-        public ActionResult Update(int id, [FromBody] RequestOfferDto requestOfferDto)
+        public ActionResult Update(
+            int id,
+            [FromBody] RequestOfferDto requestOfferDto)
         {
             return StatusCode(403, new
             {
@@ -62,19 +68,22 @@ namespace SmartAid.API.Controllers
             });
         }
 
-
-
         [HttpPost("{id}/decline")]
-        public ActionResult DeclineOffer(int id)
+        public async Task<ActionResult> DeclineOffer(
+            int id,
+            CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userIdClaim =
+                User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (!int.TryParse(userIdClaim, out var userId))
                 return Unauthorized();
 
-            var declined = _requestOfferService.TryDeclineOffer(
-                id,
-                userId);
+            var declined =
+                await _requestOfferService.TryDeclineOfferAsync(
+                    id,
+                    userId,
+                    cancellationToken);
 
             if (!declined)
             {
@@ -90,8 +99,6 @@ namespace SmartAid.API.Controllers
             });
         }
 
-
-
         [HttpDelete("{id}")]
         public ActionResult Delete(int id)
         {
@@ -100,6 +107,5 @@ namespace SmartAid.API.Controllers
                 message = "Request offers cannot be deleted manually."
             });
         }
-
     }
 }

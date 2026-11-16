@@ -1,4 +1,7 @@
 ﻿
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using DTO;
 
 namespace BLL.Services.Interfaces
@@ -13,7 +16,20 @@ namespace BLL.Services.Interfaces
 
         void Update(int id, RequestOfferDto requestOfferDto);
 
-        bool TryDeclineOffer(int offerId, int userId);
+        Task<bool> TryDeclineOfferAsync(
+            int offerId,
+            int userId,
+            CancellationToken cancellationToken = default);
+
+        Task<int> CreateOffersForRequestAsync(
+            int helpRequestId,
+            CancellationToken cancellationToken = default);
+
+        Task<bool> CreateOfferForVolunteerAsync(
+    int helpRequestId,
+    int volunteerId,
+    CancellationToken cancellationToken = default);
+
 
         void Delete(int id);
     }

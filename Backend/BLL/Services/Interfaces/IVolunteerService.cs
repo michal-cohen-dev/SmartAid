@@ -3,6 +3,8 @@ using AutoMapper;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace BLL.Services.Interfaces
 {
@@ -20,6 +22,9 @@ namespace BLL.Services.Interfaces
         void IncreaseReliabilityScore(int volunteerId);
         void UpdateLocation(int userId, double latitude, double longitude);
 
-        void UpdateAvailability(int userId, bool isAvailable);
+        Task UpdateAvailabilityAsync(
+    int userId,
+    bool isAvailable,
+    CancellationToken cancellationToken = default);
     }
 }

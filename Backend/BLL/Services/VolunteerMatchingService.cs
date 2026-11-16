@@ -40,9 +40,11 @@ namespace BLL.Services
             if (helpRequest == null)
                 throw new NotFoundException("Help request not found.");
 
-            if (helpRequest.Status != RequestStatus.Open)
-                throw new BusinessRuleException(
-                    "Matching is only possible for open requests.");
+            if (helpRequest.Status != RequestStatus.Open ||
+                helpRequest.AssignedVolunteerId != null)
+            {
+                return new List<VolunteerMatchResult>();
+            }
 
             if (helpRequest.HelpTypeId == null)
                 throw new BusinessRuleException(
@@ -50,7 +52,6 @@ namespace BLL.Services
 
             var volunteers = _volunteerRepository.GetAllWithQualifications();
 
-            // מיקום המתנדב חייב להיות מעודכן בחמש הדקות האחרונות
             var locationFreshnessCutoff = DateTime.UtcNow.AddMinutes(-5);
 
             var requiredEquipmentIds = helpRequest.RequiredEquipments
@@ -61,6 +62,16 @@ namespace BLL.Services
             var eligibleVolunteers = volunteers
                 .Where(volunteer =>
                 {
+                    if (!volunteer.IsActive)
+                        return false;
+
+                    if (!volunteer.Latitude.HasValue ||
+                        !volunteer.Longitude.HasValue)
+                        return false;
+
+                    if (_helpRequestRepository.HasActiveAssignment(volunteer.Id))
+                        return false;
+
                     bool hasRequiredHelpType =
                         volunteer.VolunteerHelpTypes.Any(
                             ht => ht.HelpTypeId == helpRequest.HelpTypeId);
@@ -168,7 +179,6 @@ namespace BLL.Services
             if (volunteer == null || !volunteer.IsActive)
                 return new List<HelpRequestMatchResult>();
 
-            // מיקום המתנדב חייב להיות מעודכן בחמש הדקות האחרונות
             var locationFreshnessCutoff = DateTime.UtcNow.AddMinutes(-5);
 
             if (!volunteer.LastLocationUpdatedAt.HasValue ||
@@ -188,7 +198,8 @@ namespace BLL.Services
             var eligibleRequests = openRequests
                 .Where(request =>
                 {
-                    if (request.HelpTypeId == null)
+                    if (request.HelpTypeId == null ||
+                        request.AssignedVolunteerId != null)
                         return false;
 
                     bool hasRequiredHelpType =

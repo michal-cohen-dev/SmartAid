@@ -4,6 +4,8 @@ using DTO;
 using BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace SmartAid.API.Controllers
 {
@@ -118,17 +120,22 @@ namespace SmartAid.API.Controllers
 
 
 
+
         [HttpPost]
         [Consumes("multipart/form-data")]
-        public ActionResult Add([FromForm] HelpRequestPostDto helpRequestDto)
+        public async Task<ActionResult> Add(
+            [FromForm] HelpRequestPostDto helpRequestDto,
+            CancellationToken cancellationToken)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             if (!int.TryParse(userIdClaim, out var userId))
                 return Unauthorized();
 
-            // שמירת הבקשה וקבלת המזהה שנוצר
-            var requestId = _helpRequestService.Add(helpRequestDto, userId);
+            var requestId = await _helpRequestService.Add(
+                helpRequestDto,
+                userId,
+                cancellationToken);
 
             return Ok(new
             {
@@ -136,6 +143,7 @@ namespace SmartAid.API.Controllers
                 id = requestId
             });
         }
+
 
 
         [HttpPut("{id}")]
