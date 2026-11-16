@@ -161,7 +161,12 @@ namespace BLL.Services
                 TotalOffersAccepted = 0,
                 TotalCompleted = 0,
 
-                ReliabilityScore = 100.0
+                ReliabilityScore = 100.0,
+
+                LastLocationUpdatedAt = volunteerDto.Latitude.HasValue &&
+                        volunteerDto.Longitude.HasValue
+    ? DateTime.UtcNow
+    : null
             };
 
             // שמירת המתנדב והציוד שלו
