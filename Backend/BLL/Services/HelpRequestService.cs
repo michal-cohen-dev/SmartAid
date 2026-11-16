@@ -22,7 +22,6 @@ namespace BLL.Services
         private readonly IVolunteerMatchingService _volunteerMatchingService;
         private readonly IMapper _mapper;
         private readonly IImageService _imageService;
-        private readonly IRequestEquipmentRepository _requestEquipmentRepository;
         private readonly IEquipmentTypeRepository _equipmentTypeRepository;
         private readonly IHelpTypeRepository _helpTypeRepository;
         private readonly IRequestOfferService _requestOfferService;
@@ -32,7 +31,6 @@ namespace BLL.Services
             IHelpRequestRepository helpRequestRepository,
             IMapper mapper,
             IImageService imageService,
-            IRequestEquipmentRepository requestEquipmentRepository,
             IEquipmentTypeRepository equipmentTypeRepository,
             IHelpTypeRepository helpTypeRepository,
             IVolunteerService volunteerService,
@@ -44,7 +42,6 @@ namespace BLL.Services
             _helpRequestRepository = helpRequestRepository;
             _mapper = mapper;
             _imageService = imageService;
-            _requestEquipmentRepository = requestEquipmentRepository;
             _equipmentTypeRepository = equipmentTypeRepository;
             _helpTypeRepository = helpTypeRepository;
             _volunteerService = volunteerService;
@@ -187,16 +184,6 @@ namespace BLL.Services
             request.UserId = userId;
             request.HelpTypeId = helpRequestDto.HelpTypeId;
 
-            // Add the equipment to the request graph.
-            // EF Core will save the request and its equipment
-            // together in one SaveChanges transaction.
-            request.RequiredEquipments = equipmentTypeIds
-                .Select(equipmentTypeId => new RequestEquipment
-                {
-                    EquipmentTypeId = equipmentTypeId
-                })
-                .ToList();
-
             string? savedImageName = null;
 
             try
@@ -209,9 +196,9 @@ namespace BLL.Services
                     request.ImageName = savedImageName;
                 }
 
-                // One repository call and one SaveChanges:
-                // request + all required equipment are saved together.
-                _helpRequestRepository.Add(request);
+                _helpRequestRepository.AddWithEquipment(
+                    request,
+                    equipmentTypeIds);
             }
             catch
             {
@@ -230,7 +217,6 @@ namespace BLL.Services
                 throw;
             }
 
-            // Failure to create offers must not undo the request.
             try
             {
                 await _requestOfferService.CreateOffersForRequestAsync(
@@ -262,8 +248,6 @@ namespace BLL.Services
             if (existingRequest == null)
                 throw new NotFoundException("Help request not found.");
 
-            // A request can only be edited while it is open
-            // and has not yet been assigned to a volunteer.
             if (existingRequest.Status != RequestStatus.Open ||
                 existingRequest.AssignedVolunteerId != null)
             {
@@ -301,31 +285,15 @@ namespace BLL.Services
             existingRequest.AddressNotes = helpRequestDto.AddressNotes;
             existingRequest.HelpTypeId = helpRequestDto.HelpTypeId;
 
-            var existingEquipments =
-                _requestEquipmentRepository.GetByHelpRequestId(id);
-
-            foreach (var equipment in existingEquipments)
-            {
-                _requestEquipmentRepository.Delete(equipment.Id);
-            }
-
-            foreach (var equipmentTypeId in equipmentTypeIds)
-            {
-                _requestEquipmentRepository.Add(new RequestEquipment
-                {
-                    HelpRequestId = id,
-                    EquipmentTypeId = equipmentTypeId
-                });
-            }
-
-            _helpRequestRepository.Update(existingRequest);
+            _helpRequestRepository.UpdateWithEquipment(
+                existingRequest,
+                equipmentTypeIds);
 
             return true;
         }
 
         public bool Delete(int id, int userId)
         {
-            // Cancel the request instead of physically deleting it.
             return _helpRequestRepository.TryCancelRequest(
                 id,
                 userId,

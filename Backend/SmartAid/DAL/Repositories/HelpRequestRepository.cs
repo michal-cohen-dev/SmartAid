@@ -91,6 +91,35 @@ namespace DAL.Repositories
             _context.SaveChanges();
         }
 
+        public void UpdateWithEquipment(
+    HelpRequest entity,
+    List<int> equipmentTypeIds)
+        {
+            using var transaction = _context.Database.BeginTransaction();
+
+            var existingEquipments = _context.RequestEquipments
+                .Where(equipment => equipment.HelpRequestId == entity.Id)
+                .ToList();
+
+            _context.RequestEquipments.RemoveRange(existingEquipments);
+
+            var newEquipments = equipmentTypeIds
+                .Distinct()
+                .Select(equipmentTypeId => new RequestEquipment
+                {
+                    HelpRequestId = entity.Id,
+                    EquipmentTypeId = equipmentTypeId
+                })
+                .ToList();
+
+            _context.RequestEquipments.AddRange(newEquipments);
+
+            // The request entity is already tracked by the DbContext.
+            _context.SaveChanges();
+
+            transaction.Commit();
+        }
+
         public void Update(HelpRequest entity)
         {
             _context.HelpRequests.Update(entity);

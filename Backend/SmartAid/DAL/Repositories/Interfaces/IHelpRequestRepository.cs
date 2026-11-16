@@ -24,6 +24,9 @@ namespace DAL.Repositories.Interfaces
         void AddWithEquipment(
     HelpRequest helpRequest,
     List<int> equipmentTypeIds);
+        void UpdateWithEquipment(
+    HelpRequest helpRequest,
+    List<int> equipmentTypeIds);
         void Update(HelpRequest helpRequest);
         void Delete(int id);
 
