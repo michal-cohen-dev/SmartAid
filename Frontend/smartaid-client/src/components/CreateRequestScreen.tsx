@@ -1,15 +1,10 @@
 
-import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import { apiRequest } from '../services/api';
-import './CreateRequestScreen.css';
+import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { apiRequest } from "../services/api";
+import "./CreateRequestScreen.css";
 
 interface HelpType {
-  id: number;
-  name: string;
-}
-
-interface EquipmentType {
   id: number;
   name: string;
 }
@@ -29,115 +24,74 @@ interface ImageAnalysisResult {
 function CreateRequestScreen() {
   const navigate = useNavigate();
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-
-  const [analysis, setAnalysis] =
-    useState<ImageAnalysisResult | null>(null);
+  const [analysis, setAnalysis] = useState<ImageAnalysisResult | null>(null);
 
   const [isManualMode, setIsManualMode] = useState(false);
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
 
   const [helpTypes, setHelpTypes] = useState<HelpType[]>([]);
-  const [helpTypeId, setHelpTypeId] = useState('');
-
-  const [equipmentTypes, setEquipmentTypes] =
-    useState<EquipmentType[]>([]);
-  const [selectedEquipmentIds, setSelectedEquipmentIds] =
-    useState<number[]>([]);
+  const [helpTypeId, setHelpTypeId] = useState("");
 
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
-  const [locationStatus, setLocationStatus] = useState('');
+  const [locationStatus, setLocationStatus] = useState("");
 
-  const [address, setAddress] = useState('');
-  const [addressNotes, setAddressNotes] = useState('');
+  const [address, setAddress] = useState("");
+  const [addressNotes, setAddressNotes] = useState("");
 
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [isLoadingHelpTypes, setIsLoadingHelpTypes] = useState(true);
-  const [isLoadingEquipmentTypes, setIsLoadingEquipmentTypes] =
-    useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [submitError, setSubmitError] = useState('');
+  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
-    document.title = 'בקשת עזרה חדשה | SmartAid';
+    document.title = "בקשת עזרה חדשה | SmartAid";
 
     const loadHelpTypes = async () => {
       try {
-        const data = await apiRequest<HelpType[]>('/api/HelpTypes');
+        const data = await apiRequest<HelpType[]>("/api/HelpTypes");
         setHelpTypes(data);
       } catch (error) {
         setSubmitError(
           error instanceof Error
             ? error.message
-            : 'לא ניתן לטעון את סוגי העזרה.'
+            : "לא ניתן לטעון את סוגי העזרה."
         );
       } finally {
         setIsLoadingHelpTypes(false);
       }
     };
 
-    const loadEquipmentTypes = async () => {
-      try {
-        const data = await apiRequest<EquipmentType[]>(
-          '/api/EquipmentTypes'
-        );
-        setEquipmentTypes(data);
-      } catch (error) {
-        setSubmitError(
-          error instanceof Error
-            ? error.message
-            : 'לא ניתן לטעון את סוגי הציוד.'
-        );
-      } finally {
-        setIsLoadingEquipmentTypes(false);
-      }
-    };
-
     loadHelpTypes();
-    loadEquipmentTypes();
   }, []);
 
-  const handleEquipmentChange = (equipmentId: number) => {
-    setSelectedEquipmentIds(previous =>
-      previous.includes(equipmentId)
-        ? previous.filter(id => id !== equipmentId)
-        : [...previous, equipmentId]
-    );
-  };
-
   const handleImageChange = (file: File | null) => {
-    setSubmitError('');
+    setSubmitError("");
     setAnalysis(null);
     setHasAnalyzed(false);
-    setHelpTypeId('');
+    setHelpTypeId("");
 
     if (!file) {
       setSelectedImage(null);
       return;
     }
 
-    const allowedTypes = [
-      'image/jpeg',
-      'image/png',
-      'image/webp'
-    ];
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 
     if (!allowedTypes.includes(file.type.toLowerCase())) {
       setSelectedImage(null);
-      setSubmitError(
-        'אפשר להעלות תמונה מסוג JPEG, PNG או WebP בלבד.'
-      );
+      setSubmitError("אפשר להעלות תמונה מסוג JPEG, PNG או WebP בלבד.");
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
       setSelectedImage(null);
-      setSubmitError('גודל התמונה לא יכול לעלות על 5MB.');
+      setSubmitError("גודל התמונה לא יכול לעלות על 5MB.");
       return;
     }
 
@@ -146,28 +100,28 @@ function CreateRequestScreen() {
 
   const handleAnalyzeImage = async () => {
     if (!selectedImage) {
-      setSubmitError('יש לבחור תמונה לפני ביצוע הניתוח.');
+      setSubmitError("יש לבחור תמונה לפני ביצוע הניתוח.");
       return;
     }
 
-    setSubmitError('');
+    setSubmitError("");
     setIsAnalyzing(true);
 
     try {
       const imageFormData = new FormData();
-      imageFormData.append('image', selectedImage);
+      imageFormData.append("image", selectedImage);
 
       const result = await apiRequest<ImageAnalysisResult>(
-        '/api/ImageAnalysis/analyze',
+        "/api/ImageAnalysis/analyze",
         {
-          method: 'POST',
+          method: "POST",
           body: imageFormData
         }
       );
 
       setAnalysis(result);
-      setTitle(result.problemName || '');
-      setDescription(result.description || '');
+      setTitle(result.problemName || "");
+      setDescription(result.description || "");
 
       if (
         result.helpTypeId !== null &&
@@ -177,7 +131,7 @@ function CreateRequestScreen() {
       ) {
         setHelpTypeId(String(result.helpTypeId));
       } else {
-        setHelpTypeId('');
+        setHelpTypeId("");
       }
 
       setHasAnalyzed(true);
@@ -186,7 +140,7 @@ function CreateRequestScreen() {
       setSubmitError(
         error instanceof Error
           ? error.message
-          : 'אירעה שגיאה בניתוח התמונה.'
+          : "אירעה שגיאה בניתוח התמונה."
       );
     } finally {
       setIsAnalyzing(false);
@@ -197,26 +151,26 @@ function CreateRequestScreen() {
     setIsManualMode(true);
     setAnalysis(null);
     setHasAnalyzed(false);
-    setTitle('');
-    setDescription('');
-    setHelpTypeId('');
-    setSubmitError('');
+    setTitle("");
+    setDescription("");
+    setHelpTypeId("");
+    setSubmitError("");
   };
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
-      setLocationStatus('הדפדפן שלך אינו תומך בקבלת מיקום.');
+      setLocationStatus("הדפדפן שלך אינו תומך בקבלת מיקום.");
       return;
     }
 
     setIsLoadingLocation(true);
-    setLocationStatus('מנסה לקבל את המיקום שלך...');
+    setLocationStatus("מנסה לקבל את המיקום שלך...");
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setLatitude(position.coords.latitude);
         setLongitude(position.coords.longitude);
-        setLocationStatus('המיקום שלך התקבל בהצלחה!');
+        setLocationStatus("המיקום שלך התקבל בהצלחה!");
         setIsLoadingLocation(false);
       },
       (error) => {
@@ -224,27 +178,16 @@ function CreateRequestScreen() {
 
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            setLocationStatus(
-              'לא ניתנה הרשאה לגשת למיקום שלך.'
-            );
+            setLocationStatus("לא ניתנה הרשאה לגשת למיקום שלך.");
             break;
-
           case error.POSITION_UNAVAILABLE:
-            setLocationStatus(
-              'לא ניתן לאתר כרגע את המיקום שלך.'
-            );
+            setLocationStatus("לא ניתן לאתר כרגע את המיקום שלך.");
             break;
-
           case error.TIMEOUT:
-            setLocationStatus(
-              'בקשת המיקום נמשכה זמן רב מדי. נסי שוב.'
-            );
+            setLocationStatus("בקשת המיקום נמשכה זמן רב מדי. נסי שוב.");
             break;
-
           default:
-            setLocationStatus(
-              'אירעה שגיאה בקבלת המיקום.'
-            );
+            setLocationStatus("אירעה שגיאה בקבלת המיקום.");
         }
       },
       {
@@ -255,104 +198,67 @@ function CreateRequestScreen() {
     );
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  // בשלב הזה לא נוצרת קריאה בשרת.
+  // רק מעבירים את הנתונים למסך הצעות ה-AI.
+  const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    setSubmitError('');
+    setSubmitError("");
 
     if (!title.trim() || title.trim().length < 2) {
-      setSubmitError(
-        'יש להזין כותרת באורך של לפחות 2 תווים.'
-      );
+      setSubmitError("יש להזין כותרת באורך של לפחות 2 תווים.");
       return;
     }
 
     if (!description.trim() || description.trim().length < 5) {
-      setSubmitError(
-        'יש להזין תיאור באורך של לפחות 5 תווים.'
-      );
+      setSubmitError("יש להזין תיאור באורך של לפחות 5 תווים.");
       return;
     }
 
     if (!helpTypeId) {
-      setSubmitError('יש לבחור את סוג העזרה המבוקש.');
-      return;
-    }
-
-    if (selectedEquipmentIds.length > 20) {
-      setSubmitError('ניתן לבחור עד 20 סוגי ציוד.');
+      setSubmitError("יש לבחור את סוג העזרה המבוקש.");
       return;
     }
 
     if (latitude === null || longitude === null) {
-      setSubmitError(
-        'יש לקבל את המיקום שלך לפני שליחת הבקשה.'
-      );
+      setSubmitError("יש לקבל את המיקום שלך לפני המשך.");
+      return;
+    }
+
+    if (!address.trim()) {
+      setSubmitError("יש להזין כתובת מדויקת.");
       return;
     }
 
     setIsSubmitting(true);
 
-    try {
-      const formData = new FormData();
-
-      if (selectedImage) {
-        formData.append('ImageFile', selectedImage);
+    navigate("/suggestions", {
+      state: {
+        analysis,
+        draft: {
+          title: title.trim(),
+          description: description.trim(),
+          helpTypeId,
+          latitude,
+          longitude,
+          address: address.trim(),
+          addressNotes: addressNotes.trim(),
+          selectedImage
+        }
       }
-
-      formData.append('Title', title.trim());
-      formData.append('Description', description.trim());
-      formData.append('Latitude', String(latitude));
-      formData.append('Longitude', String(longitude));
-      formData.append('Address', address.trim());
-
-      if (addressNotes.trim()) {
-        formData.append('AddressNotes', addressNotes.trim());
-      }
-
-      formData.append('HelpTypeId', helpTypeId);
-
-      selectedEquipmentIds.forEach(id => {
-        formData.append('RequiredEquipmentTypeIds', String(id));
-      });
-
-      const response = await apiRequest<{
-        message: string;
-        id: number;
-      }>('/api/HelpRequests', {
-        method: 'POST',
-        body: formData
-      });
-
-      navigate(`/suggestions/${response.id}`, {
-        state: { analysis }
-      });
-    } catch (error) {
-      setSubmitError(
-        error instanceof Error
-          ? error.message
-          : 'אירעה שגיאה בשליחת הבקשה.'
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   };
 
   return (
     <div className="create-request-page" dir="rtl">
       <main className="create-request-container">
-
         <header className="create-request-header">
           <h1>בקשת עזרה חדשה</h1>
-          <p>
-            לא יודעת איך לתאר את הבעיה? ה-AI שלנו יעזור לך!
-          </p>
+          <p>לא יודעת איך לתאר את הבעיה? ה-AI שלנו יעזור לך!</p>
         </header>
 
         <section className="create-request-card">
-
           {!hasAnalyzed && !isManualMode && (
             <div className="create-request-form">
-
               <div className="create-request-field">
                 <h2>נתחיל מהתמונה</h2>
                 <p>
@@ -360,33 +266,24 @@ function CreateRequestScreen() {
                   וה-AI ינסה לזהות אותה ולהציע תיאור מתאים.
                 </p>
 
-                <label htmlFor="requestImage">
-                  בחירת תמונה
-                </label>
+                <label htmlFor="requestImage">בחירת תמונה</label>
 
                 <input
                   id="requestImage"
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   onChange={(e) =>
-                    handleImageChange(
-                      e.target.files?.[0] || null
-                    )
+                    handleImageChange(e.target.files?.[0] || null)
                   }
                 />
 
                 {selectedImage && (
-                  <p>
-                    התמונה שנבחרה: {selectedImage.name}
-                  </p>
+                  <p>התמונה שנבחרה: {selectedImage.name}</p>
                 )}
               </div>
 
               {submitError && (
-                <p
-                  className="create-request-error"
-                  role="alert"
-                >
+                <p className="create-request-error" role="alert">
                   {submitError}
                 </p>
               )}
@@ -398,8 +295,8 @@ function CreateRequestScreen() {
                 disabled={!selectedImage || isAnalyzing}
               >
                 {isAnalyzing
-                  ? 'ה-AI מנתח את התמונה...'
-                  : 'נתח את התמונה באמצעות AI'}
+                  ? "ה-AI מנתח את התמונה..."
+                  : "נתח את התמונה באמצעות AI"}
               </button>
 
               <button
@@ -409,33 +306,21 @@ function CreateRequestScreen() {
               >
                 אני מעדיפה למלא את הבקשה בעצמי
               </button>
-
             </div>
           )}
 
           {hasAnalyzed && analysis && (
             <div className="create-request-form">
-
               <h2>ה-AI זיהה את הבעיה!</h2>
 
               <div className="solution-card">
                 <div className="solution-content">
                   <h3>{analysis.problemName}</h3>
-
                   <p>{analysis.description}</p>
-
+                  <p><strong>קטגוריה:</strong> {analysis.category}</p>
+                  <p><strong>רמת סיכון:</strong> {analysis.riskLevel}</p>
                   <p>
-                    <strong>קטגוריה:</strong>{' '}
-                    {analysis.category}
-                  </p>
-
-                  <p>
-                    <strong>רמת סיכון:</strong>{' '}
-                    {analysis.riskLevel}
-                  </p>
-
-                  <p>
-                    <strong>המלצת המערכת:</strong>{' '}
+                    <strong>המלצת המערכת:</strong>{" "}
                     {analysis.recommendation}
                   </p>
                 </div>
@@ -443,7 +328,7 @@ function CreateRequestScreen() {
 
               <p>
                 הפרטים הבאים מולאו אוטומטית.
-                אפשר לערוך אותם לפני שליחת הבקשה.
+                אפשר לערוך אותם לפני המשך.
               </p>
 
               <button
@@ -453,14 +338,13 @@ function CreateRequestScreen() {
                   setHasAnalyzed(false);
                   setAnalysis(null);
                   setSelectedImage(null);
-                  setTitle('');
-                  setDescription('');
-                  setHelpTypeId('');
+                  setTitle("");
+                  setDescription("");
+                  setHelpTypeId("");
                 }}
               >
                 העלאת תמונה אחרת
               </button>
-
             </div>
           )}
 
@@ -469,12 +353,8 @@ function CreateRequestScreen() {
               className="create-request-form"
               onSubmit={handleSubmit}
             >
-
               <div className="create-request-field">
-                <label htmlFor="title">
-                  כותרת הבעיה
-                </label>
-
+                <label htmlFor="title">כותרת הבעיה</label>
                 <input
                   id="title"
                   type="text"
@@ -488,16 +368,11 @@ function CreateRequestScreen() {
               </div>
 
               <div className="create-request-field">
-                <label htmlFor="description">
-                  תיאור הבעיה
-                </label>
-
+                <label htmlFor="description">תיאור הבעיה</label>
                 <textarea
                   id="description"
                   value={description}
-                  onChange={(e) =>
-                    setDescription(e.target.value)
-                  }
+                  onChange={(e) => setDescription(e.target.value)}
                   placeholder="תיאור הבעיה..."
                   required
                   minLength={5}
@@ -506,9 +381,7 @@ function CreateRequestScreen() {
               </div>
 
               <div className="create-request-field">
-                <label htmlFor="helpType">
-                  סוג העזרה
-                </label>
+                <label htmlFor="helpType">סוג העזרה</label>
 
                 {isLoadingHelpTypes ? (
                   <p>טוען סוגי עזרה...</p>
@@ -516,32 +389,21 @@ function CreateRequestScreen() {
                   <select
                     id="helpType"
                     value={helpTypeId}
-                    onChange={(e) =>
-                      setHelpTypeId(e.target.value)
-                    }
+                    onChange={(e) => setHelpTypeId(e.target.value)}
                     required
                   >
-                    <option value="">
-                      בחרי סוג עזרה
-                    </option>
-
+                    <option value="">בחרי סוג עזרה</option>
                     {helpTypes.map((helpType) => (
-                      <option
-                        key={helpType.id}
-                        value={helpType.id}
-                      >
+                      <option key={helpType.id} value={helpType.id}>
                         {helpType.name}
                       </option>
                     ))}
                   </select>
                 )}
 
-                {!isLoadingHelpTypes &&
-                  helpTypes.length === 0 && (
-                    <p>
-                      לא נמצאו סוגי עזרה במערכת.
-                    </p>
-                  )}
+                {!isLoadingHelpTypes && helpTypes.length === 0 && (
+                  <p>לא נמצאו סוגי עזרה במערכת.</p>
+                )}
 
                 {hasAnalyzed && !helpTypeId && (
                   <p>
@@ -549,49 +411,6 @@ function CreateRequestScreen() {
                     אנא בחרי את סוג העזרה באופן ידני.
                   </p>
                 )}
-              </div>
-
-              <div className="create-request-field">
-                <h3>ציוד נדרש (לא חובה)</h3>
-
-                <p>
-                  סמני את הציוד שהמתנדב צריך להביא איתו.
-                  אפשר לבחור יותר מסוג ציוד אחד.
-                </p>
-
-                {isLoadingEquipmentTypes ? (
-                  <p>טוען סוגי ציוד...</p>
-                ) : equipmentTypes.length === 0 ? (
-                  <p>לא נמצאו סוגי ציוד במערכת.</p>
-                ) : (
-                  <div className="create-request-equipment-list">
-                    {equipmentTypes.map(equipment => (
-                      <label
-                        key={equipment.id}
-                        className="create-request-equipment-option"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedEquipmentIds.includes(
-                            equipment.id
-                          )}
-                          onChange={() =>
-                            handleEquipmentChange(equipment.id)
-                          }
-                          disabled={
-                            !selectedEquipmentIds.includes(equipment.id) &&
-                            selectedEquipmentIds.length >= 20
-                          }
-                        />
-                        <span>{equipment.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-
-                <p>
-                  נבחרו {selectedEquipmentIds.length} סוגי ציוד.
-                </p>
               </div>
 
               <div className="create-request-location">
@@ -604,24 +423,18 @@ function CreateRequestScreen() {
                   disabled={isLoadingLocation}
                 >
                   {isLoadingLocation
-                    ? 'מקבל מיקום...'
-                    : 'קבלת המיקום הנוכחי שלי'}
+                    ? "מקבל מיקום..."
+                    : "קבלת המיקום הנוכחי שלי"}
                 </button>
 
                 {locationStatus && (
-                  <p
-                    className="create-request-status"
-                    role="status"
-                  >
+                  <p className="create-request-status" role="status">
                     {locationStatus}
                   </p>
                 )}
 
                 <div className="create-request-field">
-                  <label htmlFor="address">
-                    כתובת מדויקת
-                  </label>
-
+                  <label htmlFor="address">כתובת מדויקת</label>
                   <input
                     id="address"
                     type="text"
@@ -637,7 +450,6 @@ function CreateRequestScreen() {
                   <label htmlFor="addressNotes">
                     הערות למתנדב לגבי המיקום (לא חובה)
                   </label>
-
                   <textarea
                     id="addressNotes"
                     value={addressNotes}
@@ -649,10 +461,7 @@ function CreateRequestScreen() {
               </div>
 
               {submitError && (
-                <p
-                  className="create-request-error"
-                  role="alert"
-                >
+                <p className="create-request-error" role="alert">
                   {submitError}
                 </p>
               )}
@@ -663,18 +472,15 @@ function CreateRequestScreen() {
                 disabled={
                   isSubmitting ||
                   isLoadingHelpTypes ||
-                  isLoadingEquipmentTypes ||
                   helpTypes.length === 0
                 }
               >
                 {isSubmitting
-                  ? 'שולח בקשה...'
-                  : 'המשך לקבלת עזרה'}
+                  ? "מעביר להצעות..."
+                  : "המשך להצעות הפתרון"}
               </button>
-
             </form>
           )}
-
         </section>
       </main>
     </div>

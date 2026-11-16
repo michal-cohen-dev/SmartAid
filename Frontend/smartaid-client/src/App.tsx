@@ -110,10 +110,17 @@ function App() {
           element={<CreateRequestScreen />}
         />
 
-        <Route
-          path="/suggestions/:id"
-          element={<AISuggestionsScreen />}
-        />
+        
+<Route
+  path="/suggestions"
+  element={<AISuggestionsScreen />}
+/>
+
+<Route
+  path="/suggestions/:id"
+  element={<AISuggestionsScreen />}
+/>
+
 
         <Route
           path="/request-tracking/:id"

@@ -14,6 +14,17 @@ interface HelpRequest {
   assignedVolunteerName?: string | null;
 }
 
+interface DraftRequest {
+  title: string;
+  description: string;
+  helpTypeId: string;
+  latitude: number;
+  longitude: number;
+  address: string;
+  addressNotes: string;
+  selectedImage: File | null;
+}
+
 interface ImageAnalysisResult {
   problemName: string;
   description: string;
@@ -30,20 +41,41 @@ function AISuggestionsScreen() {
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
 
-  const analysis = (
-    location.state as { analysis?: ImageAnalysisResult | null } | null
-  )?.analysis;
+  const navigationState = location.state as {
+    analysis?: ImageAnalysisResult | null;
+    draft?: DraftRequest;
+  } | null;
+
+  const analysis = navigationState?.analysis;
+  const draft = navigationState?.draft;
 
   const [request, setRequest] = useState<HelpRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     document.title = "הצעות לפתרון עצמי | SmartAid";
 
     const loadRequest = async () => {
+      // בקשה חדשה שעדיין לא נשלחה לשרת
+      if (draft) {
+        setRequest({
+          id: 0,
+          title: draft.title,
+          description: draft.description,
+          createdAt: new Date().toISOString(),
+          status: 0,
+          address: draft.address
+        });
+
+        setLoading(false);
+        return;
+      }
+
+      // תמיכה גם בכתובות ישנות שבהן כבר קיים מזהה בקשה
       if (!id || !Number.isInteger(Number(id)) || Number(id) <= 0) {
-        setError("מזהה הבקשה אינו תקין.");
+        setError("לא נמצאו פרטי בקשה תקינים.");
         setLoading(false);
         return;
       }
@@ -66,7 +98,61 @@ function AISuggestionsScreen() {
     };
 
     loadRequest();
-  }, [id]);
+  }, [id, draft]);
+
+  // יצירת הקריאה מתבצעת רק לאחר לחיצה מפורשת על הזמנת מתנדב
+  const handleVolunteerRequest = async () => {
+    if (!draft) {
+      if (request?.id) {
+        navigate(`/request-tracking/${request.id}`);
+      }
+      return;
+    }
+
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    setError("");
+
+    try {
+      const formData = new FormData();
+
+      if (draft.selectedImage) {
+        formData.append("ImageFile", draft.selectedImage);
+      }
+
+      formData.append("Title", draft.title);
+      formData.append("Description", draft.description);
+      formData.append("Latitude", String(draft.latitude));
+      formData.append("Longitude", String(draft.longitude));
+      formData.append("Address", draft.address);
+      formData.append("HelpTypeId", draft.helpTypeId);
+
+      if (draft.addressNotes) {
+        formData.append("AddressNotes", draft.addressNotes);
+      }
+
+      const response = await apiRequest<{
+        message: string;
+        id: number;
+      }>("/api/HelpRequests", {
+        method: "POST",
+        body: formData
+      });
+
+      navigate(`/request-tracking/${response.id}`, {
+        replace: true
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "אירעה שגיאה בשליחת הבקשה למתנדבים."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -78,12 +164,12 @@ function AISuggestionsScreen() {
     );
   }
 
-  if (error || !request) {
+  if (error && !request) {
     return (
       <main className="ai-page" dir="rtl">
         <div className="ai-container">
           <h2>לא ניתן להציג את ההצעות</h2>
-          <p>{error || "הבקשה לא נמצאה."}</p>
+          <p>{error}</p>
           <button
             type="button"
             className="volunteer-button"
@@ -95,6 +181,8 @@ function AISuggestionsScreen() {
       </main>
     );
   }
+
+  if (!request) return null;
 
   const normalizedRisk = analysis?.riskLevel?.trim().toLowerCase();
 
@@ -110,6 +198,10 @@ function AISuggestionsScreen() {
 
   const professionalRequired = isHighRisk || isUnknownRisk;
 
+  const showVolunteerButton =
+    !professionalRequired &&
+    (!analysis || analysis.volunteerRequired);
+
   return (
     <div dir="rtl" className="ai-page">
       <div className="ai-header">
@@ -122,7 +214,8 @@ function AISuggestionsScreen() {
           <span className="ai-badge">ניתוח חכם</span>
           <h2>תוצאות בדיקת הבקשה</h2>
           <p>
-            המערכת ניתחה את המידע שסיפקת כדי להציע את דרך הפעולה המתאימה.
+            המערכת ניתחה את המידע שסיפקת כדי להציע
+            את דרך הפעולה המתאימה.
           </p>
         </div>
 
@@ -187,9 +280,9 @@ function AISuggestionsScreen() {
                 <div className="solution-content">
                   <h3>נדרשת בדיקה מקצועית</h3>
                   <p>
-                    לא מומלץ לנסות לטפל בבעיה באופן עצמאי או להסתמך
-                    על מתנדב. יש להתרחק מהאזור או מהגורם המסוכן,
-                    ולהיעזר באיש מקצוע מוסמך.
+                    לא מומלץ לנסות לטפל בבעיה באופן עצמאי
+                    או להסתמך על מתנדב. יש להתרחק מהאזור
+                    או מהגורם המסוכן ולהיעזר באיש מקצוע מוסמך.
                   </p>
                 </div>
               </div>
@@ -205,11 +298,12 @@ function AISuggestionsScreen() {
                 <button
                   type="button"
                   className="volunteer-button"
-                  onClick={() =>
-                    navigate(`/request-tracking/${request.id}`)
-                  }
+                  onClick={handleVolunteerRequest}
+                  disabled={isSubmitting}
                 >
-                  המשך לקבלת עזרת מתנדב
+                  {isSubmitting
+                    ? "שולח בקשה..."
+                    : "אני צריכה מתנדב"}
                 </button>
               </div>
             ) : (
@@ -218,16 +312,17 @@ function AISuggestionsScreen() {
                   <h3>אפשר להתחיל בבדיקה עצמית בטוחה</h3>
                   <p>
                     לפי הניתוח, לא זוהה צורך מיידי במתנדב.
-                    אם אינך בטוח כיצד לפעול, אל תבצע פעולה
-                    שאינך מכיר ופנה לאיש מקצוע מתאים.
+                    אם אינך בטוחה כיצד לפעול, אל תבצעי
+                    פעולה שאינך מכירה ופני לאיש מקצוע מתאים.
                   </p>
                 </div>
               </div>
             )}
 
             <p>
-              חשוב: הניתוח מבוסס על תמונה בלבד ואינו מהווה אבחון
-              מקצועי. ייתכן שהמערכת לא זיהתה את כל פרטי הבעיה.
+              חשוב: הניתוח מבוסס על תמונה בלבד ואינו
+              מהווה אבחון מקצועי. ייתכן שהמערכת לא זיהתה
+              את כל פרטי הבעיה.
             </p>
           </div>
         ) : (
@@ -257,14 +352,21 @@ function AISuggestionsScreen() {
               <button
                 type="button"
                 className="volunteer-button"
-                onClick={() =>
-                  navigate(`/request-tracking/${request.id}`)
-                }
+                onClick={handleVolunteerRequest}
+                disabled={isSubmitting}
               >
-                אני צריכה מתנדב
+                {isSubmitting
+                  ? "שולח בקשה..."
+                  : "אני צריכה מתנדב"}
               </button>
             </div>
           </div>
+        )}
+
+        {error && (
+          <p className="create-request-error" role="alert">
+            {error}
+          </p>
         )}
       </div>
     </div>
