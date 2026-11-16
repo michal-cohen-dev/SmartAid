@@ -30,26 +30,7 @@ function App() {
       <Route path="/login" element={<LoginScreen />} />
       <Route path="/register" element={<RegistrationScreen />} />
 
-      {/* מסכים למתנדבים בלבד */}
-      <Route
-        path="/volunteer/accepted-requests"
-        element={
-          <ProtectedRoute requireVolunteer>
-            <VolunteerAcceptedRequestsScreen />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/volunteer/completed-requests"
-        element={
-          <ProtectedRoute requireVolunteer>
-            <VolunteerCompletedRequestsScreen />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* כל המסכים הפנימיים דורשים התחברות */}
+      {/* כל המסכים הפנימיים דורשים התחברות ומקבלים את התפריט העליון */}
       <Route
         element={
           <ProtectedRoute>
@@ -86,6 +67,24 @@ function App() {
         />
 
         <Route
+          path="/volunteer/accepted-requests"
+          element={
+            <ProtectedRoute requireVolunteer>
+              <VolunteerAcceptedRequestsScreen />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/volunteer/completed-requests"
+          element={
+            <ProtectedRoute requireVolunteer>
+              <VolunteerCompletedRequestsScreen />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/request-details/:id"
           element={
             <ProtectedRoute requireVolunteer>
@@ -110,17 +109,15 @@ function App() {
           element={<CreateRequestScreen />}
         />
 
-        
-<Route
-  path="/suggestions"
-  element={<AISuggestionsScreen />}
-/>
+        <Route
+          path="/suggestions"
+          element={<AISuggestionsScreen />}
+        />
 
-<Route
-  path="/suggestions/:id"
-  element={<AISuggestionsScreen />}
-/>
-
+        <Route
+          path="/suggestions/:id"
+          element={<AISuggestionsScreen />}
+        />
 
         <Route
           path="/request-tracking/:id"
