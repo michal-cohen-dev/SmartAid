@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿
+using System.Collections.Generic;
 using DAL.Entities;
 
 namespace DAL.Repositories.Interfaces
@@ -22,5 +23,7 @@ namespace DAL.Repositories.Interfaces
         void Update(RequestOffer requestOffer);
 
         void Delete(int id);
+
+        int ExpirePendingOffers(DateTime expirationTime);
     }
 }

@@ -143,10 +143,11 @@ namespace DAL.Repositories
             // The volunteer must have an active pending offer
             // for this specific request.
             bool hasPendingOffer = _context.RequestOffers
-                .Any(offer =>
-                    offer.HelpRequestId == requestId &&
-                    offer.VolunteerId == volunteerId &&
-                    offer.Status == OfferStatus.Pending);
+    .Any(offer =>
+        offer.HelpRequestId == requestId &&
+        offer.VolunteerId == volunteerId &&
+        offer.Status == OfferStatus.Pending &&
+        offer.OfferedAt > DateTime.UtcNow.AddMinutes(-2));
 
             if (!hasPendingOffer)
             {

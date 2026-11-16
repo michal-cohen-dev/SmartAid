@@ -13,6 +13,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using SmartAid.API.Filters;
 using System.Text;
+using SmartAid.API.BackgroundServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -114,6 +115,7 @@ builder.Services.AddScoped<IVolunteerEquipmentRepository, VolunteerEquipmentRepo
 builder.Services.AddScoped<IHelpRequestRepository, HelpRequestRepository>();
 builder.Services.AddScoped<IRequestEquipmentRepository, RequestEquipmentRepository>();
 builder.Services.AddScoped<IRequestOfferRepository, RequestOfferRepository>();
+builder.Services.AddHostedService<OfferExpirationBackgroundService>();
 
 // Services
 builder.Services.AddScoped<IVolunteerService, VolunteerService>();

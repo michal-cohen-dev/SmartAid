@@ -5,6 +5,7 @@ using System.Linq;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace DAL.Repositories
 {
@@ -188,6 +189,21 @@ namespace DAL.Repositories
             transaction.Commit();
 
             return true;
+        }
+
+
+
+
+        public int ExpirePendingOffers(DateTime expirationTime)
+        {
+            return _context.RequestOffers
+                .Where(ro =>
+                    ro.Status == OfferStatus.Pending &&
+                    ro.OfferedAt <= expirationTime)
+                .ExecuteUpdate(setters =>
+                    setters.SetProperty(
+                        ro => ro.Status,
+                        OfferStatus.Expired));
         }
 
 
