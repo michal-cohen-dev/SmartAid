@@ -28,6 +28,9 @@ function RequestTrackingScreen() {
   const [ratingLoading, setRatingLoading] = useState(false);
   const [ratingMessage, setRatingMessage] = useState("");
 
+  const [cancelLoading, setCancelLoading] = useState(false);
+const [cancelMessage, setCancelMessage] = useState("");
+
 useEffect(() => {
   document.title = "מעקב אחר בקשת עזרה | SmartAid";
 
@@ -125,6 +128,39 @@ useEffect(() => {
     }
   };
 
+  const cancelRequest = async () => {
+  if (!id || cancelLoading) return;
+
+  const confirmed = window.confirm(
+    "האם את בטוחה שברצונך לבטל את בקשת העזרה?"
+  );
+
+  if (!confirmed) return;
+
+  setCancelLoading(true);
+  setCancelMessage("");
+
+  try {
+    await apiRequest(`/api/HelpRequests/${id}/cancel`, {
+      method: "POST",
+    });
+
+    setRequest((previous) =>
+      previous ? { ...previous, status: 3 } : previous
+    );
+
+    setCancelMessage("בקשת העזרה בוטלה בהצלחה.");
+  } catch (err) {
+    setCancelMessage(
+      err instanceof Error
+        ? err.message
+        : "לא ניתן לבטל את הבקשה."
+    );
+  } finally {
+    setCancelLoading(false);
+  }
+};
+
   const statusInfo: Record<
     number,
     { title: string; description: string; icon: string }
@@ -172,6 +208,26 @@ useEffect(() => {
         <div className="tracking-container">
           <h2>לא ניתן להציג את המעקב</h2>
           <p>{error || "הבקשה לא נמצאה."}</p>
+
+          {request.status === 0 && (
+  <section className="cancel-request-section">
+    <button
+      type="button"
+      className="cancel-request-button"
+      onClick={cancelRequest}
+      disabled={cancelLoading}
+    >
+      {cancelLoading ? "מבטלים את הבקשה..." : "ביטול בקשת העזרה"}
+    </button>
+
+    {cancelMessage && (
+      <p className="cancel-request-message" role="status">
+        {cancelMessage}
+      </p>
+    )}
+  </section>
+)}
+
           <button onClick={() => navigate("/my-requests")}>
             חזרה לקריאות שלי
           </button>

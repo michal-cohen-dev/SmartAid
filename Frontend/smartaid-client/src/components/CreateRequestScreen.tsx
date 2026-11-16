@@ -9,6 +9,11 @@ interface HelpType {
   name: string;
 }
 
+interface EquipmentType {
+  id: number;
+  name: string;
+}
+
 interface ImageAnalysisResult {
   problemName: string;
   description: string;
@@ -37,15 +42,22 @@ function CreateRequestScreen() {
   const [helpTypes, setHelpTypes] = useState<HelpType[]>([]);
   const [helpTypeId, setHelpTypeId] = useState('');
 
+  const [equipmentTypes, setEquipmentTypes] =
+    useState<EquipmentType[]>([]);
+  const [selectedEquipmentIds, setSelectedEquipmentIds] =
+    useState<number[]>([]);
+
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [locationStatus, setLocationStatus] = useState('');
 
   const [address, setAddress] = useState('');
-const [addressNotes, setAddressNotes] = useState('');
+  const [addressNotes, setAddressNotes] = useState('');
 
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [isLoadingHelpTypes, setIsLoadingHelpTypes] = useState(true);
+  const [isLoadingEquipmentTypes, setIsLoadingEquipmentTypes] =
+    useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -69,8 +81,34 @@ const [addressNotes, setAddressNotes] = useState('');
       }
     };
 
+    const loadEquipmentTypes = async () => {
+      try {
+        const data = await apiRequest<EquipmentType[]>(
+          '/api/EquipmentTypes'
+        );
+        setEquipmentTypes(data);
+      } catch (error) {
+        setSubmitError(
+          error instanceof Error
+            ? error.message
+            : 'לא ניתן לטעון את סוגי הציוד.'
+        );
+      } finally {
+        setIsLoadingEquipmentTypes(false);
+      }
+    };
+
     loadHelpTypes();
+    loadEquipmentTypes();
   }, []);
+
+  const handleEquipmentChange = (equipmentId: number) => {
+    setSelectedEquipmentIds(previous =>
+      previous.includes(equipmentId)
+        ? previous.filter(id => id !== equipmentId)
+        : [...previous, equipmentId]
+    );
+  };
 
   const handleImageChange = (file: File | null) => {
     setSubmitError('');
@@ -128,12 +166,9 @@ const [addressNotes, setAddressNotes] = useState('');
       );
 
       setAnalysis(result);
-
-     
       setTitle(result.problemName || '');
       setDescription(result.description || '');
 
-      // בחירת סוג העזרה לפי המזהה שהחזיר ה-AI
       if (
         result.helpTypeId !== null &&
         result.helpTypeId !== undefined &&
@@ -243,6 +278,11 @@ const [addressNotes, setAddressNotes] = useState('');
       return;
     }
 
+    if (selectedEquipmentIds.length > 20) {
+      setSubmitError('ניתן לבחור עד 20 סוגי ציוד.');
+      return;
+    }
+
     if (latitude === null || longitude === null) {
       setSubmitError(
         'יש לקבל את המיקום שלך לפני שליחת הבקשה.'
@@ -256,8 +296,8 @@ const [addressNotes, setAddressNotes] = useState('');
       const formData = new FormData();
 
       if (selectedImage) {
-  formData.append('ImageFile', selectedImage);
-}
+        formData.append('ImageFile', selectedImage);
+      }
 
       formData.append('Title', title.trim());
       formData.append('Description', description.trim());
@@ -265,10 +305,15 @@ const [addressNotes, setAddressNotes] = useState('');
       formData.append('Longitude', String(longitude));
       formData.append('Address', address.trim());
 
-if (addressNotes.trim()) {
-  formData.append('AddressNotes', addressNotes.trim());
-}
+      if (addressNotes.trim()) {
+        formData.append('AddressNotes', addressNotes.trim());
+      }
+
       formData.append('HelpTypeId', helpTypeId);
+
+      selectedEquipmentIds.forEach(id => {
+        formData.append('RequiredEquipmentTypeIds', String(id));
+      });
 
       const response = await apiRequest<{
         message: string;
@@ -506,60 +551,102 @@ if (addressNotes.trim()) {
                 )}
               </div>
 
+              <div className="create-request-field">
+                <h3>ציוד נדרש (לא חובה)</h3>
+
+                <p>
+                  סמני את הציוד שהמתנדב צריך להביא איתו.
+                  אפשר לבחור יותר מסוג ציוד אחד.
+                </p>
+
+                {isLoadingEquipmentTypes ? (
+                  <p>טוען סוגי ציוד...</p>
+                ) : equipmentTypes.length === 0 ? (
+                  <p>לא נמצאו סוגי ציוד במערכת.</p>
+                ) : (
+                  <div className="create-request-equipment-list">
+                    {equipmentTypes.map(equipment => (
+                      <label
+                        key={equipment.id}
+                        className="create-request-equipment-option"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedEquipmentIds.includes(
+                            equipment.id
+                          )}
+                          onChange={() =>
+                            handleEquipmentChange(equipment.id)
+                          }
+                          disabled={
+                            !selectedEquipmentIds.includes(equipment.id) &&
+                            selectedEquipmentIds.length >= 20
+                          }
+                        />
+                        <span>{equipment.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                <p>
+                  נבחרו {selectedEquipmentIds.length} סוגי ציוד.
+                </p>
+              </div>
+
               <div className="create-request-location">
-  <label>מיקום</label>
+                <label>מיקום</label>
 
-  <button
-    className="create-request-button"
-    type="button"
-    onClick={handleGetLocation}
-    disabled={isLoadingLocation}
-  >
-    {isLoadingLocation
-      ? 'מקבל מיקום...'
-      : 'קבלת המיקום הנוכחי שלי'}
-  </button>
+                <button
+                  className="create-request-button"
+                  type="button"
+                  onClick={handleGetLocation}
+                  disabled={isLoadingLocation}
+                >
+                  {isLoadingLocation
+                    ? 'מקבל מיקום...'
+                    : 'קבלת המיקום הנוכחי שלי'}
+                </button>
 
-  {locationStatus && (
-    <p
-      className="create-request-status"
-      role="status"
-    >
-      {locationStatus}
-    </p>
-  )}
+                {locationStatus && (
+                  <p
+                    className="create-request-status"
+                    role="status"
+                  >
+                    {locationStatus}
+                  </p>
+                )}
 
-  <div className="create-request-field">
-    <label htmlFor="address">
-      כתובת מדויקת
-    </label>
+                <div className="create-request-field">
+                  <label htmlFor="address">
+                    כתובת מדויקת
+                  </label>
 
-    <input
-      id="address"
-      type="text"
-      value={address}
-      onChange={(e) => setAddress(e.target.value)}
-      placeholder="לדוגמה: הרצל 10, פתח תקווה"
-      maxLength={300}
-      required
-    />
-  </div>
+                  <input
+                    id="address"
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="לדוגמה: הרצל 10, פתח תקווה"
+                    maxLength={300}
+                    required
+                  />
+                </div>
 
-  <div className="create-request-field">
-    <label htmlFor="addressNotes">
-      הערות למתנדב לגבי המיקום (לא חובה)
-    </label>
+                <div className="create-request-field">
+                  <label htmlFor="addressNotes">
+                    הערות למתנדב לגבי המיקום (לא חובה)
+                  </label>
 
-    <textarea
-      id="addressNotes"
-      value={addressNotes}
-      onChange={(e) => setAddressNotes(e.target.value)}
-      placeholder="לדוגמה: קומה 2, דירה 5, כניסה מהחצר"
-      maxLength={300}
-    />
-  </div>
-</div>
-
+                  <textarea
+                    id="addressNotes"
+                    value={addressNotes}
+                    onChange={(e) => setAddressNotes(e.target.value)}
+                    placeholder="לדוגמה: קומה 2, דירה 5, כניסה מהחצר"
+                    maxLength={300}
+                  />
+                </div>
+              </div>
 
               {submitError && (
                 <p
@@ -576,6 +663,7 @@ if (addressNotes.trim()) {
                 disabled={
                   isSubmitting ||
                   isLoadingHelpTypes ||
+                  isLoadingEquipmentTypes ||
                   helpTypes.length === 0
                 }
               >
