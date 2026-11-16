@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../services/api';
@@ -24,6 +23,7 @@ interface VolunteerLocation {
 function VolunteerHome() {
   const navigate = useNavigate();
   const { token, isVolunteer } = useAuth();
+
   const [isAvailable, setIsAvailable] = useState(false);
   const [location, setLocation] =
     useState<VolunteerLocation | null>(null);
@@ -39,8 +39,6 @@ function VolunteerHome() {
   const [soundEnabled, setSoundEnabled] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
-  const knownRequestIdsRef = useRef<Set<number>>(new Set());
-  const hasLoadedRequestsRef = useRef(false);
 
   // השמעת צליל התראה
   function playNotificationSound() {
@@ -77,37 +75,37 @@ function VolunteerHome() {
   }
 
   // התחברות להתראות בזמן אמת מהשרת באמצעות SignalR
-useEffect(() => {
-  if (!token || !isVolunteer) {
-    return;
-  }
-
-  let isActive = true;
-
-  const connection = createNotificationsConnection(token);
-
-  const handleNewOffer = () => {
-    if (isActive && soundEnabled) {
-      playNotificationSound();
+  useEffect(() => {
+    if (!token || !isVolunteer) {
+      return;
     }
-  };
 
-  connection.on('NewOffer', handleNewOffer);
+    let isActive = true;
 
-  connection
-    .start()
-    .catch(error => {
-      if (isActive) {
-        console.error('שגיאה בהתחברות להתראות:', error);
+    const connection = createNotificationsConnection(token);
+
+    const handleNewOffer = () => {
+      if (isActive && soundEnabled) {
+        playNotificationSound();
       }
-    });
+    };
 
-  return () => {
-    isActive = false;
-    connection.off('NewOffer', handleNewOffer);
-    void connection.stop();
-  };
-}, [token, isVolunteer, soundEnabled]);
+    connection.on('NewOffer', handleNewOffer);
+
+    connection
+      .start()
+      .catch(error => {
+        if (isActive) {
+          console.error('שגיאה בהתחברות להתראות:', error);
+        }
+      });
+
+    return () => {
+      isActive = false;
+      connection.off('NewOffer', handleNewOffer);
+      void connection.stop();
+    };
+  }, [token, isVolunteer, soundEnabled]);
 
   // הפעלת התראות קוליות לאחר לחיצה של המשתמש
   async function handleEnableSound() {
@@ -178,24 +176,8 @@ useEffect(() => {
               request.description?.trim()
           );
 
-          const currentIds = new Set(
-            validRequests.map(request => request.id)
-          );
-
-          if (hasLoadedRequestsRef.current) {
-            const newRequests = validRequests.filter(
-              request =>
-                !knownRequestIdsRef.current.has(request.id)
-            );
-
-            if (soundEnabled && newRequests.length > 0) {
-              playNotificationSound();
-            }
-          }
-
-          knownRequestIdsRef.current = currentIds;
-          hasLoadedRequestsRef.current = true;
-
+          // רענון רשימת הבקשות בלבד.
+          // התראות קוליות מתקבלות דרך SignalR.
           setRequests(validRequests);
         }
       } catch (error) {
@@ -223,7 +205,7 @@ useEffect(() => {
       isMounted = false;
       window.clearInterval(intervalId);
     };
-  }, [soundEnabled]);
+  }, []);
 
   // מעקב רציף אחר מיקום המתנדב ושליחתו לשרת
   useEffect(() => {
