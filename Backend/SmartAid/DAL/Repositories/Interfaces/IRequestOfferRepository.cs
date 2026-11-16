@@ -12,7 +12,6 @@ namespace DAL.Repositories.Interfaces
 
         List<RequestOffer> GetPendingByVolunteerId(int volunteerId);
 
-        void Add(RequestOffer requestOffer);
 
         bool TryAddIfCapacityAvailable(
             RequestOffer requestOffer,
@@ -20,7 +19,6 @@ namespace DAL.Repositories.Interfaces
 
         bool TryDeclineOffer(int offerId, int volunteerId);
 
-        void Update(RequestOffer requestOffer);
 
 
         int ExpirePendingOffers(DateTime expirationTime);

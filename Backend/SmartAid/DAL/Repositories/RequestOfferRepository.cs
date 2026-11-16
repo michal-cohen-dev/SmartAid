@@ -48,12 +48,7 @@ namespace DAL.Repositories
 
 
 
-        public void Add(RequestOffer requestOffer)
-        {
-            requestOffer.OfferedAt = DateTime.UtcNow;
-            _context.RequestOffers.Add(requestOffer);
-            _context.SaveChanges();
-        }
+       
 
         public bool TryAddIfCapacityAvailable(
             RequestOffer requestOffer,
@@ -207,12 +202,6 @@ namespace DAL.Repositories
         }
 
 
-
-        public void Update(RequestOffer requestOffer)
-        {
-            _context.RequestOffers.Update(requestOffer);
-            _context.SaveChanges();
-        }
 
        
     }
