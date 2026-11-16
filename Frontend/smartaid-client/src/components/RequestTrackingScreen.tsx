@@ -11,7 +11,12 @@ interface HelpRequest {
   createdAt: string;
   status: number;
   address: string;
+  latitude: number;
+  longitude: number;
   assignedVolunteerName?: string | null;
+  assignedVolunteerLatitude?: number | null;
+  assignedVolunteerLongitude?: number | null;
+  assignedVolunteerLastLocationUpdatedAt?: string | null;
   rating?: number | null;
 }
 
@@ -57,7 +62,6 @@ function RequestTrackingScreen() {
           setRequest(data);
           setError("");
 
-          // מפסיקים לרענן כשהקריאה הסתיימה או בוטלה
           if (data.status === 2 || data.status === 3) {
             if (intervalId !== undefined) {
               window.clearInterval(intervalId);
@@ -225,6 +229,34 @@ function RequestTrackingScreen() {
 
   const isCancelled = request.status === 3;
 
+  const hasValidVolunteerCoordinates =
+    request.assignedVolunteerLatitude != null &&
+    request.assignedVolunteerLongitude != null &&
+    Number.isFinite(request.assignedVolunteerLatitude) &&
+    Number.isFinite(request.assignedVolunteerLongitude) &&
+    request.assignedVolunteerLatitude >= -90 &&
+    request.assignedVolunteerLatitude <= 90 &&
+    request.assignedVolunteerLongitude >= -180 &&
+    request.assignedVolunteerLongitude <= 180;
+
+  const showVolunteerMap =
+    (request.status === 1 || request.status === 4) &&
+    hasValidVolunteerCoordinates;
+
+  const volunteerMapUrl = showVolunteerMap
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${
+        request.assignedVolunteerLongitude! - 0.01
+      }%2C${
+        request.assignedVolunteerLatitude! - 0.01
+      }%2C${
+        request.assignedVolunteerLongitude! + 0.01
+      }%2C${
+        request.assignedVolunteerLatitude! + 0.01
+      }&layer=mapnik&marker=${
+        request.assignedVolunteerLatitude
+      }%2C${request.assignedVolunteerLongitude}`
+    : "";
+
   const timelineSteps = [
     {
       title: "הבקשה נשלחה בהצלחה",
@@ -287,6 +319,40 @@ function RequestTrackingScreen() {
             )}
           </div>
         </div>
+
+        {request.status === 1 || request.status === 4 ? (
+          <section className="tracking-map-card">
+            <h2>מעקב אחר מיקום המתנדב</h2>
+
+            {hasValidVolunteerCoordinates ? (
+              <>
+                <p>
+                  מיקום המתנדב מתעדכן אוטומטית במהלך הטיפול בבקשה.
+                </p>
+
+                <iframe
+                  title="מיקום המתנדב על המפה"
+                  src={volunteerMapUrl}
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                />
+
+                {request.assignedVolunteerLastLocationUpdatedAt && (
+                  <p className="tracking-location-update">
+                    עדכון מיקום אחרון:{" "}
+                    {new Date(
+                      request.assignedVolunteerLastLocationUpdatedAt
+                    ).toLocaleTimeString("he-IL")}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p>
+                מיקום המתנדב עדיין לא התקבל. המפה תוצג כאשר המיקום יהיה זמין.
+              </p>
+            )}
+          </section>
+        ) : null}
 
         <section className="current-status-card">
           <span className="current-status-icon">

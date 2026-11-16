@@ -126,7 +126,23 @@ namespace BLL.Services
             if (request == null)
                 return null;
 
-            return _mapper.Map<HelpRequestDto>(request);
+            var dto = _mapper.Map<HelpRequestDto>(request);
+
+            if (request.AssignedVolunteerId.HasValue)
+            {
+                var volunteer = _volunteerRepository.GetById(
+                    request.AssignedVolunteerId.Value);
+
+                if (volunteer != null)
+                {
+                    dto.AssignedVolunteerLatitude = volunteer.Latitude;
+                    dto.AssignedVolunteerLongitude = volunteer.Longitude;
+                    dto.AssignedVolunteerLastLocationUpdatedAt =
+                        volunteer.LastLocationUpdatedAt;
+                }
+            }
+
+            return dto;
         }
 
         public bool IsOwner(int requestId, int userId)
@@ -238,7 +254,6 @@ namespace BLL.Services
             return request.Id;
         }
 
-
         public bool Update(
             int id,
             HelpRequestUpdateDto helpRequestDto,
@@ -291,7 +306,6 @@ namespace BLL.Services
                 userId,
                 equipmentTypeIds);
         }
-
 
         public bool Delete(int id, int userId)
         {

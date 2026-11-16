@@ -23,6 +23,9 @@ namespace DTO
         public string? AssignedVolunteerName { get; set; }
         public DateTime CreatedAt { get; set; }
         public int? Rating { get; set; }
+        public double? AssignedVolunteerLatitude { get; set; }
+        public double? AssignedVolunteerLongitude { get; set; }
+        public DateTime? AssignedVolunteerLastLocationUpdatedAt { get; set; }
 
         public List<int> RequiredEquipmentTypeIds { get; set; } = new();
         public List<string> RequiredEquipmentNames { get; set; } = new();
