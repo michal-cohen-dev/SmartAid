@@ -10,6 +10,7 @@ using BLL.Services.Interfaces;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
+using Microsoft.Extensions.Logging;
 
 namespace BLL.Services
 {
@@ -25,6 +26,7 @@ namespace BLL.Services
         private readonly IEquipmentTypeRepository _equipmentTypeRepository;
         private readonly IHelpTypeRepository _helpTypeRepository;
         private readonly IRequestOfferService _requestOfferService;
+        private readonly ILogger<HelpRequestService> _logger;
 
         public HelpRequestService(
             IHelpRequestRepository helpRequestRepository,
@@ -36,7 +38,8 @@ namespace BLL.Services
             IVolunteerService volunteerService,
             IVolunteerRepository volunteerRepository,
             IVolunteerMatchingService volunteerMatchingService,
-            IRequestOfferService requestOfferService)
+            IRequestOfferService requestOfferService,
+            ILogger<HelpRequestService> logger)
         {
             _helpRequestRepository = helpRequestRepository;
             _mapper = mapper;
@@ -48,6 +51,7 @@ namespace BLL.Services
             _volunteerRepository = volunteerRepository;
             _volunteerMatchingService = volunteerMatchingService;
             _requestOfferService = requestOfferService;
+            _logger = logger;
         }
 
         public List<HelpRequestDto> GetAll()
@@ -75,8 +79,8 @@ namespace BLL.Services
         }
 
         public async Task<List<HelpRequestPreviewDto>> GetOpenForVolunteerAsync(
-    int userId,
-    CancellationToken cancellationToken = default)
+            int userId,
+            CancellationToken cancellationToken = default)
         {
             var volunteer = _volunteerService.GetByUserId(userId);
 
@@ -232,9 +236,12 @@ namespace BLL.Services
             {
                 throw;
             }
-            catch (System.Exception)
+            catch (System.Exception ex)
             {
-                // Keep the saved help request even if offer creation fails.
+                _logger.LogError(
+                    ex,
+                    "Failed to create offers for help request {RequestId}.",
+                    request.Id);
             }
 
             return request.Id;

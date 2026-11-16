@@ -110,8 +110,6 @@ namespace DAL.Repositories
                 _context.Database.BeginTransaction(
                     IsolationLevel.Serializable);
 
-            // Lock the request row.
-            // This synchronizes assignment with offer creation.
             var helpRequest = _context.HelpRequests
                 .FromSqlInterpolated(
                     $"SELECT * FROM HelpRequests WITH (UPDLOCK, HOLDLOCK) WHERE Id = {requestId}")
@@ -126,8 +124,6 @@ namespace DAL.Repositories
                 return false;
             }
 
-            // Lock the volunteer row so that simultaneous
-            // assignments to the same volunteer are serialized.
             var volunteer = _context.Volunteers
                 .FromSqlInterpolated(
                     $"SELECT * FROM Volunteers WITH (UPDLOCK, HOLDLOCK) WHERE Id = {volunteerId}")
@@ -140,14 +136,12 @@ namespace DAL.Repositories
                 return false;
             }
 
-            // The volunteer must have an active pending offer
-            // for this specific request.
             bool hasPendingOffer = _context.RequestOffers
-    .Any(offer =>
-        offer.HelpRequestId == requestId &&
-        offer.VolunteerId == volunteerId &&
-        offer.Status == OfferStatus.Pending &&
-        offer.OfferedAt > DateTime.UtcNow.AddMinutes(-2));
+                .Any(offer =>
+                    offer.HelpRequestId == requestId &&
+                    offer.VolunteerId == volunteerId &&
+                    offer.Status == OfferStatus.Pending &&
+                    offer.OfferedAt > DateTime.UtcNow.AddMinutes(-2));
 
             if (!hasPendingOffer)
             {
@@ -155,8 +149,6 @@ namespace DAL.Repositories
                 return false;
             }
 
-            // Do not allow a volunteer to receive another
-            // active assignment.
             bool hasActiveAssignment = _context.HelpRequests
                 .Any(request =>
                     request.AssignedVolunteerId == volunteerId &&
@@ -169,8 +161,6 @@ namespace DAL.Repositories
                 return false;
             }
 
-            // Do not assign a request that already has
-            // an accepted offer.
             bool alreadyAccepted = _context.RequestOffers
                 .Any(offer =>
                     offer.HelpRequestId == requestId &&
@@ -182,7 +172,6 @@ namespace DAL.Repositories
                 return false;
             }
 
-            // Assign the request atomically.
             int requestRowsAffected = _context.HelpRequests
                 .Where(request =>
                     request.Id == requestId &&
@@ -202,7 +191,6 @@ namespace DAL.Repositories
                 return false;
             }
 
-            // Mark the accepted volunteer's offer as Accepted.
             int acceptedRowsAffected = _context.RequestOffers
                 .Where(offer =>
                     offer.HelpRequestId == requestId &&
@@ -219,7 +207,6 @@ namespace DAL.Repositories
                 return false;
             }
 
-            // Expire all other pending offers for this request.
             _context.RequestOffers
                 .Where(offer =>
                     offer.HelpRequestId == requestId &&
@@ -230,7 +217,6 @@ namespace DAL.Repositories
                         offer => offer.Status,
                         OfferStatus.Expired));
 
-            // Update the accepted-offer counter.
             _context.Volunteers
                 .Where(v => v.Id == volunteerId)
                 .ExecuteUpdate(setters => setters
@@ -297,31 +283,81 @@ namespace DAL.Repositories
             int userId,
             bool cancelledByVolunteer)
         {
-            var query = _context.HelpRequests
-                .Where(request => request.Id == requestId);
+            // Reuse an existing transaction if the caller
+            // has already opened one.
+            bool ownsTransaction =
+                _context.Database.CurrentTransaction == null;
+
+            using var transaction = ownsTransaction
+                ? _context.Database.BeginTransaction(
+                    IsolationLevel.Serializable)
+                : null;
+
+            var request = _context.HelpRequests
+                .FromSqlInterpolated(
+                    $"SELECT * FROM HelpRequests WITH (UPDLOCK, HOLDLOCK) WHERE Id = {requestId}")
+                .AsNoTracking()
+                .FirstOrDefault();
+
+            if (request == null)
+            {
+                transaction?.Rollback();
+                return false;
+            }
+
+            bool canCancel;
 
             if (cancelledByVolunteer)
             {
-                query = query.Where(request =>
-                    request.AssignedVolunteer != null &&
-                    request.AssignedVolunteer.UserId == userId &&
-                    (request.Status == RequestStatus.Assigned ||
-                     request.Status == RequestStatus.InTreatment));
+                canCancel = _context.HelpRequests
+                    .Any(r =>
+                        r.Id == requestId &&
+                        r.AssignedVolunteer != null &&
+                        r.AssignedVolunteer.UserId == userId &&
+                        (r.Status == RequestStatus.Assigned ||
+                         r.Status == RequestStatus.InTreatment));
             }
             else
             {
-                query = query.Where(request =>
+                canCancel =
                     request.UserId == userId &&
                     (request.Status == RequestStatus.Open ||
-                     request.Status == RequestStatus.Assigned));
+                     request.Status == RequestStatus.Assigned);
             }
 
-            var rowsAffected = query.ExecuteUpdate(setters => setters
-                .SetProperty(
-                    request => request.Status,
-                    RequestStatus.Cancelled));
+            if (!canCancel)
+            {
+                transaction?.Rollback();
+                return false;
+            }
 
-            return rowsAffected == 1;
+            int rowsAffected = _context.HelpRequests
+                .Where(r => r.Id == requestId)
+                .ExecuteUpdate(setters => setters
+                    .SetProperty(
+                        r => r.Status,
+                        RequestStatus.Cancelled));
+
+            if (rowsAffected != 1)
+            {
+                transaction?.Rollback();
+                return false;
+            }
+
+            _context.RequestOffers
+                .Where(offer =>
+                    offer.HelpRequestId == requestId &&
+                    offer.Status == OfferStatus.Pending)
+                .ExecuteUpdate(setters => setters
+                    .SetProperty(
+                        offer => offer.Status,
+                        OfferStatus.Expired));
+
+            // Commit only when this method opened the transaction.
+            // Otherwise, the calling service commits it.
+            transaction?.Commit();
+
+            return true;
         }
 
         public bool HasActiveAssignment(int volunteerId)
