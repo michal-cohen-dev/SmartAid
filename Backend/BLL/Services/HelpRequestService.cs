@@ -24,6 +24,7 @@ namespace BLL.Services
         private readonly IRequestEquipmentRepository _requestEquipmentRepository;
         private readonly IEquipmentTypeRepository _equipmentTypeRepository;
         private readonly IHelpTypeRepository _helpTypeRepository;
+        private readonly IRequestOfferService _requestOfferService;
 
         public HelpRequestService(
             IHelpRequestRepository helpRequestRepository,
@@ -34,7 +35,8 @@ namespace BLL.Services
             IHelpTypeRepository helpTypeRepository,
             IVolunteerService volunteerService,
             IVolunteerRepository volunteerRepository,
-            IVolunteerMatchingService volunteerMatchingService)
+            IVolunteerMatchingService volunteerMatchingService,
+            IRequestOfferService requestOfferService)
         {
             _helpRequestRepository = helpRequestRepository;
             _mapper = mapper;
@@ -45,6 +47,7 @@ namespace BLL.Services
             _volunteerService = volunteerService;
             _volunteerRepository = volunteerRepository;
             _volunteerMatchingService = volunteerMatchingService;
+            _requestOfferService = requestOfferService;
         }
 
         public List<HelpRequestDto> GetAll()
@@ -133,8 +136,7 @@ namespace BLL.Services
             return request.AssignedVolunteerId == volunteer.Id;
         }
 
-
-        public Task<int> Add(
+        public async Task<int> Add(
             HelpRequestPostDto helpRequestDto,
             int userId,
             CancellationToken cancellationToken = default)
@@ -205,9 +207,25 @@ namespace BLL.Services
                 throw;
             }
 
-            return Task.FromResult(request.Id);
-        }
+            // The help request is already saved.
+            // Failure to create offers must not undo the request.
+            try
+            {
+                await _requestOfferService.CreateOffersForRequestAsync(
+                    request.Id,
+                    cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (System.Exception)
+            {
+                // Keep the saved help request even if offer creation fails.
+            }
 
+            return request.Id;
+        }
 
         public bool Update(
             int id,
