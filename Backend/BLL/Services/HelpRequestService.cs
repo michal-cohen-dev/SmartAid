@@ -238,6 +238,7 @@ namespace BLL.Services
             return request.Id;
         }
 
+
         public bool Update(
             int id,
             HelpRequestUpdateDto helpRequestDto,
@@ -285,12 +286,12 @@ namespace BLL.Services
             existingRequest.AddressNotes = helpRequestDto.AddressNotes;
             existingRequest.HelpTypeId = helpRequestDto.HelpTypeId;
 
-            _helpRequestRepository.UpdateWithEquipment(
+            return _helpRequestRepository.TryUpdateWithEquipment(
                 existingRequest,
+                userId,
                 equipmentTypeIds);
-
-            return true;
         }
+
 
         public bool Delete(int id, int userId)
         {

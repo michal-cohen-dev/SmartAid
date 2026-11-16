@@ -1,7 +1,8 @@
 ﻿
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Data;
+using System.Linq;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -75,7 +76,9 @@ namespace DAL.Repositories
             _context.SaveChanges();
         }
 
-        public void AddWithEquipment(HelpRequest entity, List<int> equipmentTypeIds)
+        public void AddWithEquipment(
+            HelpRequest entity,
+            List<int> equipmentTypeIds)
         {
             entity.CreatedAt = DateTime.UtcNow;
 
@@ -91,14 +94,36 @@ namespace DAL.Repositories
             _context.SaveChanges();
         }
 
-        public void UpdateWithEquipment(
-    HelpRequest entity,
-    List<int> equipmentTypeIds)
+        public bool TryUpdateWithEquipment(
+            HelpRequest entity,
+            int userId,
+            List<int> equipmentTypeIds)
         {
-            using var transaction = _context.Database.BeginTransaction();
+            using var transaction =
+                _context.Database.BeginTransaction(
+                    IsolationLevel.Serializable);
 
+            // Lock the request row and read its current database state.
+            var currentRequest = _context.HelpRequests
+                .FromSqlInterpolated(
+                    $"SELECT * FROM HelpRequests WITH (UPDLOCK, HOLDLOCK) WHERE Id = {entity.Id}")
+                .AsNoTracking()
+                .FirstOrDefault();
+
+            // Revalidate ownership and status while holding the lock.
+            if (currentRequest == null ||
+                currentRequest.UserId != userId ||
+                currentRequest.Status != RequestStatus.Open ||
+                currentRequest.AssignedVolunteerId != null)
+            {
+                transaction.Rollback();
+                return false;
+            }
+
+            // Replace the equipment records within the same transaction.
             var existingEquipments = _context.RequestEquipments
-                .Where(equipment => equipment.HelpRequestId == entity.Id)
+                .Where(equipment =>
+                    equipment.HelpRequestId == entity.Id)
                 .ToList();
 
             _context.RequestEquipments.RemoveRange(existingEquipments);
@@ -114,10 +139,12 @@ namespace DAL.Repositories
 
             _context.RequestEquipments.AddRange(newEquipments);
 
-            // The request entity is already tracked by the DbContext.
+            // Save request changes and equipment changes together.
             _context.SaveChanges();
 
             transaction.Commit();
+
+            return true;
         }
 
         public void Update(HelpRequest entity)
@@ -149,7 +176,9 @@ namespace DAL.Repositories
                 .ToList();
         }
 
-        public bool TryAssignToVolunteer(int requestId, int volunteerId)
+        public bool TryAssignToVolunteer(
+            int requestId,
+            int volunteerId)
         {
             using var transaction =
                 _context.Database.BeginTransaction(
@@ -274,7 +303,9 @@ namespace DAL.Repositories
             return true;
         }
 
-        public bool TryMarkInTreatment(int requestId, int volunteerId)
+        public bool TryMarkInTreatment(
+            int requestId,
+            int volunteerId)
         {
             var rowsAffected = _context.HelpRequests
                 .Where(request =>
@@ -289,7 +320,9 @@ namespace DAL.Repositories
             return rowsAffected == 1;
         }
 
-        public bool TryCompleteRequest(int requestId, int volunteerId)
+        public bool TryCompleteRequest(
+            int requestId,
+            int volunteerId)
         {
             var rowsAffected = _context.HelpRequests
                 .Where(request =>
@@ -328,8 +361,6 @@ namespace DAL.Repositories
             int userId,
             bool cancelledByVolunteer)
         {
-            // Reuse an existing transaction if the caller
-            // has already opened one.
             bool ownsTransaction =
                 _context.Database.CurrentTransaction == null;
 
@@ -398,8 +429,6 @@ namespace DAL.Repositories
                         offer => offer.Status,
                         OfferStatus.Expired));
 
-            // Commit only when this method opened the transaction.
-            // Otherwise, the calling service commits it.
             transaction?.Commit();
 
             return true;

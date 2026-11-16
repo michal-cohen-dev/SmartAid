@@ -11,6 +11,7 @@ namespace DAL.Repositories.Interfaces
         List<HelpRequest> GetByUserId(int userId);
         List<HelpRequest> GetByVolunteerId(int volunteerId);
         List<int> GetRatingsByVolunteerId(int volunteerId);
+
         HelpRequest? GetById(int id);
         HelpRequest? GetOwned(int id, int userId);
 
@@ -21,12 +22,16 @@ namespace DAL.Repositories.Interfaces
         bool HasActiveAssignment(int volunteerId);
 
         void Add(HelpRequest helpRequest);
+
         void AddWithEquipment(
-    HelpRequest helpRequest,
-    List<int> equipmentTypeIds);
-        void UpdateWithEquipment(
-    HelpRequest helpRequest,
-    List<int> equipmentTypeIds);
+            HelpRequest helpRequest,
+            List<int> equipmentTypeIds);
+
+        bool TryUpdateWithEquipment(
+            HelpRequest helpRequest,
+            int userId,
+            List<int> equipmentTypeIds);
+
         void Update(HelpRequest helpRequest);
         void Delete(int id);
 
