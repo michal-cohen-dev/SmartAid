@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../services/api';
 import './VolunteerHome.css';
@@ -33,6 +34,92 @@ function VolunteerHome() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const [soundEnabled, setSoundEnabled] = useState(false);
+
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const knownRequestIdsRef = useRef<Set<number>>(new Set());
+  const hasLoadedRequestsRef = useRef(false);
+
+  // השמעת צליל התראה
+  function playNotificationSound() {
+    const audioContext = audioContextRef.current;
+
+    if (!audioContext || audioContext.state !== 'running') {
+      return;
+    }
+
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(
+      880,
+      audioContext.currentTime
+    );
+
+    gain.gain.setValueAtTime(0.001, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(
+      0.25,
+      audioContext.currentTime + 0.03
+    );
+    gain.gain.exponentialRampToValueAtTime(
+      0.001,
+      audioContext.currentTime + 0.35
+    );
+
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.35);
+  }
+
+  // הפעלת התראות קוליות לאחר לחיצה של המשתמש
+  async function handleEnableSound() {
+    try {
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as typeof window & {
+          webkitAudioContext?: typeof AudioContext;
+        }).webkitAudioContext;
+
+      if (!AudioContextClass) {
+        setError('הדפדפן אינו תומך בהתראות קוליות.');
+        return;
+      }
+
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioContextClass();
+      }
+
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+
+      setSoundEnabled(true);
+
+      // צליל קצר לבדיקת ההתראות
+      const context = audioContextRef.current;
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+
+      oscillator.frequency.value = 880;
+      gain.gain.setValueAtTime(0.15, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        context.currentTime + 0.25
+      );
+
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.25);
+    } catch {
+      setError('לא הצלחנו להפעיל את הצליל. נסי שוב.');
+    }
+  }
+
   // טעינת בקשות עזרה פתוחות ורענון אוטומטי
   useEffect(() => {
     let isMounted = true;
@@ -55,6 +142,24 @@ function VolunteerHome() {
               request.title?.trim() &&
               request.description?.trim()
           );
+
+          const currentIds = new Set(
+            validRequests.map(request => request.id)
+          );
+
+          if (hasLoadedRequestsRef.current) {
+            const newRequests = validRequests.filter(
+              request =>
+                !knownRequestIdsRef.current.has(request.id)
+            );
+
+            if (soundEnabled && newRequests.length > 0) {
+              playNotificationSound();
+            }
+          }
+
+          knownRequestIdsRef.current = currentIds;
+          hasLoadedRequestsRef.current = true;
 
           setRequests(validRequests);
         }
@@ -83,7 +188,7 @@ function VolunteerHome() {
       isMounted = false;
       window.clearInterval(intervalId);
     };
-  }, []);
+  }, [soundEnabled]);
 
   // מעקב רציף אחר מיקום המתנדב ושליחתו לשרת
   useEffect(() => {
@@ -191,6 +296,14 @@ function VolunteerHome() {
     };
   }, [isAvailable]);
 
+  // סגירת משאב הצליל ביציאה מהעמוד
+  useEffect(() => {
+    return () => {
+      audioContextRef.current?.close();
+      audioContextRef.current = null;
+    };
+  }, []);
+
   function handleToggle() {
     setIsAvailable(previous => !previous);
   }
@@ -285,6 +398,27 @@ function VolunteerHome() {
             : 'הפעלה וקבלת מיקום'}
         </button>
 
+      </section>
+
+      <section className="volunteer-notifications">
+        <h2>התראות על בקשות חדשות</h2>
+
+        <p>
+          {soundEnabled
+            ? 'התראות קוליות מופעלות.'
+            : 'כדי לשמוע צליל כאשר מגיעה בקשה חדשה, יש להפעיל התראות.'}
+        </p>
+
+        <button
+          className="volunteer-button"
+          type="button"
+          onClick={handleEnableSound}
+          disabled={soundEnabled}
+        >
+          {soundEnabled
+            ? 'הצליל מופעל'
+            : 'הפעלת צליל התראות'}
+        </button>
       </section>
 
       <section className="volunteer-requests-section">
