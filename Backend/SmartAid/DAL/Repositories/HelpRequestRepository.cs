@@ -75,6 +75,22 @@ namespace DAL.Repositories
             _context.SaveChanges();
         }
 
+        public void AddWithEquipment(HelpRequest entity, List<int> equipmentTypeIds)
+        {
+            entity.CreatedAt = DateTime.UtcNow;
+
+            entity.RequiredEquipments = equipmentTypeIds
+                .Distinct()
+                .Select(equipmentTypeId => new RequestEquipment
+                {
+                    EquipmentTypeId = equipmentTypeId
+                })
+                .ToList();
+
+            _context.HelpRequests.Add(entity);
+            _context.SaveChanges();
+        }
+
         public void Update(HelpRequest entity)
         {
             _context.HelpRequests.Update(entity);

@@ -183,8 +183,19 @@ namespace BLL.Services
             }
 
             var request = _mapper.Map<HelpRequest>(helpRequestDto);
+
             request.UserId = userId;
             request.HelpTypeId = helpRequestDto.HelpTypeId;
+
+            // Add the equipment to the request graph.
+            // EF Core will save the request and its equipment
+            // together in one SaveChanges transaction.
+            request.RequiredEquipments = equipmentTypeIds
+                .Select(equipmentTypeId => new RequestEquipment
+                {
+                    EquipmentTypeId = equipmentTypeId
+                })
+                .ToList();
 
             string? savedImageName = null;
 
@@ -192,20 +203,15 @@ namespace BLL.Services
             {
                 if (helpRequestDto.ImageFile != null)
                 {
-                    savedImageName = _imageService.Save(helpRequestDto.ImageFile);
+                    savedImageName = _imageService.Save(
+                        helpRequestDto.ImageFile);
+
                     request.ImageName = savedImageName;
                 }
 
+                // One repository call and one SaveChanges:
+                // request + all required equipment are saved together.
                 _helpRequestRepository.Add(request);
-
-                foreach (var equipmentTypeId in equipmentTypeIds)
-                {
-                    _requestEquipmentRepository.Add(new RequestEquipment
-                    {
-                        HelpRequestId = request.Id,
-                        EquipmentTypeId = equipmentTypeId
-                    });
-                }
             }
             catch
             {
@@ -224,7 +230,6 @@ namespace BLL.Services
                 throw;
             }
 
-            // The help request is already saved.
             // Failure to create offers must not undo the request.
             try
             {
@@ -257,6 +262,15 @@ namespace BLL.Services
             if (existingRequest == null)
                 throw new NotFoundException("Help request not found.");
 
+            // A request can only be edited while it is open
+            // and has not yet been assigned to a volunteer.
+            if (existingRequest.Status != RequestStatus.Open ||
+                existingRequest.AssignedVolunteerId != null)
+            {
+                throw new BusinessRuleException(
+                    "A help request can only be edited while it is open and has not been assigned to a volunteer.");
+            }
+
             var equipmentTypeIds = helpRequestDto.RequiredEquipmentTypeIds
                 .Distinct()
                 .ToList();
@@ -270,13 +284,6 @@ namespace BLL.Services
                 }
             }
 
-            existingRequest.Title = helpRequestDto.Title;
-            existingRequest.Description = helpRequestDto.Description;
-            existingRequest.Latitude = helpRequestDto.Latitude;
-            existingRequest.Longitude = helpRequestDto.Longitude;
-            existingRequest.Address = helpRequestDto.Address;
-            existingRequest.AddressNotes = helpRequestDto.AddressNotes;
-
             var helpType = _helpTypeRepository.GetById(
                 helpRequestDto.HelpTypeId);
 
@@ -286,6 +293,12 @@ namespace BLL.Services
                     $"Help type with ID {helpRequestDto.HelpTypeId} does not exist.");
             }
 
+            existingRequest.Title = helpRequestDto.Title;
+            existingRequest.Description = helpRequestDto.Description;
+            existingRequest.Latitude = helpRequestDto.Latitude;
+            existingRequest.Longitude = helpRequestDto.Longitude;
+            existingRequest.Address = helpRequestDto.Address;
+            existingRequest.AddressNotes = helpRequestDto.AddressNotes;
             existingRequest.HelpTypeId = helpRequestDto.HelpTypeId;
 
             var existingEquipments =
@@ -312,8 +325,7 @@ namespace BLL.Services
 
         public bool Delete(int id, int userId)
         {
-            // Instead of physically deleting the request,
-            // cancel it and preserve its history.
+            // Cancel the request instead of physically deleting it.
             return _helpRequestRepository.TryCancelRequest(
                 id,
                 userId,

@@ -21,6 +21,9 @@ namespace DAL.Repositories.Interfaces
         bool HasActiveAssignment(int volunteerId);
 
         void Add(HelpRequest helpRequest);
+        void AddWithEquipment(
+    HelpRequest helpRequest,
+    List<int> equipmentTypeIds);
         void Update(HelpRequest helpRequest);
         void Delete(int id);
 
