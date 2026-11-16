@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using DTO;
 using BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace SmartAid.API.Controllers
 {
@@ -58,6 +59,34 @@ namespace SmartAid.API.Controllers
             return StatusCode(403, new
             {
                 message = "Request offers cannot be updated manually."
+            });
+        }
+
+
+
+        [HttpPost("{id}/decline")]
+        public ActionResult DeclineOffer(int id)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var declined = _requestOfferService.TryDeclineOffer(
+                id,
+                userId);
+
+            if (!declined)
+            {
+                return Conflict(new
+                {
+                    message = "לא ניתן לדחות את ההצעה. ייתכן שהיא כבר טופלה או שאינה שייכת לך."
+                });
+            }
+
+            return Ok(new
+            {
+                message = "ההצעה נדחתה בהצלחה."
             });
         }
 

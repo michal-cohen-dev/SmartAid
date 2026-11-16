@@ -19,7 +19,11 @@ namespace BLL.Services.Interfaces
         List<HelpRequestDto> GetByUserId(int userId);
         List<HelpRequestDto> GetByVolunteerId(int userId);
 
-        int Add(HelpRequestPostDto helpRequestDto, int userId);
+        Task<int> Add(
+            HelpRequestPostDto helpRequestDto,
+            int userId,
+            CancellationToken cancellationToken = default);
+
         bool Update(int id, HelpRequestUpdateDto helpRequestDto, int userId);
         bool Delete(int id, int userId);
         bool IsOwner(int requestId, int userId);

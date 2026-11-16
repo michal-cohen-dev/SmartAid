@@ -145,5 +145,27 @@ namespace SmartAid.API.Controllers
             });
         }
 
+
+
+        [HttpPut("me/availability")]
+        public ActionResult UpdateMyAvailability(
+            [FromBody] UpdateVolunteerAvailabilityDto availabilityDto)
+        {
+            var currentUserId = GetCurrentUserId();
+
+            if (currentUserId == null)
+                return Unauthorized();
+
+            _volunteerService.UpdateAvailability(
+                currentUserId.Value,
+                availabilityDto.IsAvailable);
+
+            return Ok(new
+            {
+                message = "Volunteer availability updated successfully."
+            });
+        }
+
+
     }
 }

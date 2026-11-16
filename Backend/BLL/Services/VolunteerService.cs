@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿
+using AutoMapper;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
@@ -16,11 +17,11 @@ namespace BLL.Services
         private readonly IHelpTypeRepository _helpTypeRepository;
 
         public VolunteerService(
-    IVolunteerRepository volunteerRepository,
-    IUserRepository userRepository,
-    IEquipmentTypeRepository equipmentTypeRepository,
-    IHelpTypeRepository helpTypeRepository,
-    IMapper mapper)
+            IVolunteerRepository volunteerRepository,
+            IUserRepository userRepository,
+            IEquipmentTypeRepository equipmentTypeRepository,
+            IHelpTypeRepository helpTypeRepository,
+            IMapper mapper)
         {
             _volunteerRepository = volunteerRepository;
             _userRepository = userRepository;
@@ -32,7 +33,6 @@ namespace BLL.Services
         public List<VolunteerDto> GetAll()
         {
             var volunteers = _volunteerRepository.GetAll();
-
             return _mapper.Map<List<VolunteerDto>>(volunteers);
         }
 
@@ -57,11 +57,8 @@ namespace BLL.Services
         }
 
         // רישום משתמש קיים כמתנדב
-        public void Add(
-            RegisterVolunteerDto volunteerDto,
-            int currentUserId)
+        public void Add(RegisterVolunteerDto volunteerDto, int currentUserId)
         {
-            // בדיקה שהמשתמש עדיין אינו מתנדב
             var existingVolunteer =
                 _volunteerRepository.GetByUserId(currentUserId);
 
@@ -71,7 +68,6 @@ namespace BLL.Services
                     "This user already has a volunteer profile.");
             }
 
-            // שליפת המשתמש הקיים
             var user = _userRepository.GetById(currentUserId);
 
             if (user == null)
@@ -80,7 +76,6 @@ namespace BLL.Services
                     "The current user was not found.");
             }
 
-            // בדיקת תקינות רשימת הציוד
             var equipmentIds = volunteerDto.EquipmentTypeIds
                 .Distinct()
                 .ToList();
@@ -97,7 +92,6 @@ namespace BLL.Services
                     "Invalid equipment type ID.");
             }
 
-            // בדיקה שכל פריטי הציוד קיימים במערכת
             foreach (var equipmentId in equipmentIds)
             {
                 var equipment =
@@ -110,7 +104,6 @@ namespace BLL.Services
                 }
             }
 
-            // בדיקת תקינות רשימת סוגי העזרה
             var helpTypeIds = volunteerDto.HelpTypeIds
                 .Distinct()
                 .ToList();
@@ -133,7 +126,6 @@ namespace BLL.Services
                     "Invalid help type ID.");
             }
 
-            // בדיקה שכל סוגי העזרה קיימים במערכת
             foreach (var helpTypeId in helpTypeIds)
             {
                 var helpType = _helpTypeRepository.GetById(helpTypeId);
@@ -145,7 +137,6 @@ namespace BLL.Services
                 }
             }
 
-            // יצירת פרופיל המתנדב
             var volunteer = new Volunteer
             {
                 UserId = user.Id,
@@ -155,7 +146,7 @@ namespace BLL.Services
                 Latitude = volunteerDto.Latitude,
                 Longitude = volunteerDto.Longitude,
 
-                IsActive = true,
+                IsActive = false,
 
                 TotalOffersReceived = 0,
                 TotalOffersAccepted = 0,
@@ -163,17 +154,17 @@ namespace BLL.Services
 
                 ReliabilityScore = 100.0,
 
-                LastLocationUpdatedAt = volunteerDto.Latitude.HasValue &&
-                        volunteerDto.Longitude.HasValue
-    ? DateTime.UtcNow
-    : null
+                LastLocationUpdatedAt =
+                    volunteerDto.Latitude.HasValue &&
+                    volunteerDto.Longitude.HasValue
+                        ? DateTime.UtcNow
+                        : null
             };
 
-            // שמירת המתנדב והציוד שלו
             _volunteerRepository.AddWithEquipmentAndHelpTypes(
-      volunteer,
-      equipmentIds,
-      helpTypeIds);
+                volunteer,
+                equipmentIds,
+                helpTypeIds);
         }
 
         public void Update(
@@ -222,7 +213,6 @@ namespace BLL.Services
             _volunteerRepository.IncreaseReliabilityScore(volunteerId);
         }
 
-
         public void UpdateLocation(
             int userId,
             double latitude,
@@ -246,5 +236,32 @@ namespace BLL.Services
             _volunteerRepository.Update(volunteer);
         }
 
+        public void UpdateAvailability(int userId, bool isAvailable)
+        {
+            var volunteer = _volunteerRepository.GetByUserId(userId);
+
+            if (volunteer == null)
+                throw new NotFoundException("Volunteer profile not found.");
+
+            if (isAvailable)
+            {
+                var locationFreshnessCutoff =
+                    DateTime.UtcNow.AddMinutes(-5);
+
+                if (!volunteer.Latitude.HasValue ||
+                    !volunteer.Longitude.HasValue ||
+                    !volunteer.LastLocationUpdatedAt.HasValue ||
+                    volunteer.LastLocationUpdatedAt.Value <
+                        locationFreshnessCutoff)
+                {
+                    throw new ConflictException(
+                        "A fresh location is required to become available.");
+                }
+            }
+
+            volunteer.IsActive = isAvailable;
+
+            _volunteerRepository.Update(volunteer);
+        }
     }
 }

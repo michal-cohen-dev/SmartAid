@@ -80,7 +80,14 @@ namespace BLL.Services
                 VolunteerId = volunteer.Id
             };
 
-            _requestOfferRepository.Add(offer);
+            bool added = _requestOfferRepository.TryAddIfCapacityAvailable(
+    offer,
+    5);
+
+            if (!added)
+            {
+                return;
+            }
 
             _volunteerRepository.IncrementTotalOffersReceived(
                 volunteer.Id);
@@ -118,6 +125,28 @@ namespace BLL.Services
                     existingOffer.VolunteerId);
             }
         }
+
+
+
+        public bool TryDeclineOffer(int offerId, int userId)
+        {
+            if (offerId <= 0)
+                throw new ArgumentException("Invalid request offer ID.");
+
+            if (userId <= 0)
+                throw new ArgumentException("Invalid user ID.");
+
+            var volunteer = _volunteerRepository.GetByUserId(userId);
+
+            if (volunteer == null)
+                throw new NotFoundException("Volunteer profile not found.");
+
+            return _requestOfferRepository.TryDeclineOffer(
+                offerId,
+                volunteer.Id);
+        }
+
+
 
         public void Delete(int id)
         {

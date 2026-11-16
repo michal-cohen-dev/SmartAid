@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿
+using AutoMapper;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
@@ -18,5 +19,7 @@ namespace BLL.Services.Interfaces
         void DecreaseReliabilityScore(int volunteerId);
         void IncreaseReliabilityScore(int volunteerId);
         void UpdateLocation(int userId, double latitude, double longitude);
+
+        void UpdateAvailability(int userId, bool isAvailable);
     }
 }

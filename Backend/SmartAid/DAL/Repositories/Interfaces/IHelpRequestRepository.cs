@@ -19,12 +19,14 @@ namespace DAL.Repositories.Interfaces
         bool TryCompleteRequest(int requestId, int volunteerId);
         bool TryRateCompletedRequest(int requestId, int userId, int rating);
         bool HasActiveAssignment(int volunteerId);
+
         void Add(HelpRequest helpRequest);
         void Update(HelpRequest helpRequest);
         void Delete(int id);
+
         bool TryCancelRequest(
-    int requestId,
-    int userId,
-    bool cancelledByVolunteer);
+            int requestId,
+            int userId,
+            bool cancelledByVolunteer);
     }
 }
