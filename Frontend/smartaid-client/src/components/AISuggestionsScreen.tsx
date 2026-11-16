@@ -198,9 +198,7 @@ function AISuggestionsScreen() {
 
   const professionalRequired = isHighRisk || isUnknownRisk;
 
-  const showVolunteerButton =
-    !professionalRequired &&
-    (!analysis || analysis.volunteerRequired);
+  
 
   return (
     <div dir="rtl" className="ai-page">
