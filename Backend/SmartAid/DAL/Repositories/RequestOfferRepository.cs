@@ -33,6 +33,20 @@ namespace DAL.Repositories
                 .FirstOrDefault(ro => ro.Id == id);
         }
 
+
+
+        public List<RequestOffer> GetPendingByVolunteerId(int volunteerId)
+        {
+            return _context.RequestOffers
+                .Where(ro =>
+                    ro.VolunteerId == volunteerId &&
+                    ro.Status == OfferStatus.Pending)
+                .ToList();
+        }
+
+
+
+
         public void Add(RequestOffer requestOffer)
         {
             requestOffer.OfferedAt = DateTime.UtcNow;

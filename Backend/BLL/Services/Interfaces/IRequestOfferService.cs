@@ -11,6 +11,7 @@ namespace BLL.Services.Interfaces
         List<RequestOfferDto> GetAll();
 
         RequestOfferDto? GetById(int id);
+        List<RequestOfferDto> GetPendingByVolunteerId(int volunteerId);
 
         void Add(RequestOfferDto requestOfferDto);
 

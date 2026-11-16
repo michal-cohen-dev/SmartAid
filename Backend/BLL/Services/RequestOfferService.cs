@@ -57,6 +57,23 @@ namespace BLL.Services
             return _mapper.Map<RequestOfferDto>(offer);
         }
 
+
+
+
+        public List<RequestOfferDto> GetPendingByVolunteerId(int volunteerId)
+        {
+            if (volunteerId <= 0)
+                throw new ArgumentException("Invalid volunteer ID.");
+
+            var offers = _requestOfferRepository.GetPendingByVolunteerId(volunteerId);
+
+            return _mapper.Map<List<RequestOfferDto>>(offers);
+        }
+
+
+
+
+
         public void Add(RequestOfferDto requestOfferDto)
         {
             if (requestOfferDto.HelpRequestId <= 0)

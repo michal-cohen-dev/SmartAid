@@ -1,5 +1,4 @@
-﻿
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using DAL.Entities;
 
 namespace DAL.Repositories.Interfaces
@@ -9,6 +8,8 @@ namespace DAL.Repositories.Interfaces
         List<RequestOffer> GetAll();
 
         RequestOffer? GetById(int id);
+
+        List<RequestOffer> GetPendingByVolunteerId(int volunteerId);
 
         void Add(RequestOffer requestOffer);
 

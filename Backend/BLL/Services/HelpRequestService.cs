@@ -75,8 +75,8 @@ namespace BLL.Services
         }
 
         public async Task<List<HelpRequestPreviewDto>> GetOpenForVolunteerAsync(
-            int userId,
-            CancellationToken cancellationToken = default)
+    int userId,
+    CancellationToken cancellationToken = default)
         {
             var volunteer = _volunteerService.GetByUserId(userId);
 
@@ -91,8 +91,21 @@ namespace BLL.Services
                     volunteer.Id,
                     cancellationToken);
 
+            var pendingOffers =
+                _requestOfferService.GetPendingByVolunteerId(volunteer.Id);
+
+            var pendingRequestIds = pendingOffers
+                .Select(offer => offer.HelpRequestId)
+                .ToList();
+
+            var eligibleRequests = matches
+                .Where(match =>
+                    pendingRequestIds.Contains(match.HelpRequest.Id))
+                .Select(match => match.HelpRequest)
+                .ToList();
+
             var fullDtos = _mapper.Map<List<HelpRequestDto>>(
-                matches.Select(match => match.HelpRequest).ToList());
+                eligibleRequests);
 
             return fullDtos.Select(request => new HelpRequestPreviewDto
             {
