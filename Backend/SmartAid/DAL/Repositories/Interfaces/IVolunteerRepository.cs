@@ -1,35 +1,49 @@
-﻿
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using DAL.Entities;
-using DAL.Repositories.Interfaces;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace DAL.Repositories.Interfaces
 {
-
     public interface IVolunteerRepository
     {
         List<Volunteer> GetAll();
+
         Volunteer? GetById(int id);
+
         Volunteer? GetByUserId(int userId);
+
+        Volunteer? GetByIdWithQualifications(int id);
+
+        Volunteer? GetByUserIdWithQualifications(int userId);
+
+        List<Volunteer> GetAllWithQualifications();
+
         void Add(Volunteer volunteer);
+
         void Update(Volunteer volunteer);
+
         void Delete(int id);
+
         void IncrementTotalCompleted(int volunteerId);
+
         void IncrementTotalOffersReceived(int volunteerId);
+
         void IncrementTotalOffersAccepted(int volunteerId);
+
         void DecreaseReliabilityScore(int volunteerId);
+
         void IncreaseReliabilityScore(int volunteerId);
+
         IDbContextTransaction BeginTransaction();
 
         void AddWithEquipmentAndHelpTypes(
-     Volunteer volunteer,
-     List<int> equipmentTypeIds,
-     List<int> helpTypeIds);
-        List<Volunteer> GetAllWithQualifications();
+            Volunteer volunteer,
+            List<int> equipmentTypeIds,
+            List<int> helpTypeIds);
 
-        Volunteer? GetByIdWithQualifications(int id);
+        void ReplaceQualifications(
+            int volunteerId,
+            List<int> equipmentTypeIds,
+            List<int> helpTypeIds);
     }
 }

@@ -1,4 +1,5 @@
 ﻿
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace DTO;
@@ -26,4 +27,10 @@ public class VolunteerDto
     public int TotalOffersAccepted { get; set; }
     public int TotalCompleted { get; set; }
     public double ReliabilityScore { get; set; }
+
+    public List<int> EquipmentTypeIds { get; set; } = new();
+    public List<string> EquipmentTypeNames { get; set; } = new();
+
+    public List<int> HelpTypeIds { get; set; } = new();
+    public List<string> HelpTypeNames { get; set; } = new();
 }
