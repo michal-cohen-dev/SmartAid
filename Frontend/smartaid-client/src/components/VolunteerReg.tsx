@@ -62,39 +62,74 @@ function toggleSelection(
   );
 }
 
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-
-    if (selectedHelpTypeIds.length === 0) {
-      setError("יש לבחור לפחות סוג עזרה אחד.");
+function getCurrentLocation(): Promise<{
+  latitude: number;
+  longitude: number;
+}> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("הדפדפן אינו תומך בקבלת מיקום."));
       return;
     }
 
-    try {
-      setSubmitting(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      () => {
+        reject(
+          new Error("לא ניתן לקבל את המיקום שלך. יש לאשר גישה למיקום בדפדפן.")
+        );
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  });
+}
 
-      await apiRequest("/api/Volunteers", {
-        method: "POST",
-        body: JSON.stringify({
-          equipmentTypeIds: selectedEquipmentIds,
-          helpTypeIds: selectedHelpTypeIds,
-        }),
-      });
+ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  event.preventDefault();
+  setError("");
 
-      setSuccess(true);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "אירעה שגיאה בהרשמה כמתנדב."
-      );
-    } finally {
-      setSubmitting(false);
-    }
+  if (selectedHelpTypeIds.length === 0) {
+    setError("יש לבחור לפחות סוג עזרה אחד.");
+    return;
   }
 
+  try {
+    setSubmitting(true);
+
+    // קבלת המיקום הנוכחי של המתנדב
+    const location = await getCurrentLocation();
+
+    // שליחת פרטי ההרשמה והמיקום לשרת
+    await apiRequest("/api/Volunteers", {
+      method: "POST",
+      body: JSON.stringify({
+        equipmentTypeIds: selectedEquipmentIds,
+        helpTypeIds: selectedHelpTypeIds,
+        latitude: location.latitude,
+        longitude: location.longitude,
+      }),
+    });
+
+    setSuccess(true);
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "אירעה שגיאה בהרשמה כמתנדב."
+    );
+  } finally {
+    setSubmitting(false);
+  }
+}
   function handleLoginAgain() {
     sessionStorage.removeItem("token");
     navigate("/login");

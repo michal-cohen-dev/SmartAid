@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BLL", "..\BLL\BLL.csproj", 
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Images", "Images", "{33D1A5D9-7715-43AC-B826-1E17EF394668}"
 EndProject
+Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "SmartAid.Database", "..\..\..\..\..\..\Users\hadas\source\repos\SmartAid.Database\SmartAid.Database.sqlproj", "{EEB9AB08-0A03-4382-B5AB-88BA598889DC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -35,6 +37,12 @@ Global
 		{B73709F5-42D1-490A-9F92-6EE133C4C49A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B73709F5-42D1-490A-9F92-6EE133C4C49A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B73709F5-42D1-490A-9F92-6EE133C4C49A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EEB9AB08-0A03-4382-B5AB-88BA598889DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EEB9AB08-0A03-4382-B5AB-88BA598889DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EEB9AB08-0A03-4382-B5AB-88BA598889DC}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{EEB9AB08-0A03-4382-B5AB-88BA598889DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EEB9AB08-0A03-4382-B5AB-88BA598889DC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EEB9AB08-0A03-4382-B5AB-88BA598889DC}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
