@@ -50,6 +50,9 @@ namespace BLL.Services
 
             var volunteers = _volunteerRepository.GetAllWithQualifications();
 
+            // מיקום המתנדב חייב להיות מעודכן בחמש הדקות האחרונות
+            var locationFreshnessCutoff = DateTime.UtcNow.AddMinutes(-5);
+
             var requiredEquipmentIds = helpRequest.RequiredEquipments
                 .Select(e => e.EquipmentTypeId)
                 .Distinct()
@@ -68,7 +71,13 @@ namespace BLL.Services
                                 equipment =>
                                     equipment.EquipmentTypeId == requiredId));
 
-                    return hasRequiredHelpType && hasAllRequiredEquipment;
+                    bool hasFreshLocation =
+                        volunteer.LastLocationUpdatedAt.HasValue &&
+                        volunteer.LastLocationUpdatedAt.Value >= locationFreshnessCutoff;
+
+                    return hasRequiredHelpType &&
+                           hasAllRequiredEquipment &&
+                           hasFreshLocation;
                 })
                 .ToList();
 
@@ -158,6 +167,15 @@ namespace BLL.Services
 
             if (volunteer == null || !volunteer.IsActive)
                 return new List<HelpRequestMatchResult>();
+
+            // מיקום המתנדב חייב להיות מעודכן בחמש הדקות האחרונות
+            var locationFreshnessCutoff = DateTime.UtcNow.AddMinutes(-5);
+
+            if (!volunteer.LastLocationUpdatedAt.HasValue ||
+                volunteer.LastLocationUpdatedAt.Value < locationFreshnessCutoff)
+            {
+                return new List<HelpRequestMatchResult>();
+            }
 
             if (volunteer.Latitude == null || volunteer.Longitude == null)
                 return new List<HelpRequestMatchResult>();
