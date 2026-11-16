@@ -1,11 +1,11 @@
 ﻿
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using System;
 
 namespace DAL.Repositories
 {
@@ -34,8 +34,6 @@ namespace DAL.Repositories
                 .FirstOrDefault(ro => ro.Id == id);
         }
 
-
-
         public List<RequestOffer> GetPendingByVolunteerId(int volunteerId)
         {
             return _context.RequestOffers
@@ -45,11 +43,6 @@ namespace DAL.Repositories
                 .ToList();
         }
 
-
-
-
-       
-
         public bool TryAddIfCapacityAvailable(
             RequestOffer requestOffer,
             int maxActiveOffers)
@@ -57,23 +50,20 @@ namespace DAL.Repositories
             using var transaction = _context.Database.BeginTransaction(
                 IsolationLevel.Serializable);
 
-            // Lock the request row so concurrent offer-creation
-            // operations for the same request are serialized.
             var helpRequest = _context.HelpRequests
-    .FromSqlInterpolated(
-        $"SELECT * FROM HelpRequests WITH (UPDLOCK, HOLDLOCK) WHERE Id = {requestOffer.HelpRequestId}")
-    .AsNoTracking()
-    .FirstOrDefault();
+                .FromSqlInterpolated(
+                    $"SELECT * FROM HelpRequests WITH (UPDLOCK, HOLDLOCK) WHERE Id = {requestOffer.HelpRequestId}")
+                .AsNoTracking()
+                .FirstOrDefault();
 
             if (helpRequest == null ||
-               helpRequest.Status != RequestStatus.Open ||
+                helpRequest.Status != RequestStatus.Open ||
                 helpRequest.AssignedVolunteerId != null)
             {
                 transaction.Rollback();
                 return false;
             }
 
-            // Do not create more offers after someone has accepted.
             bool alreadyAccepted = _context.RequestOffers
                 .Any(ro =>
                     ro.HelpRequestId == requestOffer.HelpRequestId &&
@@ -85,7 +75,6 @@ namespace DAL.Repositories
                 return false;
             }
 
-            // A volunteer can receive only one offer per request.
             bool alreadyOffered = _context.RequestOffers
                 .Any(ro =>
                     ro.HelpRequestId == requestOffer.HelpRequestId &&
@@ -97,7 +86,6 @@ namespace DAL.Repositories
                 return false;
             }
 
-            // Only Pending offers count toward the active-offer limit.
             int activeOffersCount = _context.RequestOffers
                 .Count(ro =>
                     ro.HelpRequestId == requestOffer.HelpRequestId &&
@@ -119,14 +107,11 @@ namespace DAL.Repositories
             return true;
         }
 
-
-
         public bool TryDeclineOffer(int offerId, int volunteerId)
         {
             using var transaction = _context.Database.BeginTransaction(
                 IsolationLevel.Serializable);
 
-            // Read the request ID so we can lock the request first.
             var initialOffer = _context.RequestOffers
                 .AsNoTracking()
                 .FirstOrDefault(ro => ro.Id == offerId);
@@ -137,8 +122,6 @@ namespace DAL.Repositories
                 return false;
             }
 
-            // Lock the help request first, using the same lock order
-            // as the assignment operation.
             var helpRequest = _context.HelpRequests
                 .FromSqlInterpolated(
                     $"SELECT * FROM HelpRequests WITH (UPDLOCK, HOLDLOCK) WHERE Id = {initialOffer.HelpRequestId}")
@@ -153,7 +136,6 @@ namespace DAL.Repositories
                 return false;
             }
 
-            // Lock the offer before checking and changing its status.
             var offer = _context.RequestOffers
                 .FromSqlInterpolated(
                     $"SELECT * FROM RequestOffers WITH (UPDLOCK, HOLDLOCK) WHERE Id = {offerId}")
@@ -186,12 +168,20 @@ namespace DAL.Repositories
             return true;
         }
 
-
-
-
-        public int ExpirePendingOffers(DateTime expirationTime)
+        public List<int> ExpirePendingOffers(DateTime expirationTime)
         {
-            return _context.RequestOffers
+            var expiredRequestIds = _context.RequestOffers
+                .Where(ro =>
+                    ro.Status == OfferStatus.Pending &&
+                    ro.OfferedAt <= expirationTime)
+                .Select(ro => ro.HelpRequestId)
+                .Distinct()
+                .ToList();
+
+            if (expiredRequestIds.Count == 0)
+                return expiredRequestIds;
+
+            _context.RequestOffers
                 .Where(ro =>
                     ro.Status == OfferStatus.Pending &&
                     ro.OfferedAt <= expirationTime)
@@ -199,10 +189,8 @@ namespace DAL.Repositories
                     setters.SetProperty(
                         ro => ro.Status,
                         OfferStatus.Expired));
+
+            return expiredRequestIds;
         }
-
-
-
-       
     }
 }

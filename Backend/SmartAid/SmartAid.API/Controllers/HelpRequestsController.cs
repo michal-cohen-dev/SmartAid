@@ -7,6 +7,8 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using SmartAid.API.Services;
+using Microsoft.AspNetCore.SignalR;
+using SmartAid.API.Hubs;
 
 namespace SmartAid.API.Controllers
 {
@@ -17,20 +19,49 @@ namespace SmartAid.API.Controllers
     {
         private readonly IHelpRequestService _helpRequestService;
         private readonly EstimatedArrivalService _estimatedArrivalService;
-
+        private readonly IHubContext<NotificationsHub> _hubContext;
 
         public HelpRequestsController(
-    IHelpRequestService helpRequestService,
-    EstimatedArrivalService estimatedArrivalService)
+            IHelpRequestService helpRequestService,
+            EstimatedArrivalService estimatedArrivalService,
+            IHubContext<NotificationsHub> hubContext)
         {
             _helpRequestService = helpRequestService;
             _estimatedArrivalService = estimatedArrivalService;
+            _hubContext = hubContext;
         }
 
+        private async Task NotifyRequestUpdatedAsync(
+            int requestId,
+            int? ownerUserId = null,
+            int? volunteerId = null)
+        {
+            var request = _helpRequestService.GetById(requestId);
 
+            var requesterId = ownerUserId ?? request?.UserId;
+            var assignedVolunteerId =
+                volunteerId ?? request?.AssignedVolunteerId;
 
+            var notification = new
+            {
+                HelpRequestId = requestId,
+                Status = request?.Status
+            };
 
+            if (requesterId.HasValue)
+            {
+                await _hubContext.Clients
+                    .Group($"user:{requesterId.Value}")
+                    .SendAsync("RequestUpdated", notification);
+            }
 
+            if (assignedVolunteerId.HasValue)
+            {
+                await _hubContext.Clients
+                    .Group($"volunteer:{assignedVolunteerId.Value}")
+                    .SendAsync("RequestUpdated", notification);
+            }
+        }
 
         [Authorize(Roles = "Admin")]
         [HttpGet]
@@ -39,12 +70,9 @@ namespace SmartAid.API.Controllers
             return Ok(_helpRequestService.GetAll());
         }
 
-
-
-
         [HttpGet("open")]
         public async Task<ActionResult<IEnumerable<HelpRequestPreviewDto>>> GetOpenForVolunteer(
-     CancellationToken cancellationToken)
+            CancellationToken cancellationToken)
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -58,24 +86,15 @@ namespace SmartAid.API.Controllers
             return Ok(requests);
         }
 
-
-
-
-
-        [Authorize]
         [HttpGet("my")]
         public IActionResult GetMyRequests()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             if (!int.TryParse(userIdClaim, out int userId))
-            {
                 return Unauthorized();
-            }
 
-            var requests = _helpRequestService.GetByUserId(userId);
-
-            return Ok(requests);
+            return Ok(_helpRequestService.GetByUserId(userId));
         }
 
         [HttpGet("volunteer/my")]
@@ -86,17 +105,13 @@ namespace SmartAid.API.Controllers
             if (!int.TryParse(userIdClaim, out var userId))
                 return Unauthorized();
 
-            var requests = _helpRequestService.GetByVolunteerId(userId);
-
-            return Ok(requests);
+            return Ok(_helpRequestService.GetByVolunteerId(userId));
         }
-
-
 
         [HttpGet("{id}")]
         public async Task<ActionResult<HelpRequestDto>> GetById(
-    int id,
-    CancellationToken cancellationToken)
+            int id,
+            CancellationToken cancellationToken)
         {
             if (!User.IsInRole("Admin"))
             {
@@ -131,9 +146,6 @@ namespace SmartAid.API.Controllers
             return Ok(request);
         }
 
-
-
-
         [HttpPost]
         [Consumes("multipart/form-data")]
         public async Task<ActionResult> Add(
@@ -157,10 +169,10 @@ namespace SmartAid.API.Controllers
             });
         }
 
-
-
         [HttpPut("{id}")]
-        public ActionResult Update(int id, [FromBody] HelpRequestUpdateDto helpRequestDto)
+        public ActionResult Update(
+            int id,
+            [FromBody] HelpRequestUpdateDto helpRequestDto)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
@@ -184,8 +196,10 @@ namespace SmartAid.API.Controllers
         }
 
         [HttpDelete("{id}")]
-        public ActionResult Delete(int id)
+        public async Task<ActionResult> Delete(int id)
         {
+            var requestBeforeDelete = _helpRequestService.GetById(id);
+
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             if (!int.TryParse(userIdClaim, out var userId))
@@ -197,9 +211,14 @@ namespace SmartAid.API.Controllers
             {
                 return NotFound(new
                 {
-                    message = "Help request not found."
+                    message = "Request not found."
                 });
             }
+
+            await NotifyRequestUpdatedAsync(
+                id,
+                requestBeforeDelete?.UserId,
+                requestBeforeDelete?.AssignedVolunteerId);
 
             return Ok(new
             {
@@ -207,18 +226,15 @@ namespace SmartAid.API.Controllers
             });
         }
 
-
         [HttpPost("{id}/accept")]
-        public ActionResult AcceptRequest(int id)
+        public async Task<ActionResult> AcceptRequest(int id)
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (!int.TryParse(userIdClaim, out var userId))
                 return Unauthorized();
 
-            var accepted = _helpRequestService.TryAssignToVolunteer(
-                id,
-                userId);
+            var accepted = _helpRequestService.TryAssignToVolunteer(id, userId);
 
             if (!accepted)
             {
@@ -228,6 +244,8 @@ namespace SmartAid.API.Controllers
                 });
             }
 
+            await NotifyRequestUpdatedAsync(id);
+
             return Ok(new
             {
                 message = "הבקשה הוקצתה אליך בהצלחה."
@@ -235,16 +253,14 @@ namespace SmartAid.API.Controllers
         }
 
         [HttpPost("{id}/arrive")]
-        public ActionResult MarkArrived(int id)
+        public async Task<ActionResult> MarkArrived(int id)
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (!int.TryParse(userIdClaim, out var userId))
                 return Unauthorized();
 
-            var marked = _helpRequestService.TryMarkInTreatment(
-                id,
-                userId);
+            var marked = _helpRequestService.TryMarkInTreatment(id, userId);
 
             if (!marked)
             {
@@ -254,6 +270,8 @@ namespace SmartAid.API.Controllers
                 });
             }
 
+            await NotifyRequestUpdatedAsync(id);
+
             return Ok(new
             {
                 message = "הגעתך סומנה בהצלחה."
@@ -261,16 +279,14 @@ namespace SmartAid.API.Controllers
         }
 
         [HttpPost("{id}/complete")]
-        public ActionResult CompleteRequest(int id)
+        public async Task<ActionResult> CompleteRequest(int id)
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (!int.TryParse(userIdClaim, out var userId))
                 return Unauthorized();
 
-            var completed = _helpRequestService.TryCompleteRequest(
-                id,
-                userId);
+            var completed = _helpRequestService.TryCompleteRequest(id, userId);
 
             if (!completed)
             {
@@ -280,17 +296,18 @@ namespace SmartAid.API.Controllers
                 });
             }
 
+            await NotifyRequestUpdatedAsync(id);
+
             return Ok(new
             {
                 message = "הטיפול הסתיים בהצלחה."
             });
         }
 
-
         [HttpPost("{id}/rate")]
         public ActionResult RateRequest(
-    int id,
-    [FromBody] RateHelpRequestDto ratingDto)
+            int id,
+            [FromBody] RateHelpRequestDto ratingDto)
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -317,8 +334,10 @@ namespace SmartAid.API.Controllers
         }
 
         [HttpPost("{id}/cancel")]
-        public IActionResult Cancel(int id)
+        public async Task<IActionResult> Cancel(int id)
         {
+            var requestBeforeCancel = _helpRequestService.GetById(id);
+
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
 
             if (userIdClaim == null ||
@@ -334,6 +353,11 @@ namespace SmartAid.API.Controllers
                 return BadRequest(
                     "לא ניתן לבטל את הבקשה. ייתכן שהיא כבר בוטלה או שהמשתמש אינו מורשה לבטל אותה.");
             }
+
+            await NotifyRequestUpdatedAsync(
+                id,
+                requestBeforeCancel?.UserId,
+                requestBeforeCancel?.AssignedVolunteerId);
 
             return Ok("הבקשה בוטלה בהצלחה.");
         }

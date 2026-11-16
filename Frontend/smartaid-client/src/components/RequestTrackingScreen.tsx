@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { apiRequest } from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import { createNotificationsConnection } from "../services/notifications";
 import "./RequestTrackingScreen.css";
 
 interface HelpRequest {
@@ -21,9 +23,15 @@ interface HelpRequest {
   rating?: number | null;
 }
 
+interface RequestUpdatedNotification {
+  helpRequestId?: number;
+  HelpRequestId?: number;
+}
+
 function RequestTrackingScreen() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { token } = useAuth();
 
   const [request, setRequest] = useState<HelpRequest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,8 +92,52 @@ function RequestTrackingScreen() {
       }
     };
 
+    // טעינה ראשונית
     loadRequest(true);
 
+    // התחברות לעדכוני SignalR בזמן אמת
+    let connection:
+      | ReturnType<typeof createNotificationsConnection>
+      | undefined;
+
+    if (token) {
+      try {
+        connection = createNotificationsConnection(token);
+
+        const handleRequestUpdated = (
+          notification: RequestUpdatedNotification
+        ) => {
+          const updatedRequestId =
+            notification?.helpRequestId ??
+            notification?.HelpRequestId;
+
+          if (
+            isMounted &&
+            Number(updatedRequestId) === Number(id)
+          ) {
+            void loadRequest();
+          }
+        };
+
+        connection.on("RequestUpdated", handleRequestUpdated);
+
+        connection.start().catch((connectionError) => {
+          if (isMounted) {
+            console.error(
+              "שגיאה בהתחברות לעדכוני הבקשה:",
+              connectionError
+            );
+          }
+        });
+      } catch (connectionError) {
+        console.error(
+          "לא ניתן ליצור חיבור SignalR:",
+          connectionError
+        );
+      }
+    }
+
+    // רענון תקופתי נשאר לצורך עדכון מיקום המתנדב וזמן ההגעה
     intervalId = window.setInterval(() => {
       loadRequest();
     }, 5000);
@@ -96,8 +148,13 @@ function RequestTrackingScreen() {
       if (intervalId !== undefined) {
         window.clearInterval(intervalId);
       }
+
+      if (connection) {
+        connection.off("RequestUpdated");
+        void connection.stop();
+      }
     };
-  }, [id]);
+  }, [id, token]);
 
   const submitRating = async () => {
     if (!id || selectedRating < 1 || selectedRating > 5) {

@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiRequest } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { createNotificationsConnection } from '../services/notifications';
 import './RequestDetailsScreen.css';
 
 interface HelpRequestPreview {
@@ -30,6 +32,7 @@ interface HelpRequestDetails extends HelpRequestPreview {
 function RequestDetailsScreen() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { token } = useAuth();
 
   const [preview, setPreview] = useState<HelpRequestPreview | null>(null);
   const [details, setDetails] = useState<HelpRequestDetails | null>(null);
@@ -135,6 +138,55 @@ function RequestDetailsScreen() {
       isMounted = false;
     };
   }, [id]);
+
+  // קבלת עדכוני סטטוס בזמן אמת באמצעות SignalR
+  useEffect(() => {
+    if (!token || !id) {
+      return;
+    }
+
+    let isActive = true;
+
+    const connection = createNotificationsConnection(token);
+
+    const handleRequestUpdated = (notification: {
+      helpRequestId?: number;
+      HelpRequestId?: number;
+    }) => {
+      const updatedRequestId =
+        notification?.helpRequestId ??
+        notification?.HelpRequestId;
+
+      if (
+        isActive &&
+        Number(updatedRequestId) === Number(id)
+      ) {
+        loadFullRequest().catch(error => {
+          console.error(
+            'שגיאה בטעינת פרטי הבקשה לאחר עדכון:',
+            error
+          );
+        });
+      }
+    };
+
+    connection.on('RequestUpdated', handleRequestUpdated);
+
+    connection.start().catch(error => {
+      if (isActive) {
+        console.error(
+          'שגיאה בהתחברות לעדכוני הבקשה:',
+          error
+        );
+      }
+    });
+
+    return () => {
+      isActive = false;
+      connection.off('RequestUpdated', handleRequestUpdated);
+      void connection.stop();
+    };
+  }, [id, token]);
 
   async function handleAcceptRequest() {
     if (!id) return;

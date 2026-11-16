@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../services/api';
@@ -74,7 +75,7 @@ function VolunteerHome() {
     oscillator.stop(audioContext.currentTime + 0.35);
   }
 
-  // התחברות להתראות בזמן אמת מהשרת באמצעות SignalR
+  // התחברות להתראות ועדכוני בקשות בזמן אמת באמצעות SignalR
   useEffect(() => {
     if (!token || !isVolunteer) {
       return;
@@ -90,19 +91,44 @@ function VolunteerHome() {
       }
     };
 
-    connection.on('NewOffer', handleNewOffer);
+    const handleRequestUpdated = async () => {
+      try {
+        const data = await apiRequest<HelpRequest[]>(
+          '/api/HelpRequests/open'
+        );
 
-    connection
-      .start()
-      .catch(error => {
         if (isActive) {
-          console.error('שגיאה בהתחברות להתראות:', error);
+          const validRequests = data.filter(
+            request =>
+              request.title?.trim() &&
+              request.description?.trim()
+          );
+
+          setRequests(validRequests);
         }
-      });
+      } catch (error) {
+        if (isActive) {
+          console.error(
+            'שגיאה ברענון הבקשות לאחר עדכון:',
+            error
+          );
+        }
+      }
+    };
+
+    connection.on('NewOffer', handleNewOffer);
+    connection.on('RequestUpdated', handleRequestUpdated);
+
+    connection.start().catch(error => {
+      if (isActive) {
+        console.error('שגיאה בהתחברות להתראות:', error);
+      }
+    });
 
     return () => {
       isActive = false;
       connection.off('NewOffer', handleNewOffer);
+      connection.off('RequestUpdated', handleRequestUpdated);
       void connection.stop();
     };
   }, [token, isVolunteer, soundEnabled]);

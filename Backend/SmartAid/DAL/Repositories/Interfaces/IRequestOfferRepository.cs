@@ -1,4 +1,5 @@
 ﻿
+using System;
 using System.Collections.Generic;
 using DAL.Entities;
 
@@ -12,15 +13,12 @@ namespace DAL.Repositories.Interfaces
 
         List<RequestOffer> GetPendingByVolunteerId(int volunteerId);
 
-
         bool TryAddIfCapacityAvailable(
             RequestOffer requestOffer,
             int maxActiveOffers);
 
         bool TryDeclineOffer(int offerId, int volunteerId);
 
-
-
-        int ExpirePendingOffers(DateTime expirationTime);
+        List<int> ExpirePendingOffers(DateTime expirationTime);
     }
 }

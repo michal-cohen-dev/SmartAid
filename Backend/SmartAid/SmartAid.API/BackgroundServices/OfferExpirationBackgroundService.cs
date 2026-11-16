@@ -1,4 +1,5 @@
 ﻿
+using BLL.Services.Interfaces;
 using DAL.Repositories.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -34,16 +35,49 @@ namespace SmartAid.API.BackgroundServices
                     var repository = scope.ServiceProvider
                         .GetRequiredService<IRequestOfferRepository>();
 
+                    var offerService = scope.ServiceProvider
+                        .GetRequiredService<IRequestOfferService>();
+
                     var expirationTime = DateTime.UtcNow.AddMinutes(-2);
 
-                    var expiredCount =
+                    var expiredRequestIds =
                         repository.ExpirePendingOffers(expirationTime);
 
-                    if (expiredCount > 0)
+                    if (expiredRequestIds.Count == 0)
+                        continue;
+
+                    _logger.LogInformation(
+                        "Expired offers found for {Count} help requests.",
+                        expiredRequestIds.Count);
+
+                    foreach (var requestId in expiredRequestIds)
                     {
-                        _logger.LogInformation(
-                            "Expired {Count} pending request offers.",
-                            expiredCount);
+                        stoppingToken.ThrowIfCancellationRequested();
+
+                        try
+                        {
+                            int createdOffers =
+                                await offerService.CreateOffersForRequestAsync(
+                                    requestId,
+                                    stoppingToken);
+
+                            _logger.LogInformation(
+                                "Created {Count} new offers for help request {RequestId} after expiration.",
+                                createdOffers,
+                                requestId);
+                        }
+                        catch (OperationCanceledException)
+                            when (stoppingToken.IsCancellationRequested)
+                        {
+                            throw;
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(
+                                ex,
+                                "Failed to create the next offers for help request {RequestId}.",
+                                requestId);
+                        }
                     }
                 }
                 catch (OperationCanceledException)
@@ -55,7 +89,7 @@ namespace SmartAid.API.BackgroundServices
                 {
                     _logger.LogError(
                         ex,
-                        "Error while expiring request offers.");
+                        "Error while processing expired request offers.");
                 }
             }
         }
