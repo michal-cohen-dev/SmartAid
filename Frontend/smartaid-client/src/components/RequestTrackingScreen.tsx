@@ -17,6 +17,7 @@ interface HelpRequest {
   assignedVolunteerLatitude?: number | null;
   assignedVolunteerLongitude?: number | null;
   assignedVolunteerLastLocationUpdatedAt?: string | null;
+  estimatedArrivalSeconds?: number | null;
   rating?: number | null;
 }
 
@@ -257,6 +258,26 @@ function RequestTrackingScreen() {
       }%2C${request.assignedVolunteerLongitude}`
     : "";
 
+  const hasValidEta =
+    request.estimatedArrivalSeconds != null &&
+    Number.isFinite(request.estimatedArrivalSeconds) &&
+    request.estimatedArrivalSeconds >= 0;
+
+  const formatEta = (seconds: number) => {
+    if (seconds < 60) {
+      return "פחות מדקה";
+    }
+
+    if (seconds < 3600) {
+      return `${Math.ceil(seconds / 60)} דקות`;
+    }
+
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.ceil((seconds % 3600) / 60);
+
+    return `${hours} שעות ו-${minutes} דקות`;
+  };
+
   const timelineSteps = [
     {
       title: "הבקשה נשלחה בהצלחה",
@@ -320,39 +341,58 @@ function RequestTrackingScreen() {
           </div>
         </div>
 
-        {request.status === 1 || request.status === 4 ? (
-          <section className="tracking-map-card">
-            <h2>מעקב אחר מיקום המתנדב</h2>
-
-            {hasValidVolunteerCoordinates ? (
-              <>
-                <p>
-                  מיקום המתנדב מתעדכן אוטומטית במהלך הטיפול בבקשה.
-                </p>
-
-                <iframe
-                  title="מיקום המתנדב על המפה"
-                  src={volunteerMapUrl}
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                />
-
-                {request.assignedVolunteerLastLocationUpdatedAt && (
-                  <p className="tracking-location-update">
-                    עדכון מיקום אחרון:{" "}
-                    {new Date(
-                      request.assignedVolunteerLastLocationUpdatedAt
-                    ).toLocaleTimeString("he-IL")}
+        {(request.status === 1 || request.status === 4) && (
+          <>
+            {hasValidEta && (
+              <section className="tracking-eta-card">
+                <span className="tracking-eta-icon">⏱️</span>
+                <div>
+                  <span className="tracking-eta-label">
+                    זמן הגעה משוער
+                  </span>
+                  <h2>
+                    {formatEta(request.estimatedArrivalSeconds!)}
+                  </h2>
+                  <p>
+                    הזמן מחושב לפי מיקום המתנדב והתנועה בכבישים.
                   </p>
-                )}
-              </>
-            ) : (
-              <p>
-                מיקום המתנדב עדיין לא התקבל. המפה תוצג כאשר המיקום יהיה זמין.
-              </p>
+                </div>
+              </section>
             )}
-          </section>
-        ) : null}
+
+            <section className="tracking-map-card">
+              <h2>מעקב אחר מיקום המתנדב</h2>
+
+              {hasValidVolunteerCoordinates ? (
+                <>
+                  <p>
+                    מיקום המתנדב מתעדכן אוטומטית במהלך הטיפול בבקשה.
+                  </p>
+
+                  <iframe
+                    title="מיקום המתנדב על המפה"
+                    src={volunteerMapUrl}
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                  />
+
+                  {request.assignedVolunteerLastLocationUpdatedAt && (
+                    <p className="tracking-location-update">
+                      עדכון מיקום אחרון:{" "}
+                      {new Date(
+                        request.assignedVolunteerLastLocationUpdatedAt
+                      ).toLocaleTimeString("he-IL")}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p>
+                  מיקום המתנדב עדיין לא התקבל. המפה תוצג כאשר המיקום יהיה זמין.
+                </p>
+              )}
+            </section>
+          </>
+        )}
 
         <section className="current-status-card">
           <span className="current-status-icon">

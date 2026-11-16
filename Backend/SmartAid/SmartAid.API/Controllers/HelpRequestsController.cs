@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using SmartAid.API.Services;
 
 namespace SmartAid.API.Controllers
 {
@@ -15,10 +16,15 @@ namespace SmartAid.API.Controllers
     public class HelpRequestsController : ControllerBase
     {
         private readonly IHelpRequestService _helpRequestService;
+        private readonly EstimatedArrivalService _estimatedArrivalService;
 
-        public HelpRequestsController(IHelpRequestService helpRequestService)
+
+        public HelpRequestsController(
+    IHelpRequestService helpRequestService,
+    EstimatedArrivalService estimatedArrivalService)
         {
             _helpRequestService = helpRequestService;
+            _estimatedArrivalService = estimatedArrivalService;
         }
 
 
@@ -88,7 +94,9 @@ namespace SmartAid.API.Controllers
 
 
         [HttpGet("{id}")]
-        public ActionResult<HelpRequestDto> GetById(int id)
+        public async Task<ActionResult<HelpRequestDto>> GetById(
+    int id,
+    CancellationToken cancellationToken)
         {
             if (!User.IsInRole("Admin"))
             {
@@ -114,6 +122,11 @@ namespace SmartAid.API.Controllers
                     message = $"Help request with ID {id} not found."
                 });
             }
+
+            request.EstimatedArrivalSeconds =
+                await _estimatedArrivalService.GetEstimatedArrivalSecondsAsync(
+                    request,
+                    cancellationToken);
 
             return Ok(request);
         }

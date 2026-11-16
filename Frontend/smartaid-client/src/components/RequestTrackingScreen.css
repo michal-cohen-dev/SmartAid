@@ -539,3 +539,66 @@
     font-size: 18px;
   }
 }
+
+/* Estimated arrival time */
+
+.tracking-eta-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 26px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #dce4eb;
+  border-right: 4px solid #647b91;
+  border-radius: 10px;
+}
+
+.tracking-eta-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #edf1f4;
+  font-size: 28px;
+}
+
+.tracking-eta-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #737b86;
+  font-size: 14px;
+}
+
+.tracking-eta-card h2 {
+  margin: 0 0 8px;
+  color: #343d49;
+  font-size: 25px;
+}
+
+.tracking-eta-card p {
+  margin: 0;
+  color: #737b86;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .tracking-eta-card {
+    gap: 14px;
+    padding: 18px;
+  }
+
+  .tracking-eta-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+  }
+
+  .tracking-eta-card h2 {
+    font-size: 22px;
+  }
+}

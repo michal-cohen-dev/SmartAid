@@ -189,6 +189,10 @@ builder.Services.AddEndpointsApiExplorer();
 // SignalR
 builder.Services.AddSignalR();
 
+builder.Services.AddMemoryCache();
+
+builder.Services.AddScoped<EstimatedArrivalService>();
+
 // Swagger
 builder.Services.AddSwaggerGen(options =>
 {
