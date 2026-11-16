@@ -4,13 +4,12 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
+using BLL.Exceptions;
+using BLL.Services.Interfaces;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
-using BLL.Services.Interfaces;
-using BLL.Exceptions;
-using System.Threading;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace BLL.Services
 {
@@ -24,6 +23,7 @@ namespace BLL.Services
         private readonly IVolunteerMatchingService _volunteerMatchingService;
         private readonly IMapper _mapper;
         private readonly IVolunteerNotificationService _volunteerNotificationService;
+        private readonly ILogger<RequestOfferService> _logger;
 
         public RequestOfferService(
             IRequestOfferRepository requestOfferRepository,
@@ -31,7 +31,8 @@ namespace BLL.Services
             IVolunteerRepository volunteerRepository,
             IVolunteerMatchingService volunteerMatchingService,
             IMapper mapper,
-            IVolunteerNotificationService volunteerNotificationService)
+            IVolunteerNotificationService volunteerNotificationService,
+            ILogger<RequestOfferService> logger)
         {
             _requestOfferRepository = requestOfferRepository;
             _helpRequestRepository = helpRequestRepository;
@@ -39,6 +40,7 @@ namespace BLL.Services
             _volunteerMatchingService = volunteerMatchingService;
             _mapper = mapper;
             _volunteerNotificationService = volunteerNotificationService;
+            _logger = logger;
         }
 
         public List<RequestOfferDto> GetAll()
@@ -60,22 +62,16 @@ namespace BLL.Services
             return _mapper.Map<RequestOfferDto>(offer);
         }
 
-
-
-
         public List<RequestOfferDto> GetPendingByVolunteerId(int volunteerId)
         {
             if (volunteerId <= 0)
                 throw new ArgumentException("Invalid volunteer ID.");
 
-            var offers = _requestOfferRepository.GetPendingByVolunteerId(volunteerId);
+            var offers =
+                _requestOfferRepository.GetPendingByVolunteerId(volunteerId);
 
             return _mapper.Map<List<RequestOfferDto>>(offers);
         }
-
-
-
-
 
         public void Add(RequestOfferDto requestOfferDto)
         {
@@ -122,13 +118,10 @@ namespace BLL.Services
             }
         }
 
-
-
-
         public async Task<bool> CreateOfferForVolunteerAsync(
-    int helpRequestId,
-    int volunteerId,
-    CancellationToken cancellationToken = default)
+            int helpRequestId,
+            int volunteerId,
+            CancellationToken cancellationToken = default)
         {
             if (helpRequestId <= 0)
                 throw new ArgumentException("Invalid help request ID.");
@@ -168,7 +161,7 @@ namespace BLL.Services
 
             _volunteerRepository.IncrementTotalOffersReceived(volunteer.Id);
 
-            await _volunteerNotificationService.NotifyNewOfferAsync(
+            await NotifyNewOfferSafelyAsync(
                 volunteer.Id,
                 helpRequest.Id,
                 cancellationToken);
@@ -176,37 +169,14 @@ namespace BLL.Services
             return true;
         }
 
-
-
         public void Update(int id, RequestOfferDto requestOfferDto)
         {
             if (id <= 0)
                 throw new ArgumentException("Invalid request offer ID.");
 
-            var existingOffer = _requestOfferRepository.GetById(id);
-
-            if (existingOffer == null)
-                throw new NotFoundException("Request offer not found.");
-
-            if (!Enum.IsDefined(
-                    typeof(OfferStatus), requestOfferDto.Status))
-            {
-                throw new ArgumentException("Invalid offer status.");
-            }
-
-            var previousStatus = existingOffer.Status;
-            var newStatus = (OfferStatus)requestOfferDto.Status;
-
-            existingOffer.Status = newStatus;
-
-            _requestOfferRepository.Update(existingOffer);
-
-            if (previousStatus == OfferStatus.Pending &&
-                newStatus == OfferStatus.Accepted)
-            {
-                _volunteerRepository.IncrementTotalOffersAccepted(
-                    existingOffer.VolunteerId);
-            }
+            throw new BusinessRuleException(
+                "Request offer status cannot be changed directly. " +
+                "Use the dedicated accept, decline or expiration operations.");
         }
 
         public async Task<bool> TryDeclineOfferAsync(
@@ -285,20 +255,49 @@ namespace BLL.Services
                         offer,
                         MaxActiveOffers);
 
-                if (added)
-                {
-                    createdOffers++;
+                if (!added)
+                    continue;
 
-                    _volunteerRepository.IncrementTotalOffersReceived(
-                        match.Volunteer.Id);
-                    await _volunteerNotificationService.NotifyNewOfferAsync(
-    match.Volunteer.Id,
-    helpRequestId,
-    cancellationToken);
-                }
+                createdOffers++;
+
+                _volunteerRepository.IncrementTotalOffersReceived(
+                    match.Volunteer.Id);
+
+                await NotifyNewOfferSafelyAsync(
+                    match.Volunteer.Id,
+                    helpRequestId,
+                    cancellationToken);
             }
 
             return createdOffers;
+        }
+
+        private async Task NotifyNewOfferSafelyAsync(
+            int volunteerId,
+            int helpRequestId,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                await _volunteerNotificationService.NotifyNewOfferAsync(
+                    volunteerId,
+                    helpRequestId,
+                    cancellationToken);
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to send new offer notification. " +
+                    "VolunteerId: {VolunteerId}, HelpRequestId: {HelpRequestId}",
+                    volunteerId,
+                    helpRequestId);
+            }
         }
 
         public void Delete(int id)

@@ -17,6 +17,8 @@ namespace BLL.Services
 {
     public class VolunteerMatchingService : IVolunteerMatchingService
     {
+        private const int MaxRoutesPerBatch = 100;
+
         private readonly IVolunteerRepository _volunteerRepository;
         private readonly IHelpRequestRepository _helpRequestRepository;
         private readonly ITomTomRoutingService _tomTomRoutingService;
@@ -117,10 +119,38 @@ namespace BLL.Services
                 helpRequest.Latitude,
                 helpRequest.Longitude);
 
-            var routes = await _tomTomRoutingService.CalculateRoutesAsync(
-                origins,
-                destination,
-                cancellationToken);
+            // TomTom allows up to 100 routes per request.
+            // Split volunteers into batches and restore their original indexes.
+            var routes = new List<TomTomRouteResult>();
+
+            for (int startIndex = 0;
+                 startIndex < origins.Count;
+                 startIndex += MaxRoutesPerBatch)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var batchOrigins = origins
+                    .Skip(startIndex)
+                    .Take(MaxRoutesPerBatch)
+                    .ToList();
+
+                var batchRoutes =
+                    await _tomTomRoutingService.CalculateRoutesAsync(
+                        batchOrigins,
+                        destination,
+                        cancellationToken);
+
+                routes.AddRange(
+                    batchRoutes.Select(route => new TomTomRouteResult
+                    {
+                        OriginIndex = route.OriginIndex + startIndex,
+                        DestinationIndex = route.DestinationIndex,
+                        DistanceInMeters = route.DistanceInMeters,
+                        TravelTimeInSeconds = route.TravelTimeInSeconds,
+                        TrafficDelayInSeconds = route.TrafficDelayInSeconds,
+                        ErrorCode = route.ErrorCode
+                    }));
+            }
 
             var validResults = routes
                 .Where(route =>
@@ -240,11 +270,39 @@ namespace BLL.Services
                     request.Longitude))
                 .ToList();
 
-            var routes =
-                await _tomTomRoutingService.CalculateRoutesToMultipleDestinationsAsync(
-                    origin,
-                    destinations,
-                    cancellationToken);
+            // TomTom allows up to 100 routes per request.
+            // Split requests into batches and restore their original indexes.
+            var routes = new List<TomTomRouteResult>();
+
+            for (int startIndex = 0;
+                 startIndex < destinations.Count;
+                 startIndex += MaxRoutesPerBatch)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var batchDestinations = destinations
+                    .Skip(startIndex)
+                    .Take(MaxRoutesPerBatch)
+                    .ToList();
+
+                var batchRoutes =
+                    await _tomTomRoutingService
+                        .CalculateRoutesToMultipleDestinationsAsync(
+                            origin,
+                            batchDestinations,
+                            cancellationToken);
+
+                routes.AddRange(
+                    batchRoutes.Select(route => new TomTomRouteResult
+                    {
+                        OriginIndex = route.OriginIndex,
+                        DestinationIndex = route.DestinationIndex + startIndex,
+                        DistanceInMeters = route.DistanceInMeters,
+                        TravelTimeInSeconds = route.TravelTimeInSeconds,
+                        TrafficDelayInSeconds = route.TrafficDelayInSeconds,
+                        ErrorCode = route.ErrorCode
+                    }));
+            }
 
             var validResults = routes
                 .Where(route =>
