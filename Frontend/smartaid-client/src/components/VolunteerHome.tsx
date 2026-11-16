@@ -22,10 +22,11 @@ interface VolunteerLocation {
 }
 
 function VolunteerHome() {
+  const availabilityUpdatePendingRef = useRef(false);
   const navigate = useNavigate();
   const { token, isVolunteer } = useAuth();
 
-  const [isAvailable, setIsAvailable] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(true);
   const [location, setLocation] =
     useState<VolunteerLocation | null>(null);
 
@@ -293,11 +294,38 @@ function VolunteerHome() {
               }),
             }
           )
-            .then(() => {
-              if (isActive) {
-                setLocationSaveError('');
-              }
-            })
+            .then(async () => {
+    if (!isActive) return;
+
+    setLocationSaveError('');
+
+    // לאחר שהמיקום נשמר, מעדכנים זמינות בשרת
+    if (availabilityUpdatePendingRef.current) {
+        await apiRequest<{ message: string }>(
+            '/api/Volunteers/me/availability',
+            {
+                method: 'PUT',
+                body: JSON.stringify({
+                    isAvailable: true
+                })
+            }
+        );
+
+        availabilityUpdatePendingRef.current = false;
+    }
+})
+.catch(error => {
+    if (!isActive) return;
+
+    availabilityUpdatePendingRef.current = false;
+    setIsAvailable(false);
+
+    setLocationSaveError(
+        error instanceof Error
+            ? error.message
+            : 'עדכון הזמינות נכשל'
+    );
+})
             .catch(error => {
               if (isActive) {
                 setLocationSaveError(
@@ -347,9 +375,38 @@ function VolunteerHome() {
     };
   }, []);
 
-  function handleToggle() {
-    setIsAvailable(previous => !previous);
-  }
+ async function handleToggle() {
+    if (isAvailable) {
+        try {
+            await apiRequest<{ message: string }>(
+                '/api/Volunteers/me/availability',
+                {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        isAvailable: false
+                    })
+                }
+            );
+
+            availabilityUpdatePendingRef.current = false;
+            setIsAvailable(false);
+            setLocation(null);
+            setLocationError('');
+            setLocationSaveError('');
+
+        } catch (error) {
+            setLocationSaveError(
+                error instanceof Error
+                    ? error.message
+                    : 'לא הצלחנו לעדכן זמינות'
+            );
+        }
+
+    } else {
+        availabilityUpdatePendingRef.current = true;
+        setIsAvailable(true);
+    }
+}
 
   return (
     <div className="volunteer-page" dir="rtl">
