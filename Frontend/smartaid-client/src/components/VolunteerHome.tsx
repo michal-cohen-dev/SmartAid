@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../services/api';
 import './VolunteerHome.css';
+import { useAuth } from '../context/AuthContext';
+import { createNotificationsConnection } from '../services/notifications';
 
 interface HelpRequest {
   id: number;
@@ -21,7 +23,7 @@ interface VolunteerLocation {
 
 function VolunteerHome() {
   const navigate = useNavigate();
-
+  const { token, isVolunteer } = useAuth();
   const [isAvailable, setIsAvailable] = useState(false);
   const [location, setLocation] =
     useState<VolunteerLocation | null>(null);
@@ -73,6 +75,39 @@ function VolunteerHome() {
     oscillator.start();
     oscillator.stop(audioContext.currentTime + 0.35);
   }
+
+  // התחברות להתראות בזמן אמת מהשרת באמצעות SignalR
+useEffect(() => {
+  if (!token || !isVolunteer) {
+    return;
+  }
+
+  let isActive = true;
+
+  const connection = createNotificationsConnection(token);
+
+  const handleNewOffer = () => {
+    if (isActive && soundEnabled) {
+      playNotificationSound();
+    }
+  };
+
+  connection.on('NewOffer', handleNewOffer);
+
+  connection
+    .start()
+    .catch(error => {
+      if (isActive) {
+        console.error('שגיאה בהתחברות להתראות:', error);
+      }
+    });
+
+  return () => {
+    isActive = false;
+    connection.off('NewOffer', handleNewOffer);
+    void connection.stop();
+  };
+}, [token, isVolunteer, soundEnabled]);
 
   // הפעלת התראות קוליות לאחר לחיצה של המשתמש
   async function handleEnableSound() {

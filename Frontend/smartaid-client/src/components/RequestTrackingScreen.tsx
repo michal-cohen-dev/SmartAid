@@ -29,70 +29,70 @@ function RequestTrackingScreen() {
   const [ratingMessage, setRatingMessage] = useState("");
 
   const [cancelLoading, setCancelLoading] = useState(false);
-const [cancelMessage, setCancelMessage] = useState("");
+  const [cancelMessage, setCancelMessage] = useState("");
 
-useEffect(() => {
-  document.title = "מעקב אחר בקשת עזרה | SmartAid";
+  useEffect(() => {
+    document.title = "מעקב אחר בקשת עזרה | SmartAid";
 
-  if (!id || !Number.isInteger(Number(id)) || Number(id) <= 0) {
-    setError("מזהה הבקשה אינו תקין.");
-    setLoading(false);
-    return;
-  }
-
-  let isMounted = true;
-  let intervalId: number | undefined;
-
-  const loadRequest = async (showLoading = false) => {
-    if (showLoading) {
-      setLoading(true);
+    if (!id || !Number.isInteger(Number(id)) || Number(id) <= 0) {
+      setError("מזהה הבקשה אינו תקין.");
+      setLoading(false);
+      return;
     }
 
-    try {
-      const data = await apiRequest<HelpRequest>(
-        `/api/HelpRequests/${id}`
-      );
+    let isMounted = true;
+    let intervalId: number | undefined;
 
-      if (isMounted) {
-        setRequest(data);
-        setError("");
+    const loadRequest = async (showLoading = false) => {
+      if (showLoading) {
+        setLoading(true);
+      }
 
-        // מפסיקים לרענן כשהקריאה הסתיימה או בוטלה
-        if (data.status === 2 || data.status === 3) {
-          if (intervalId !== undefined) {
-            window.clearInterval(intervalId);
+      try {
+        const data = await apiRequest<HelpRequest>(
+          `/api/HelpRequests/${id}`
+        );
+
+        if (isMounted) {
+          setRequest(data);
+          setError("");
+
+          // מפסיקים לרענן כשהקריאה הסתיימה או בוטלה
+          if (data.status === 2 || data.status === 3) {
+            if (intervalId !== undefined) {
+              window.clearInterval(intervalId);
+            }
           }
         }
+      } catch (err) {
+        if (isMounted) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "לא ניתן לטעון את פרטי הבקשה."
+          );
+        }
+      } finally {
+        if (isMounted && showLoading) {
+          setLoading(false);
+        }
       }
-    } catch (err) {
-      if (isMounted) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "לא ניתן לטעון את פרטי הבקשה."
-        );
+    };
+
+    loadRequest(true);
+
+    intervalId = window.setInterval(() => {
+      loadRequest();
+    }, 5000);
+
+    return () => {
+      isMounted = false;
+
+      if (intervalId !== undefined) {
+        window.clearInterval(intervalId);
       }
-    } finally {
-      if (isMounted && showLoading) {
-        setLoading(false);
-      }
-    }
-  };
-
-  loadRequest(true);
-
-  intervalId = window.setInterval(() => {
-    loadRequest();
-  }, 5000);
-
-  return () => {
-    isMounted = false;
-
-    if (intervalId !== undefined) {
-      window.clearInterval(intervalId);
-    }
-  };
-}, [id]);
+    };
+  }, [id]);
 
   const submitRating = async () => {
     if (!id || selectedRating < 1 || selectedRating > 5) {
@@ -129,37 +129,37 @@ useEffect(() => {
   };
 
   const cancelRequest = async () => {
-  if (!id || cancelLoading) return;
+    if (!id || cancelLoading) return;
 
-  const confirmed = window.confirm(
-    "האם את בטוחה שברצונך לבטל את בקשת העזרה?"
-  );
-
-  if (!confirmed) return;
-
-  setCancelLoading(true);
-  setCancelMessage("");
-
-  try {
-    await apiRequest(`/api/HelpRequests/${id}/cancel`, {
-      method: "POST",
-    });
-
-    setRequest((previous) =>
-      previous ? { ...previous, status: 3 } : previous
+    const confirmed = window.confirm(
+      "האם את בטוחה שברצונך לבטל את בקשת העזרה?"
     );
 
-    setCancelMessage("בקשת העזרה בוטלה בהצלחה.");
-  } catch (err) {
-    setCancelMessage(
-      err instanceof Error
-        ? err.message
-        : "לא ניתן לבטל את הבקשה."
-    );
-  } finally {
-    setCancelLoading(false);
-  }
-};
+    if (!confirmed) return;
+
+    setCancelLoading(true);
+    setCancelMessage("");
+
+    try {
+      await apiRequest(`/api/HelpRequests/${id}/cancel`, {
+        method: "POST",
+      });
+
+      setRequest((previous) =>
+        previous ? { ...previous, status: 3 } : previous
+      );
+
+      setCancelMessage("בקשת העזרה בוטלה בהצלחה.");
+    } catch (err) {
+      setCancelMessage(
+        err instanceof Error
+          ? err.message
+          : "לא ניתן לבטל את הבקשה."
+      );
+    } finally {
+      setCancelLoading(false);
+    }
+  };
 
   const statusInfo: Record<
     number,
@@ -187,7 +187,7 @@ useEffect(() => {
     },
     4: {
       title: "המתנדב הגיע ומטפל בבקשה",
-      description: "המתנדב הגיע למקום והחל בטיפול בבקשת העזרה שלך.",
+      description: "המתנדב הגיע למקום והחל בטיפול בבקשת העזרה.",
       icon: "🙋",
     },
   };
@@ -208,25 +208,6 @@ useEffect(() => {
         <div className="tracking-container">
           <h2>לא ניתן להציג את המעקב</h2>
           <p>{error || "הבקשה לא נמצאה."}</p>
-
-          {request.status === 0 && (
-  <section className="cancel-request-section">
-    <button
-      type="button"
-      className="cancel-request-button"
-      onClick={cancelRequest}
-      disabled={cancelLoading}
-    >
-      {cancelLoading ? "מבטלים את הבקשה..." : "ביטול בקשת העזרה"}
-    </button>
-
-    {cancelMessage && (
-      <p className="cancel-request-message" role="status">
-        {cancelMessage}
-      </p>
-    )}
-  </section>
-)}
 
           <button onClick={() => navigate("/my-requests")}>
             חזרה לקריאות שלי
@@ -351,6 +332,27 @@ useEffect(() => {
           </section>
         )}
 
+        {request.status === 0 && (
+          <section className="cancel-request-section">
+            <button
+              type="button"
+              className="cancel-request-button"
+              onClick={cancelRequest}
+              disabled={cancelLoading}
+            >
+              {cancelLoading
+                ? "מבטלים את הבקשה..."
+                : "ביטול בקשת העזרה"}
+            </button>
+
+            {cancelMessage && (
+              <p className="cancel-request-message" role="status">
+                {cancelMessage}
+              </p>
+            )}
+          </section>
+        )}
+
         {request.status === 2 && (
           <section className="rating-card">
             <h2>איך היה השירות שקיבלת?</h2>
@@ -411,28 +413,28 @@ useEffect(() => {
         )}
 
         {request.assignedVolunteerName && (
-  <section className="volunteer-info-card">
-    <div className="volunteer-info-icon">🙋</div>
+          <section className="volunteer-info-card">
+            <div className="volunteer-info-icon">🙋</div>
 
-    <div className="volunteer-info-content">
-      <span className="volunteer-info-label">
-        המתנדב שמטפל בבקשה שלך
-      </span>
+            <div className="volunteer-info-content">
+              <span className="volunteer-info-label">
+                המתנדב שמטפל בבקשה שלך
+              </span>
 
-      <h3>{request.assignedVolunteerName}</h3>
+              <h3>{request.assignedVolunteerName}</h3>
 
-      <p>
-        {request.status === 1
-          ? "המתנדב אישר את הבקשה ונמצא בדרכו אליך."
-          : request.status === 4
-          ? "המתנדב הגיע אליך ומטפל בבקשה."
-          : request.status === 2
-          ? "המתנדב השלים את הטיפול בבקשה."
-          : "המתנדב משויך לבקשת העזרה שלך."}
-      </p>
-    </div>
-  </section>
-)}
+              <p>
+                {request.status === 1
+                  ? "המתנדב אישר את הבקשה ונמצא בדרכו אליך."
+                  : request.status === 4
+                  ? "המתנדב הגיע אליך ומטפל בבקשה."
+                  : request.status === 2
+                  ? "המתנדב השלים את הטיפול בבקשה."
+                  : "המתנדב משויך לבקשת העזרה שלך."}
+              </p>
+            </div>
+          </section>
+        )}
 
         {isCancelled && (
           <div className="tracking-info">
