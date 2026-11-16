@@ -22,7 +22,6 @@ namespace DAL.Repositories.Interfaces
 
         void Update(RequestOffer requestOffer);
 
-        void Delete(int id);
 
         int ExpirePendingOffers(DateTime expirationTime);
     }

@@ -214,15 +214,6 @@ namespace DAL.Repositories
             _context.SaveChanges();
         }
 
-        public void Delete(int id)
-        {
-            var entity = _context.RequestOffers.Find(id);
-
-            if (entity != null)
-            {
-                _context.RequestOffers.Remove(entity);
-                _context.SaveChanges();
-            }
-        }
+       
     }
 }

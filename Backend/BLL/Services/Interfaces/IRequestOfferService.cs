@@ -32,6 +32,5 @@ namespace BLL.Services.Interfaces
     CancellationToken cancellationToken = default);
 
 
-        void Delete(int id);
     }
 }

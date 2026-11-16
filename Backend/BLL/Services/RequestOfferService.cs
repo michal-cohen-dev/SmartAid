@@ -300,17 +300,5 @@ namespace BLL.Services
             }
         }
 
-        public void Delete(int id)
-        {
-            if (id <= 0)
-                throw new ArgumentException("Invalid request offer ID.");
-
-            var existingOffer = _requestOfferRepository.GetById(id);
-
-            if (existingOffer == null)
-                throw new NotFoundException("Request offer not found.");
-
-            _requestOfferRepository.Delete(id);
-        }
     }
 }
