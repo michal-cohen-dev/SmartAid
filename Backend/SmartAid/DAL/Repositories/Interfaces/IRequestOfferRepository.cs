@@ -27,5 +27,9 @@ namespace DAL.Repositories.Interfaces
             DateTime expirationTime);
 
         List<int> ExpirePendingOffers(DateTime expirationTime);
+
+        List<int> ExpirePendingOffersForVolunteerExceptRequest(
+            int volunteerId,
+            int acceptedHelpRequestId);
     }
 }

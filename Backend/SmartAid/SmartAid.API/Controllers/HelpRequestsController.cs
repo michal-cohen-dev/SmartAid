@@ -279,9 +279,10 @@ namespace SmartAid.API.Controllers
             if (userId == null)
                 return Unauthorized();
 
-            var accepted = _helpRequestService.TryAssignToVolunteer(
-                id,
-                userId.Value);
+            var accepted = await _helpRequestService.TryAssignToVolunteerAsync(
+     id,
+     userId.Value,
+     HttpContext.RequestAborted);
 
             if (!accepted)
             {

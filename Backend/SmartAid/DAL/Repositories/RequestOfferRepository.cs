@@ -223,5 +223,39 @@ namespace DAL.Repositories
 
             return expiredRequestIds;
         }
+
+        public List<int> ExpirePendingOffersForVolunteerExceptRequest(
+            int volunteerId,
+            int acceptedRequestId)
+        {
+            using var transaction = _context.Database.BeginTransaction(
+                IsolationLevel.Serializable);
+
+            var offersToExpire = _context.RequestOffers
+                .Where(ro =>
+                    ro.VolunteerId == volunteerId &&
+                    ro.Status == OfferStatus.Pending &&
+                    ro.HelpRequestId != acceptedRequestId &&
+                    ro.HelpRequest.Status == RequestStatus.Open &&
+                    ro.HelpRequest.AssignedVolunteerId == null)
+                .ToList();
+
+            var affectedRequestIds = offersToExpire
+                .Select(ro => ro.HelpRequestId)
+                .Distinct()
+                .ToList();
+
+            foreach (var offer in offersToExpire)
+            {
+                offer.Status = OfferStatus.Expired;
+            }
+
+            if (offersToExpire.Count > 0)
+                _context.SaveChanges();
+
+            transaction.Commit();
+
+            return affectedRequestIds;
+        }
     }
 }

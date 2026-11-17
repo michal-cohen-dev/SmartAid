@@ -28,7 +28,10 @@ namespace BLL.Services.Interfaces
         bool Delete(int id, int userId);
         bool IsOwner(int requestId, int userId);
         bool IsAssignedVolunteer(int requestId, int userId);
-        bool TryAssignToVolunteer(int requestId, int userId);
+        Task<bool> TryAssignToVolunteerAsync(
+     int requestId,
+     int userId,
+     CancellationToken cancellationToken = default);
         bool TryMarkInTreatment(int requestId, int userId);
         bool TryCompleteRequest(int requestId, int userId);
         bool TryRateCompletedRequest(int requestId, int userId, int rating);
