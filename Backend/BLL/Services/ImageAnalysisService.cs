@@ -3,7 +3,6 @@ using BLL.Services.Interfaces;
 using DAL.Repositories.Interfaces;
 using DTO;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 using System.Text;
 using System.Text.Json;
 
@@ -12,21 +11,15 @@ namespace BLL.Services;
 public class ImageAnalysisService : IImageAnalysisService
 {
     private readonly HttpClient _httpClient;
-    private readonly string _apiKey;
     private readonly IHelpTypeRepository _helpTypeRepository;
     private readonly IEquipmentTypeRepository _equipmentTypeRepository;
 
     public ImageAnalysisService(
-        HttpClient httpClient,
-        IConfiguration configuration,
-        IHelpTypeRepository helpTypeRepository,
-        IEquipmentTypeRepository equipmentTypeRepository)
+     HttpClient httpClient,
+     IHelpTypeRepository helpTypeRepository,
+     IEquipmentTypeRepository equipmentTypeRepository)
     {
         _httpClient = httpClient;
-        _apiKey = configuration["Gemini:ApiKey"]
-            ?? throw new InvalidOperationException(
-                "Gemini API key was not found.");
-
         _helpTypeRepository = helpTypeRepository;
         _equipmentTypeRepository = equipmentTypeRepository;
     }
@@ -315,11 +308,8 @@ public class ImageAnalysisService : IImageAnalysisService
         var jsonRequest = JsonSerializer.Serialize(requestBody);
 
         using var request = new HttpRequestMessage(
-            HttpMethod.Post,
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent");
-
-        request.Headers.Add("x-goog-api-key", _apiKey);
-
+    HttpMethod.Post,
+    "v1beta/models/gemini-3.5-flash-lite:generateContent");
         request.Content = new StringContent(
             jsonRequest,
             Encoding.UTF8,
