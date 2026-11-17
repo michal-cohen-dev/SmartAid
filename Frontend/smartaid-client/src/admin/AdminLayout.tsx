@@ -8,6 +8,7 @@ const menuItems = [
   { title: "ניהול מתנדבים", path: "/admin/volunteers", icon: "🤝" },
   { title: "ניהול קריאות", path: "/admin/requests", icon: "📋" },
   { title: "ניהול ציוד", path: "/admin/equipment", icon: "🧰" },
+  { title: "ניהול סוגי עזרה", path: "/admin/help-types", icon: "🆘" },
 ];
 
 export default function AdminLayout() {

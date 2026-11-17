@@ -27,8 +27,10 @@ export default function AdminRequests() {
   const [requests, setRequests] = useState<HelpRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
 
   useEffect(() => {
     loadRequests();
@@ -38,6 +40,7 @@ export default function AdminRequests() {
     try {
       setLoading(true);
       setError("");
+
       const data = await apiRequest<HelpRequest[]>("/api/HelpRequests");
       setRequests(data);
     } catch (err) {
@@ -48,6 +51,43 @@ export default function AdminRequests() {
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function cancelRequest(request: HelpRequest) {
+    const confirmed = window.confirm(
+      `האם את בטוחה שברצונך לבטל את קריאה מספר ${request.id}?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setCancellingId(request.id);
+      setError("");
+      setSuccessMessage("");
+
+      await apiRequest(
+        `/api/HelpRequests/${request.id}/admin-cancel`,
+        {
+          method: "POST",
+        }
+      );
+
+      setSuccessMessage(
+        `קריאה מספר ${request.id} בוטלה בהצלחה.`
+      );
+
+      await loadRequests();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "אירעה שגיאה בביטול הקריאה"
+      );
+    } finally {
+      setCancellingId(null);
     }
   }
 
@@ -89,6 +129,12 @@ export default function AdminRequests() {
       </div>
 
       {error && <div className="requests-error">{error}</div>}
+
+      {successMessage && (
+        <div className="requests-success">
+          {successMessage}
+        </div>
+      )}
 
       <div className="requests-stats">
         <div className="request-stat-card">
@@ -144,31 +190,55 @@ export default function AdminRequests() {
               <th>מתנדב משויך</th>
               <th>סטטוס</th>
               <th>תאריך יצירה</th>
+              <th>פעולות</th>
             </tr>
           </thead>
 
           <tbody>
-            {filteredRequests.map((request) => (
-              <tr key={request.id}>
-                <td>#{request.id}</td>
-                <td>{request.title}</td>
-                <td>{request.userFullName || "לא צוין"}</td>
-                <td>{request.address || "לא צוינה כתובת"}</td>
-                <td>{request.assignedVolunteerName || "טרם שובץ"}</td>
-                <td>
-                  <span className={`request-status status-${request.status}`}>
-                    {statusLabels[request.status] ?? "לא ידוע"}
-                  </span>
-                </td>
-                <td>
-                  {new Date(request.createdAt).toLocaleDateString("he-IL")}
-                </td>
-              </tr>
-            ))}
+            {filteredRequests.map((request) => {
+              const canCancel = [0, 1, 4].includes(request.status);
+
+              return (
+                <tr key={request.id}>
+                  <td>#{request.id}</td>
+                  <td>{request.title}</td>
+                  <td>{request.userFullName || "לא צוין"}</td>
+                  <td>{request.address || "לא צוינה כתובת"}</td>
+                  <td>{request.assignedVolunteerName || "טרם שובץ"}</td>
+
+                  <td>
+                    <span className={`request-status status-${request.status}`}>
+                      {statusLabels[request.status] ?? "לא ידוע"}
+                    </span>
+                  </td>
+
+                  <td>
+                    {new Date(request.createdAt).toLocaleDateString("he-IL")}
+                  </td>
+
+                  <td>
+                    {canCancel ? (
+                      <button
+                        type="button"
+                        className="requests-refresh-button requests-cancel-button"
+                        onClick={() => cancelRequest(request)}
+                        disabled={cancellingId !== null}
+                      >
+                        {cancellingId === request.id
+                          ? "מבטל..."
+                          : "ביטול קריאה"}
+                      </button>
+                    ) : (
+                      <span>אין פעולות</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
 
             {filteredRequests.length === 0 && (
               <tr>
-                <td colSpan={7} className="empty-requests">
+                <td colSpan={8} className="empty-requests">
                   לא נמצאו קריאות להצגה
                 </td>
               </tr>

@@ -28,6 +28,7 @@ import AdminUsers from './admin/AdminUsers';
 import AdminVolunteers from './admin/AdminVolunteers';
 import AdminRequests from './admin/AdminRequests';
 import AdminEquipment from './admin/AdminEquipment';
+import AdminHelpTypes from './admin/AdminHelpTypes';
 
 function App() {
   return (
@@ -125,6 +126,7 @@ function App() {
         <Route path="volunteers" element={<AdminVolunteers />} />
         <Route path="requests" element={<AdminRequests />} />
         <Route path="equipment" element={<AdminEquipment />} />
+        <Route path="help-types" element={<AdminHelpTypes />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />
