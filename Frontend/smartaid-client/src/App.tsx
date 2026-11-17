@@ -24,6 +24,9 @@ import ProtectedRoute from './routes/ProtectedRoute';
 
 import AdminLayout from './admin/AdminLayout';
 import AdminDashboard from './admin/AdminDashboard';
+import AdminVolunteers from './admin/AdminVolunteers';
+import AdminRequests from './admin/AdminRequests';
+import AdminEquipment from './admin/AdminEquipment';
 
 function App() {
   return (
@@ -137,7 +140,7 @@ function App() {
           element={<ProfileScreen />}
         />
       </Route>
-      <Route
+<Route
   path="/admin"
   element={
     <ProtectedRoute requireAdmin>
@@ -146,6 +149,17 @@ function App() {
   }
 >
   <Route index element={<AdminDashboard />} />
+  <Route
+    path="volunteers"
+    element={<AdminVolunteers />}
+  />
+  <Route
+    path="requests"
+    element={<AdminRequests />}
+  />
+
+  <Route path="equipment" element={<AdminEquipment />} />
+  
 </Route>
 
       <Route path="*" element={<NotFound />} />
