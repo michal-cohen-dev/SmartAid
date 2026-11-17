@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
-using Microsoft.EntityFrameworkCore;
-
 
 namespace DAL.Repositories
 {
@@ -24,7 +22,8 @@ namespace DAL.Repositories
 
         public User? GetById(int id)
         {
-            return _context.Users.FirstOrDefault(u => u.Id == id);
+            return _context.Users
+                .FirstOrDefault(u => u.Id == id);
         }
 
         public User? GetByEmail(string email)
@@ -38,7 +37,6 @@ namespace DAL.Repositories
             _context.Users.Add(user);
             _context.SaveChanges();
         }
-
 
         public void Update(User user)
         {
@@ -54,6 +52,16 @@ namespace DAL.Repositories
             }
         }
 
+        public bool HasRestrictingDependencies(int userId)
+        {
+            var hasVolunteerProfile = _context.Volunteers
+                .Any(v => v.UserId == userId);
+
+            var hasHelpRequests = _context.HelpRequests
+                .Any(h => h.UserId == userId);
+
+            return hasVolunteerProfile || hasHelpRequests;
+        }
 
         public void Delete(int id)
         {

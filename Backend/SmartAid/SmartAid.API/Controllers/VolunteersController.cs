@@ -1,9 +1,10 @@
-﻿
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using DTO;
 using BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using SmartAid.API.Extensions;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,16 +20,6 @@ namespace SmartAid.API.Controllers
         public VolunteersController(IVolunteerService volunteerService)
         {
             _volunteerService = volunteerService;
-        }
-
-        private int? GetCurrentUserId()
-        {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (int.TryParse(userIdClaim, out var currentUserId))
-                return currentUserId;
-
-            return null;
         }
 
         [Authorize(Roles = "Admin")]
@@ -55,11 +46,31 @@ namespace SmartAid.API.Controllers
             return Ok(volunteer);
         }
 
+
+
+
+        [Authorize(Roles = "Admin")]
+        [HttpPut("admin/{id:int}")]
+        public ActionResult UpdateForAdmin(
+            int id,
+            [FromBody] AdminVolunteerUpdateDto volunteerDto)
+        {
+            _volunteerService.UpdateForAdmin(id, volunteerDto);
+
+            return Ok(new
+            {
+                message = "Volunteer updated successfully by admin."
+            });
+        }
+
+
+
+
         [HttpPost]
         public ActionResult Add(
-    [FromBody] RegisterVolunteerDto volunteerDto)
+            [FromBody] RegisterVolunteerDto volunteerDto)
         {
-            var currentUserId = GetCurrentUserId();
+            var currentUserId = User.GetUserId();
 
             if (currentUserId == null)
                 return Unauthorized();
@@ -75,14 +86,19 @@ namespace SmartAid.API.Controllers
         }
 
         [HttpPut("{id}")]
-        public ActionResult Update(int id, [FromBody] VolunteerDto volunteerDto)
+        public ActionResult Update(
+            int id,
+            [FromBody] VolunteerDto volunteerDto)
         {
-            var currentUserId = GetCurrentUserId();
+            var currentUserId = User.GetUserId();
 
             if (currentUserId == null)
                 return Unauthorized();
 
-            _volunteerService.Update(id, volunteerDto, currentUserId.Value);
+            _volunteerService.Update(
+                id,
+                volunteerDto,
+                currentUserId.Value);
 
             return Ok(new
             {
@@ -93,12 +109,14 @@ namespace SmartAid.API.Controllers
         [HttpDelete("{id}")]
         public ActionResult Delete(int id)
         {
-            var currentUserId = GetCurrentUserId();
+            var currentUserId = User.GetUserId();
 
             if (currentUserId == null)
                 return Unauthorized();
 
-            _volunteerService.Delete(id, currentUserId.Value);
+            _volunteerService.Delete(
+                id,
+                currentUserId.Value);
 
             return Ok(new
             {
@@ -109,12 +127,13 @@ namespace SmartAid.API.Controllers
         [HttpGet("me")]
         public ActionResult<VolunteerDto> GetMyProfile()
         {
-            var currentUserId = GetCurrentUserId();
+            var currentUserId = User.GetUserId();
 
             if (currentUserId == null)
                 return Unauthorized();
 
-            var volunteer = _volunteerService.GetByUserId(currentUserId.Value);
+            var volunteer =
+                _volunteerService.GetByUserId(currentUserId.Value);
 
             if (volunteer == null)
                 return NotFound(new
@@ -125,13 +144,11 @@ namespace SmartAid.API.Controllers
             return Ok(volunteer);
         }
 
-
-
         [HttpPut("me/location")]
         public ActionResult UpdateMyLocation(
             [FromBody] UpdateVolunteerLocationDto locationDto)
         {
-            var currentUserId = GetCurrentUserId();
+            var currentUserId = User.GetUserId();
 
             if (currentUserId == null)
                 return Unauthorized();
@@ -147,14 +164,12 @@ namespace SmartAid.API.Controllers
             });
         }
 
-
-
         [HttpPut("me/availability")]
         public async Task<ActionResult> UpdateMyAvailability(
-    [FromBody] UpdateVolunteerAvailabilityDto availabilityDto,
-    CancellationToken cancellationToken)
+            [FromBody] UpdateVolunteerAvailabilityDto availabilityDto,
+            CancellationToken cancellationToken)
         {
-            var currentUserId = GetCurrentUserId();
+            var currentUserId = User.GetUserId();
 
             if (currentUserId == null)
                 return Unauthorized();
@@ -169,6 +184,5 @@ namespace SmartAid.API.Controllers
                 message = "Volunteer availability updated successfully."
             });
         }
-
     }
 }

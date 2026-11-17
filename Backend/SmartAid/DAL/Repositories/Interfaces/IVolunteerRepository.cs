@@ -18,6 +18,9 @@ namespace DAL.Repositories.Interfaces
 
         List<Volunteer> GetAllWithQualifications();
 
+        List<Volunteer> GetAllWithQualificationsForAdmin();
+
+
         void Add(Volunteer volunteer);
 
         void Update(Volunteer volunteer);

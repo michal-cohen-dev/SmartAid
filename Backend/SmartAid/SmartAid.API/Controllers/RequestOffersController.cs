@@ -1,12 +1,11 @@
-﻿
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using DTO;
 using BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
+using SmartAid.API.Extensions;
 
 namespace SmartAid.API.Controllers
 {
@@ -73,16 +72,15 @@ namespace SmartAid.API.Controllers
             int id,
             CancellationToken cancellationToken)
         {
-            var userIdClaim =
-                User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
             var declined =
                 await _requestOfferService.TryDeclineOfferAsync(
                     id,
-                    userId,
+                    userId.Value,
                     cancellationToken);
 
             if (!declined)

@@ -12,6 +12,8 @@ namespace BLL.MappingProfiles
         {
             CreateMap<User, UserDto>();
 
+            CreateMap<HelpType, HelpTypeDto>();
+
             CreateMap<Volunteer, VolunteerDto>()
                 .ForMember(
                     dest => dest.EquipmentTypeIds,
