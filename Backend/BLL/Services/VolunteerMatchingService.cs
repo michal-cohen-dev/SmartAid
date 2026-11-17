@@ -346,6 +346,12 @@ namespace BLL.Services
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
+                // לא להציג למתנדב בקשת עזרה שהוא עצמו פתח
+                if (request.UserId == volunteer.UserId)
+                {
+                    continue;
+                }
+
                 if (request.Status != RequestStatus.Open ||
                     request.AssignedVolunteerId != null ||
                     request.HelpTypeId == null)
