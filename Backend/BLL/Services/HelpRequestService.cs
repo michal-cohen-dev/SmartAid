@@ -377,6 +377,14 @@ namespace BLL.Services
                 rating);
         }
 
+
+
+        public bool AdminCancelRequest(int requestId)
+        {
+            return _helpRequestRepository.TryAdminCancelRequest(requestId);
+        }
+
+
         public bool TryCancelRequest(int requestId, int userId)
         {
             var request = _helpRequestRepository.GetById(requestId);

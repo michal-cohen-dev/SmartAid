@@ -39,5 +39,7 @@ namespace DAL.Repositories.Interfaces
             int requestId,
             int userId,
             bool cancelledByVolunteer);
+
+        bool TryAdminCancelRequest(int requestId);
     }
 }

@@ -18,13 +18,17 @@ namespace DAL.Repositories
             _context = context;
         }
 
+
         public List<HelpRequest> GetAll()
         {
             return _context.HelpRequests
                 .Include(hr => hr.User)
                 .Include(hr => hr.AssignedVolunteer)
+                .Include(hr => hr.RequiredEquipments)
+                    .ThenInclude(re => re.EquipmentType)
                 .ToList();
         }
+
 
         public List<HelpRequest> GetByUserId(int userId)
         {
@@ -355,6 +359,63 @@ namespace DAL.Repositories
 
             return rowsAffected == 1;
         }
+
+
+
+        public bool TryAdminCancelRequest(int requestId)
+        {
+            using var transaction =
+                _context.Database.BeginTransaction(
+                    IsolationLevel.Serializable);
+
+            var request = _context.HelpRequests
+                .FromSqlInterpolated(
+                    $"SELECT * FROM HelpRequests WITH (UPDLOCK, HOLDLOCK) WHERE Id = {requestId}")
+                .AsNoTracking()
+                .FirstOrDefault();
+
+            if (request == null ||
+                (request.Status != RequestStatus.Open &&
+                 request.Status != RequestStatus.Assigned &&
+                 request.Status != RequestStatus.InTreatment))
+            {
+                transaction.Rollback();
+                return false;
+            }
+
+            int rowsAffected = _context.HelpRequests
+                .Where(r =>
+                    r.Id == requestId &&
+                    (r.Status == RequestStatus.Open ||
+                     r.Status == RequestStatus.Assigned ||
+                     r.Status == RequestStatus.InTreatment))
+                .ExecuteUpdate(setters => setters
+                    .SetProperty(
+                        r => r.Status,
+                        RequestStatus.Cancelled));
+
+            if (rowsAffected != 1)
+            {
+                transaction.Rollback();
+                return false;
+            }
+
+            _context.RequestOffers
+                .Where(offer =>
+                    offer.HelpRequestId == requestId &&
+                    offer.Status == OfferStatus.Pending)
+                .ExecuteUpdate(setters => setters
+                    .SetProperty(
+                        offer => offer.Status,
+                        OfferStatus.Expired));
+
+            transaction.Commit();
+
+            return true;
+        }
+
+
+
 
         public bool TryCancelRequest(
             int requestId,

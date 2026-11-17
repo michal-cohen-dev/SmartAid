@@ -32,6 +32,8 @@ namespace BLL.Services.Interfaces
         bool TryMarkInTreatment(int requestId, int userId);
         bool TryCompleteRequest(int requestId, int userId);
         bool TryRateCompletedRequest(int requestId, int userId, int rating);
+        bool AdminCancelRequest(int requestId);
         bool TryCancelRequest(int requestId, int userId);
+        
     }
 }

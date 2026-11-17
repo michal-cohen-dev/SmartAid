@@ -199,6 +199,47 @@ namespace SmartAid.API.Controllers
             });
         }
 
+
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("{id}/admin-cancel")]
+        public async Task<IActionResult> AdminCancel(int id)
+        {
+            var requestBeforeCancel = _helpRequestService.GetById(id);
+
+            if (requestBeforeCancel == null)
+            {
+                return NotFound(new
+                {
+                    message = "הקריאה לא נמצאה."
+                });
+            }
+
+            bool cancelled =
+                _helpRequestService.AdminCancelRequest(id);
+
+            if (!cancelled)
+            {
+                return Conflict(new
+                {
+                    message = "לא ניתן לבטל קריאה שכבר הושלמה או בוטלה."
+                });
+            }
+
+            await NotifyRequestUpdatedAsync(
+                id,
+                requestBeforeCancel.UserId,
+                requestBeforeCancel.AssignedVolunteerId);
+
+            return Ok(new
+            {
+                message = "הקריאה בוטלה בהצלחה על ידי המנהל."
+            });
+        }
+
+
+
+
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(int id)
         {
