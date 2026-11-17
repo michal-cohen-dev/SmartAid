@@ -12,6 +12,7 @@ interface AuthContextType {
   isVolunteer: boolean;
   login: (token: string) => void;
   logout: () => void;
+  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(
@@ -49,6 +50,34 @@ function getVolunteerStatus(token: string | null): boolean {
   }
 }
 
+function getUserRole(token: string | null): string | null {
+  if (!token) return null;
+
+  try {
+    const payload = token.split(".")[1];
+    const base64 = payload
+      .replace(/-/g, "+")
+      .replace(/_/g, "/")
+      .padEnd(Math.ceil(payload.length / 4) * 4, "=");
+
+    const binary = atob(base64);
+    const bytes = Uint8Array.from(
+      binary,
+      (character) => character.charCodeAt(0)
+    );
+
+    const decoded = JSON.parse(
+      new TextDecoder().decode(bytes)
+    );
+
+    return decoded.role ??
+      decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ??
+      null;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({
   children,
 }: {
@@ -74,6 +103,7 @@ export function AuthProvider({
     isVolunteer: getVolunteerStatus(token),
     login,
     logout,
+    isAdmin: getUserRole(token) === "Admin",
   };
 
   return (
