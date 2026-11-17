@@ -477,13 +477,6 @@ function RequestDetailsScreen() {
                     </p>
 
                     <div className="navigation-buttons">
-                      <a
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${details.latitude},${details.longitude}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        ניווט באמצעות Google Maps
-                      </a>
 
                       <a
                         href={`https://waze.com/ul?ll=${details.latitude},${details.longitude}&navigate=yes`}
