@@ -2,6 +2,7 @@
 using AutoMapper;
 using DAL.Entities;
 using DTO;
+using Microsoft.AspNetCore.Http;
 using System.Linq;
 
 namespace BLL.MappingProfiles
@@ -46,7 +47,9 @@ namespace BLL.MappingProfiles
                 .ForMember(
                     dest => dest.RequiredEquipmentNames,
                     opt => opt.MapFrom(src =>
-                        src.RequiredEquipments.Select(e => e.EquipmentType.Name)))
+                        src.RequiredEquipments
+                            .Where(e => e.EquipmentType != null)
+                            .Select(e => e.EquipmentType.Name)))
                 .ReverseMap();
 
             CreateMap<HelpRequestPostDto, HelpRequest>()
