@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿
+using Microsoft.AspNetCore.Mvc;
 using DTO;
 using BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -46,25 +47,23 @@ namespace SmartAid.API.Controllers
             return Ok(volunteer);
         }
 
-
-
-
         [Authorize(Roles = "Admin")]
         [HttpPut("admin/{id:int}")]
-        public ActionResult UpdateForAdmin(
+        public async Task<ActionResult> UpdateForAdmin(
             int id,
-            [FromBody] AdminVolunteerUpdateDto volunteerDto)
+            [FromBody] AdminVolunteerUpdateDto volunteerDto,
+            CancellationToken cancellationToken)
         {
-            _volunteerService.UpdateForAdmin(id, volunteerDto);
+            await _volunteerService.UpdateForAdmin(
+                id,
+                volunteerDto,
+                cancellationToken);
 
             return Ok(new
             {
                 message = "Volunteer updated successfully by admin."
             });
         }
-
-
-
 
         [HttpPost]
         public ActionResult Add(
@@ -86,19 +85,21 @@ namespace SmartAid.API.Controllers
         }
 
         [HttpPut("{id}")]
-        public ActionResult Update(
+        public async Task<ActionResult> Update(
             int id,
-            [FromBody] VolunteerDto volunteerDto)
+            [FromBody] VolunteerDto volunteerDto,
+            CancellationToken cancellationToken)
         {
             var currentUserId = User.GetUserId();
 
             if (currentUserId == null)
                 return Unauthorized();
 
-            _volunteerService.Update(
+            await _volunteerService.Update(
                 id,
                 volunteerDto,
-                currentUserId.Value);
+                currentUserId.Value,
+                cancellationToken);
 
             return Ok(new
             {
@@ -145,18 +146,20 @@ namespace SmartAid.API.Controllers
         }
 
         [HttpPut("me/location")]
-        public ActionResult UpdateMyLocation(
-            [FromBody] UpdateVolunteerLocationDto locationDto)
+        public async Task<ActionResult> UpdateMyLocation(
+            [FromBody] UpdateVolunteerLocationDto locationDto,
+            CancellationToken cancellationToken)
         {
             var currentUserId = User.GetUserId();
 
             if (currentUserId == null)
                 return Unauthorized();
 
-            _volunteerService.UpdateLocation(
+            await _volunteerService.UpdateLocation(
                 currentUserId.Value,
                 locationDto.Latitude!.Value,
-                locationDto.Longitude!.Value);
+                locationDto.Longitude!.Value,
+                cancellationToken);
 
             return Ok(new
             {

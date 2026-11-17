@@ -19,6 +19,8 @@ namespace BLL.Services
     public class VolunteerMatchingService : IVolunteerMatchingService
     {
         private const int MaxRoutesPerBatch = 100;
+        private const int MaxActiveOffers = 5;
+        private const double MaxAirDistanceKm = 15;
 
         private readonly IVolunteerRepository _volunteerRepository;
         private readonly IHelpRequestRepository _helpRequestRepository;
@@ -26,10 +28,10 @@ namespace BLL.Services
         private readonly ILogger<VolunteerMatchingService> _logger;
 
         public VolunteerMatchingService(
-    IVolunteerRepository volunteerRepository,
-    IHelpRequestRepository helpRequestRepository,
-    ITomTomRoutingService tomTomRoutingService,
-    ILogger<VolunteerMatchingService> logger)
+            IVolunteerRepository volunteerRepository,
+            IHelpRequestRepository helpRequestRepository,
+            ITomTomRoutingService tomTomRoutingService,
+            ILogger<VolunteerMatchingService> logger)
         {
             _volunteerRepository = volunteerRepository;
             _helpRequestRepository = helpRequestRepository;
@@ -58,14 +60,16 @@ namespace BLL.Services
 
             var volunteers = _volunteerRepository.GetAllWithQualifications();
 
-            var locationFreshnessCutoff = DateTime.UtcNow.AddMinutes(-5);
+            var locationFreshnessCutoff =
+                DateTime.UtcNow.AddMinutes(-5);
 
             var requiredEquipmentIds = helpRequest.RequiredEquipments
                 .Select(e => e.EquipmentTypeId)
                 .Distinct()
                 .ToList();
 
-            var eligibleVolunteers = new List<Volunteer>();
+            var nearbyVolunteers = new List<Volunteer>();
+            var airDistances = new Dictionary<int, double>();
 
             _logger.LogInformation(
                 "Starting volunteer matching for help request {HelpRequestId}. Volunteers found: {VolunteerCount}",
@@ -74,15 +78,23 @@ namespace BLL.Services
 
             foreach (var volunteer in volunteers)
             {
-                string rejectionReason = null;
+                cancellationToken.ThrowIfCancellationRequested();
+
+                string? rejectionReason = null;
 
                 if (!volunteer.IsActive)
+                {
                     rejectionReason = "Volunteer is inactive";
+                }
                 else if (!volunteer.Latitude.HasValue ||
                          !volunteer.Longitude.HasValue)
+                {
                     rejectionReason = "Missing location coordinates";
+                }
                 else if (_helpRequestRepository.HasActiveAssignment(volunteer.Id))
+                {
                     rejectionReason = "Has active assignment";
+                }
                 else
                 {
                     bool hasRequiredHelpType =
@@ -97,7 +109,8 @@ namespace BLL.Services
 
                     bool hasFreshLocation =
                         volunteer.LastLocationUpdatedAt.HasValue &&
-                        volunteer.LastLocationUpdatedAt.Value >= locationFreshnessCutoff;
+                        volunteer.LastLocationUpdatedAt.Value >=
+                            locationFreshnessCutoff;
 
                     if (!hasRequiredHelpType)
                         rejectionReason = "Missing required help type";
@@ -118,282 +131,337 @@ namespace BLL.Services
                     continue;
                 }
 
-                eligibleVolunteers.Add(volunteer);
+                double? distanceKm =
+                    CalculateDistanceKm(volunteer, helpRequest);
+
+                if (!distanceKm.HasValue ||
+                    distanceKm.Value > MaxAirDistanceKm)
+                {
+                    continue;
+                }
+
+                nearbyVolunteers.Add(volunteer);
+                airDistances[volunteer.Id] = distanceKm.Value;
 
                 _logger.LogInformation(
-                    "Volunteer {VolunteerId} passed initial matching for help request {HelpRequestId}",
+                    "Volunteer {VolunteerId} passed matching for help request {HelpRequestId}. Air distance: {DistanceKm:F2} km",
                     volunteer.Id,
-                    helpRequestId);
+                    helpRequestId,
+                    distanceKm.Value);
             }
 
             _logger.LogInformation(
-                "Initial matching completed for help request {HelpRequestId}. Eligible volunteers: {EligibleCount}",
+                "Air-distance matching completed for help request {HelpRequestId}. Eligible volunteers: {EligibleCount}",
                 helpRequestId,
-                eligibleVolunteers.Count);
+                nearbyVolunteers.Count);
 
-            const double maxAirDistanceKm = 15;
-
-            var nearbyVolunteers = eligibleVolunteers
-                .Where(volunteer =>
-                {
-                    double? distance = CalculateDistanceKm(volunteer, helpRequest);
-
-                    return distance.HasValue &&
-                           distance.Value <= maxAirDistanceKm;
-                })
-                .ToList();
-
-            if (!nearbyVolunteers.Any())
+            if (nearbyVolunteers.Count == 0)
                 return new List<VolunteerMatchResult>();
 
-            var origins = nearbyVolunteers
-                .Select(volunteer => new TomTomLocation(
-                    volunteer.Latitude!.Value,
-                    volunteer.Longitude!.Value))
-                .ToList();
-
-            var destination = new TomTomLocation(
-                helpRequest.Latitude,
-                helpRequest.Longitude);
-
-            // TomTom allows up to 100 routes per request.
-            // Split volunteers into batches and restore their original indexes.
-            var routes = new List<TomTomRouteResult>();
-
-            for (int startIndex = 0;
-                 startIndex < origins.Count;
-                 startIndex += MaxRoutesPerBatch)
+            // Fewer than five eligible volunteers:
+            // Send offers directly without calling TomTom.
+            if (nearbyVolunteers.Count < MaxActiveOffers)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                _logger.LogInformation(
+                    "Only {EligibleCount} eligible volunteers found for help request {HelpRequestId}. Skipping TomTom and using air-distance ranking.",
+                    nearbyVolunteers.Count,
+                    helpRequestId);
 
-                var batchOrigins = origins
-                    .Skip(startIndex)
-                    .Take(MaxRoutesPerBatch)
-                    .ToList();
-
-                var batchRoutes =
-                    await _tomTomRoutingService.CalculateRoutesAsync(
-                        batchOrigins,
-                        destination,
-                        cancellationToken);
-
-                routes.AddRange(
-                    batchRoutes.Select(route => new TomTomRouteResult
-                    {
-                        OriginIndex = route.OriginIndex + startIndex,
-                        DestinationIndex = route.DestinationIndex,
-                        DistanceInMeters = route.DistanceInMeters,
-                        TravelTimeInSeconds = route.TravelTimeInSeconds,
-                        TrafficDelayInSeconds = route.TrafficDelayInSeconds,
-                        ErrorCode = route.ErrorCode
-                    }));
+                return BuildAirDistanceMatches(
+                    nearbyVolunteers,
+                    airDistances);
             }
 
-            var validResults = routes
-                .Where(route =>
-                    route.DestinationIndex == 0 &&
-                    route.OriginIndex >= 0 &&
-                    route.OriginIndex < nearbyVolunteers.Count &&
-                    route.TravelTimeInSeconds.HasValue &&
-                    route.DistanceInMeters.HasValue &&
-                    string.IsNullOrEmpty(route.ErrorCode))
-                .Select(route => new
+            // Five or more eligible volunteers:
+            // Use TomTom to rank them by driving distance.
+            try
+            {
+                var origins = nearbyVolunteers
+                    .Select(volunteer => new TomTomLocation(
+                        volunteer.Latitude!.Value,
+                        volunteer.Longitude!.Value))
+                    .ToList();
+
+                var destination = new TomTomLocation(
+                    helpRequest.Latitude,
+                    helpRequest.Longitude);
+
+                var routes = new List<TomTomRouteResult>();
+
+                for (int startIndex = 0;
+                     startIndex < origins.Count;
+                     startIndex += MaxRoutesPerBatch)
                 {
-                    Volunteer = nearbyVolunteers[route.OriginIndex],
-                    Distance = route.DistanceInMeters!.Value,
-                    TravelTime = route.TravelTimeInSeconds!.Value
-                })
-                .ToList();
+                    cancellationToken.ThrowIfCancellationRequested();
 
-            if (!validResults.Any())
-                return new List<VolunteerMatchResult>();
+                    var batchOrigins = origins
+                        .Skip(startIndex)
+                        .Take(MaxRoutesPerBatch)
+                        .ToList();
 
-            return validResults
-                .Select(x =>
+                    var batchRoutes =
+                        await _tomTomRoutingService.CalculateRoutesAsync(
+                            batchOrigins,
+                            destination,
+                            cancellationToken);
+
+                    routes.AddRange(
+                        batchRoutes.Select(route => new TomTomRouteResult
+                        {
+                            OriginIndex = route.OriginIndex + startIndex,
+                            DestinationIndex = route.DestinationIndex,
+                            DistanceInMeters = route.DistanceInMeters,
+                            TravelTimeInSeconds = route.TravelTimeInSeconds,
+                            TrafficDelayInSeconds = route.TrafficDelayInSeconds,
+                            ErrorCode = route.ErrorCode
+                        }));
+                }
+
+                var validResults = routes
+                    .Where(route =>
+                        route.DestinationIndex == 0 &&
+                        route.OriginIndex >= 0 &&
+                        route.OriginIndex < nearbyVolunteers.Count &&
+                        route.TravelTimeInSeconds.HasValue &&
+                        route.DistanceInMeters.HasValue &&
+                        string.IsNullOrEmpty(route.ErrorCode))
+                    .ToList();
+
+                // If even one volunteer has no valid route result,
+                // use the air-distance fallback for everyone.
+                if (validResults.Count != nearbyVolunteers.Count)
                 {
-                    double distanceScore = Math.Clamp(
-                        100.0 * (15000 - x.Distance) / 15000,
-                        0,
-                        100);
+                    _logger.LogWarning(
+                        "TomTom returned incomplete or invalid route results for help request {HelpRequestId}. Expected: {ExpectedCount}, received: {ValidCount}. Falling back to air distance.",
+                        helpRequestId,
+                        nearbyVolunteers.Count,
+                        validResults.Count);
 
-                    double reliabilityScore =
-                        Math.Clamp(x.Volunteer.ReliabilityScore, 0, 100);
+                    return BuildAirDistanceMatches(
+                        nearbyVolunteers,
+                        airDistances);
+                }
 
-                    double matchScore =
-                        distanceScore * 0.8 + reliabilityScore * 0.2;
-
-                    return new VolunteerMatchResult
+                return validResults
+                    .Select(route =>
                     {
-                        Volunteer = x.Volunteer,
-                        DistanceInMeters = x.Distance,
-                        TravelTimeInSeconds = x.TravelTime,
-                        ReliabilityScore = reliabilityScore,
-                        MatchScore = matchScore
-                    };
-                })
-                .OrderByDescending(x => x.MatchScore)
-                .ToList();
+                        var volunteer =
+                            nearbyVolunteers[route.OriginIndex];
+
+                        double distanceScore = CalculateDistanceScore(
+                            route.DistanceInMeters!.Value);
+
+                        double reliabilityScore =
+                            Math.Clamp(
+                                volunteer.ReliabilityScore,
+                                0,
+                                100);
+
+                        double matchScore =
+                            distanceScore * 0.8 +
+                            reliabilityScore * 0.2;
+
+                        return new VolunteerMatchResult
+                        {
+                            Volunteer = volunteer,
+                            DistanceInMeters =
+                                route.DistanceInMeters.Value,
+                            TravelTimeInSeconds =
+                                route.TravelTimeInSeconds!.Value,
+                            ReliabilityScore = reliabilityScore,
+                            MatchScore = matchScore
+                        };
+                    })
+                    .OrderByDescending(match => match.MatchScore)
+                    .ToList();
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "TomTom routing failed for help request {HelpRequestId}. Falling back to air-distance ranking.",
+                    helpRequestId);
+
+                return BuildAirDistanceMatches(
+                    nearbyVolunteers,
+                    airDistances);
+            }
         }
 
-        public async Task<List<HelpRequestMatchResult>>
+        public Task<List<HelpRequestMatchResult>>
             GetEligibleRequestsForVolunteerAsync(
                 int volunteerId,
                 CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var volunteer =
                 _volunteerRepository.GetByIdWithQualifications(volunteerId);
 
             if (volunteer == null || !volunteer.IsActive)
-                return new List<HelpRequestMatchResult>();
-
-            var locationFreshnessCutoff = DateTime.UtcNow.AddMinutes(-5);
-
-            if (!volunteer.LastLocationUpdatedAt.HasValue ||
-                volunteer.LastLocationUpdatedAt.Value < locationFreshnessCutoff)
             {
-                return new List<HelpRequestMatchResult>();
+                return Task.FromResult(
+                    new List<HelpRequestMatchResult>());
             }
 
-            if (volunteer.Latitude == null || volunteer.Longitude == null)
-                return new List<HelpRequestMatchResult>();
+            var locationFreshnessCutoff =
+                DateTime.UtcNow.AddMinutes(-5);
+
+            if (!volunteer.LastLocationUpdatedAt.HasValue ||
+                volunteer.LastLocationUpdatedAt.Value <
+                    locationFreshnessCutoff)
+            {
+                return Task.FromResult(
+                    new List<HelpRequestMatchResult>());
+            }
+
+            if (!volunteer.Latitude.HasValue ||
+                !volunteer.Longitude.HasValue)
+            {
+                return Task.FromResult(
+                    new List<HelpRequestMatchResult>());
+            }
 
             if (_helpRequestRepository.HasActiveAssignment(volunteerId))
-                return new List<HelpRequestMatchResult>();
+            {
+                return Task.FromResult(
+                    new List<HelpRequestMatchResult>());
+            }
 
             var openRequests = _helpRequestRepository.GetOpenRequests();
 
-            var eligibleRequests = openRequests
-                .Where(request =>
-                {
-                    if (request.HelpTypeId == null ||
-                        request.AssignedVolunteerId != null)
-                        return false;
+            var matches = new List<HelpRequestMatchResult>();
 
-                    bool hasRequiredHelpType =
-                        volunteer.VolunteerHelpTypes.Any(
-                            ht => ht.HelpTypeId == request.HelpTypeId);
-
-                    var requiredEquipmentIds = request.RequiredEquipments
-                        .Select(e => e.EquipmentTypeId)
-                        .Distinct()
-                        .ToList();
-
-                    bool hasAllRequiredEquipment =
-                        requiredEquipmentIds.All(requiredId =>
-                            volunteer.VolunteerEquipments.Any(
-                                equipment =>
-                                    equipment.EquipmentTypeId == requiredId));
-
-                    return hasRequiredHelpType && hasAllRequiredEquipment;
-                })
-                .Where(request =>
-                {
-                    double? distance = CalculateDistanceKm(volunteer, request);
-
-                    return distance.HasValue && distance.Value <= 15;
-                })
-                .ToList();
-
-            if (!eligibleRequests.Any())
-                return new List<HelpRequestMatchResult>();
-
-            var origin = new TomTomLocation(
-                volunteer.Latitude.Value,
-                volunteer.Longitude.Value);
-
-            var destinations = eligibleRequests
-                .Select(request => new TomTomLocation(
-                    request.Latitude,
-                    request.Longitude))
-                .ToList();
-
-            // TomTom allows up to 100 routes per request.
-            // Split requests into batches and restore their original indexes.
-            var routes = new List<TomTomRouteResult>();
-
-            for (int startIndex = 0;
-                 startIndex < destinations.Count;
-                 startIndex += MaxRoutesPerBatch)
+            foreach (var request in openRequests)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var batchDestinations = destinations
-                    .Skip(startIndex)
-                    .Take(MaxRoutesPerBatch)
+                if (request.Status != RequestStatus.Open ||
+                    request.AssignedVolunteerId != null ||
+                    request.HelpTypeId == null)
+                {
+                    continue;
+                }
+
+                bool hasRequiredHelpType =
+                    volunteer.VolunteerHelpTypes.Any(
+                        ht => ht.HelpTypeId == request.HelpTypeId);
+
+                if (!hasRequiredHelpType)
+                    continue;
+
+                var requiredEquipmentIds = request.RequiredEquipments
+                    .Select(e => e.EquipmentTypeId)
+                    .Distinct()
                     .ToList();
 
-                var batchRoutes =
-                    await _tomTomRoutingService
-                        .CalculateRoutesToMultipleDestinationsAsync(
-                            origin,
-                            batchDestinations,
-                            cancellationToken);
+                bool hasAllRequiredEquipment =
+                    requiredEquipmentIds.All(requiredId =>
+                        volunteer.VolunteerEquipments.Any(
+                            equipment =>
+                                equipment.EquipmentTypeId == requiredId));
 
-                routes.AddRange(
-                    batchRoutes.Select(route => new TomTomRouteResult
-                    {
-                        OriginIndex = route.OriginIndex,
-                        DestinationIndex = route.DestinationIndex + startIndex,
-                        DistanceInMeters = route.DistanceInMeters,
-                        TravelTimeInSeconds = route.TravelTimeInSeconds,
-                        TrafficDelayInSeconds = route.TrafficDelayInSeconds,
-                        ErrorCode = route.ErrorCode
-                    }));
+                if (!hasAllRequiredEquipment)
+                    continue;
+
+                double? distanceKm =
+                    CalculateDistanceKm(volunteer, request);
+
+                if (!distanceKm.HasValue ||
+                    distanceKm.Value > MaxAirDistanceKm)
+                {
+                    continue;
+                }
+
+                double distanceInMeters =
+                    distanceKm.Value * 1000;
+
+                double distanceScore =
+                    CalculateDistanceScore(distanceInMeters);
+
+                double reliabilityScore =
+                    Math.Clamp(volunteer.ReliabilityScore, 0, 100);
+
+                double matchScore =
+                    distanceScore * 0.8 +
+                    reliabilityScore * 0.2;
+
+                matches.Add(new HelpRequestMatchResult
+                {
+                    HelpRequest = request,
+                    DistanceInMeters =
+                        (int)Math.Round(distanceInMeters),
+                    TravelTimeInSeconds = 0,
+                    ReliabilityScore = reliabilityScore,
+                    MatchScore = matchScore
+                });
             }
 
-            var validResults = routes
-                .Where(route =>
-                    route.OriginIndex == 0 &&
-                    route.DestinationIndex >= 0 &&
-                    route.DestinationIndex < eligibleRequests.Count &&
-                    route.TravelTimeInSeconds.HasValue &&
-                    route.DistanceInMeters.HasValue &&
-                    string.IsNullOrEmpty(route.ErrorCode))
-                .Select(route => new
-                {
-                    Request = eligibleRequests[route.DestinationIndex],
-                    Distance = route.DistanceInMeters!.Value,
-                    TravelTime = route.TravelTimeInSeconds!.Value
-                })
+            var orderedMatches = matches
+                .OrderByDescending(match => match.MatchScore)
                 .ToList();
 
-            if (!validResults.Any())
-                return new List<HelpRequestMatchResult>();
+            return Task.FromResult(orderedMatches);
+        }
 
-            double reliabilityScore =
-                Math.Clamp(volunteer.ReliabilityScore, 0, 100);
-
-            return validResults
-                .Select(x =>
+        private static List<VolunteerMatchResult>
+            BuildAirDistanceMatches(
+                List<Volunteer> volunteers,
+                Dictionary<int, double> airDistances)
+        {
+            return volunteers
+                .Select(volunteer =>
                 {
-                    double distanceScore = Math.Clamp(
-                        100.0 * (15000 - x.Distance) / 15000,
-                        0,
-                        100);
+                    double distanceInMeters =
+                        airDistances[volunteer.Id] * 1000;
+
+                    double distanceScore =
+                        CalculateDistanceScore(distanceInMeters);
+
+                    double reliabilityScore =
+                        Math.Clamp(volunteer.ReliabilityScore, 0, 100);
 
                     double matchScore =
-                        distanceScore * 0.8 + reliabilityScore * 0.2;
+                        distanceScore * 0.8 +
+                        reliabilityScore * 0.2;
 
-                    return new HelpRequestMatchResult
+                    return new VolunteerMatchResult
                     {
-                        HelpRequest = x.Request,
-                        DistanceInMeters = x.Distance,
-                        TravelTimeInSeconds = x.TravelTime,
+                        Volunteer = volunteer,
+                        DistanceInMeters =
+                            (int)Math.Round(distanceInMeters),
+                        TravelTimeInSeconds = 0,
                         ReliabilityScore = reliabilityScore,
                         MatchScore = matchScore
                     };
                 })
-                .OrderByDescending(x => x.MatchScore)
+                .OrderByDescending(match => match.MatchScore)
                 .ToList();
+        }
+
+        private static double CalculateDistanceScore(
+            double distanceInMeters)
+        {
+            return Math.Clamp(
+                100.0 * (15000 - distanceInMeters) / 15000,
+                0,
+                100);
         }
 
         private static double? CalculateDistanceKm(
             Volunteer volunteer,
             HelpRequest request)
         {
-            if (volunteer.Latitude == null ||
-                volunteer.Longitude == null)
+            if (!volunteer.Latitude.HasValue ||
+                !volunteer.Longitude.HasValue)
+            {
                 return null;
+            }
 
             const double earthRadiusKm = 6371;
 

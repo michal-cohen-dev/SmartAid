@@ -3,7 +3,6 @@ using AutoMapper;
 using BLL.Exceptions;
 using BLL.Services.Interfaces;
 using DAL.Entities;
-using DAL.Repositories;
 using DAL.Repositories.Interfaces;
 using DTO;
 using System;
@@ -42,7 +41,6 @@ namespace BLL.Services
             _requestOfferService = requestOfferService;
         }
 
-
         public List<VolunteerDto> GetAll()
         {
             var volunteers =
@@ -50,8 +48,6 @@ namespace BLL.Services
 
             return _mapper.Map<List<VolunteerDto>>(volunteers);
         }
-
-
 
         public VolunteerDto? GetById(int id)
         {
@@ -63,7 +59,6 @@ namespace BLL.Services
 
             return _mapper.Map<VolunteerDto>(volunteer);
         }
-
 
         public VolunteerDto? GetByUserId(int userId)
         {
@@ -160,10 +155,11 @@ namespace BLL.Services
                 helpTypeIds);
         }
 
-        public void Update(
+        public async Task Update(
             int id,
             VolunteerDto volunteerDto,
-            int currentUserId)
+            int currentUserId,
+            CancellationToken cancellationToken = default)
         {
             var existingVolunteer =
                 _volunteerRepository.GetByIdWithQualifications(id);
@@ -224,13 +220,16 @@ namespace BLL.Services
                 id,
                 equipmentIds,
                 helpTypeIds);
+
+            await SendOffersForOpenRequestsAsync(
+                id,
+                cancellationToken);
         }
 
-
-
-        public void UpdateForAdmin(
+        public async Task UpdateForAdmin(
             int id,
-            AdminVolunteerUpdateDto volunteerDto)
+            AdminVolunteerUpdateDto volunteerDto,
+            CancellationToken cancellationToken = default)
         {
             var existingVolunteer =
                 _volunteerRepository.GetByIdWithQualifications(id);
@@ -287,10 +286,11 @@ namespace BLL.Services
                 id,
                 equipmentIds,
                 helpTypeIds);
+
+            await SendOffersForOpenRequestsAsync(
+                id,
+                cancellationToken);
         }
-
-
-
 
         public void Delete(int id, int currentUserId)
         {
@@ -317,10 +317,11 @@ namespace BLL.Services
             _volunteerRepository.IncreaseReliabilityScore(volunteerId);
         }
 
-        public void UpdateLocation(
+        public async Task UpdateLocation(
             int userId,
             double latitude,
-            double longitude)
+            double longitude,
+            CancellationToken cancellationToken = default)
         {
             if (latitude < -90 || latitude > 90)
                 throw new ArgumentException("Invalid latitude.");
@@ -338,6 +339,10 @@ namespace BLL.Services
             volunteer.LastLocationUpdatedAt = DateTime.UtcNow;
 
             _volunteerRepository.Update(volunteer);
+
+            await SendOffersForOpenRequestsAsync(
+                volunteer.Id,
+                cancellationToken);
         }
 
         public async Task UpdateAvailabilityAsync(
@@ -374,10 +379,27 @@ namespace BLL.Services
             if (!isAvailable)
                 return;
 
+            await SendOffersForOpenRequestsAsync(
+                volunteer.Id,
+                cancellationToken);
+        }
+
+        private async Task SendOffersForOpenRequestsAsync(
+            int volunteerId,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var volunteer =
+                _volunteerRepository.GetByIdWithQualifications(volunteerId);
+
+            if (volunteer == null || !volunteer.IsActive)
+                return;
+
             var eligibleRequests =
                 await _volunteerMatchingService
                     .GetEligibleRequestsForVolunteerAsync(
-                        volunteer.Id,
+                        volunteerId,
                         cancellationToken);
 
             foreach (var match in eligibleRequests)
@@ -386,7 +408,7 @@ namespace BLL.Services
 
                 await _requestOfferService.CreateOfferForVolunteerAsync(
                     match.HelpRequest.Id,
-                    volunteer.Id,
+                    volunteerId,
                     cancellationToken);
             }
         }
