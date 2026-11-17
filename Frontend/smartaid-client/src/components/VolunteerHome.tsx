@@ -596,15 +596,6 @@ function VolunteerHome() {
 
       </section>
 
-      <div className="volunteer-create-request">
-        <button
-          className="volunteer-button"
-          type="button"
-          onClick={() => navigate('/request')}
-        >
-          פתיחת בקשת עזרה
-        </button>
-      </div>
 
     </div>
   );
