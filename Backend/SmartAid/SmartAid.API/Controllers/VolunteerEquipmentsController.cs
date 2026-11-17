@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿
+using Microsoft.AspNetCore.Mvc;
 using DTO;
 using BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -81,11 +82,6 @@ namespace SmartAid.API.Controllers
         {
             if (dto == null)
                 return BadRequest("Invalid request data.");
-
-            var existing = _service.GetById(id);
-
-            if (existing == null)
-                return NotFound();
 
             _service.Update(id, dto);
 
