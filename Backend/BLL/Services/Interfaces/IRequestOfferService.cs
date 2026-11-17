@@ -32,5 +32,13 @@ namespace BLL.Services.Interfaces
     CancellationToken cancellationToken = default);
 
 
+        Task ReassignPendingOffersAfterVolunteerAssignmentAsync(
+    int volunteerId,
+    int acceptedRequestId,
+    CancellationToken cancellationToken = default);
+
     }
+
+
+
 }

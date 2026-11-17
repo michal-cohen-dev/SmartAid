@@ -279,9 +279,10 @@ namespace SmartAid.API.Controllers
             if (userId == null)
                 return Unauthorized();
 
-            var accepted = _helpRequestService.TryAssignToVolunteer(
-                id,
-                userId.Value);
+            var accepted = await _helpRequestService.TryAssignToVolunteerAsync(
+     id,
+     userId.Value,
+     HttpContext.RequestAborted);
 
             if (!accepted)
             {
@@ -385,7 +386,9 @@ namespace SmartAid.API.Controllers
         }
 
         [HttpPost("{id}/cancel")]
-        public async Task<IActionResult> Cancel(int id)
+        public async Task<IActionResult> Cancel(
+     int id,
+     CancellationToken cancellationToken)
         {
             var requestBeforeCancel = _helpRequestService.GetById(id);
 
@@ -394,9 +397,10 @@ namespace SmartAid.API.Controllers
             if (userId == null)
                 return Unauthorized();
 
-            bool cancelled = _helpRequestService.TryCancelRequest(
+            bool cancelled = await _helpRequestService.TryCancelRequestAsync(
                 id,
-                userId.Value);
+                userId.Value,
+                cancellationToken);
 
             if (!cancelled)
             {

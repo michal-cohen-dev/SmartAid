@@ -461,12 +461,31 @@ namespace DAL.Repositories
                 return false;
             }
 
-            int rowsAffected = _context.HelpRequests
-                .Where(r => r.Id == requestId)
-                .ExecuteUpdate(setters => setters
-                    .SetProperty(
-                        r => r.Status,
-                        RequestStatus.Cancelled));
+            int rowsAffected;
+
+            if (cancelledByVolunteer)
+            {
+                rowsAffected = _context.HelpRequests
+                    .Where(r =>
+                        r.Id == requestId &&
+                        r.AssignedVolunteerId != null)
+                    .ExecuteUpdate(setters => setters
+                        .SetProperty(
+                            r => r.Status,
+                            RequestStatus.Open)
+                        .SetProperty(
+                            r => r.AssignedVolunteerId,
+                            (int?)null));
+            }
+            else
+            {
+                rowsAffected = _context.HelpRequests
+                    .Where(r => r.Id == requestId)
+                    .ExecuteUpdate(setters => setters
+                        .SetProperty(
+                            r => r.Status,
+                            RequestStatus.Cancelled));
+            }
 
             if (rowsAffected != 1)
             {

@@ -272,6 +272,57 @@ namespace BLL.Services
             return createdOffers;
         }
 
+
+        public async Task ReassignPendingOffersAfterVolunteerAssignmentAsync(
+    int volunteerId,
+    int acceptedRequestId,
+    CancellationToken cancellationToken = default)
+        {
+            if (volunteerId <= 0)
+                throw new ArgumentException("Invalid volunteer ID.");
+
+            if (acceptedRequestId <= 0)
+                throw new ArgumentException("Invalid help request ID.");
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // ביטול כל ההצעות הממתינות של המתנדב,
+            // למעט ההצעה של הקריאה שאותה קיבל.
+            var affectedRequestIds =
+                _requestOfferRepository.ExpirePendingOffersForVolunteerExceptRequest(
+                    volunteerId,
+                    acceptedRequestId);
+
+            // חיפוש מתנדבים מתאימים חדשים לכל קריאה שהתפנתה.
+            foreach (var requestId in affectedRequestIds)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                try
+                {
+                    await CreateOffersForRequestAsync(
+                        requestId,
+                        cancellationToken);
+                }
+                catch (OperationCanceledException)
+                    when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Failed to redistribute offers for request {RequestId} " +
+                        "after volunteer {VolunteerId} was assigned to request {AcceptedRequestId}.",
+                        requestId,
+                        volunteerId,
+                        acceptedRequestId);
+                }
+            }
+        }
+
+
         private async Task NotifyNewOfferSafelyAsync(
             int volunteerId,
             int helpRequestId,
