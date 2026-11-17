@@ -75,12 +75,16 @@ namespace DAL.Repositories
                 return false;
             }
 
-            bool alreadyOffered = _context.RequestOffers
-                .Any(ro =>
+            // בדיקה האם קיימת למתנדב הצעה קודמת לאותה קריאה.
+            var existingOffer = _context.RequestOffers
+                .FirstOrDefault(ro =>
                     ro.HelpRequestId == requestOffer.HelpRequestId &&
                     ro.VolunteerId == requestOffer.VolunteerId);
 
-            if (alreadyOffered)
+            // הצעה Pending או Declined אינה נפתחת מחדש.
+            // רק הצעה שפגה (Expired) יכולה להיפתח שוב.
+            if (existingOffer != null &&
+                existingOffer.Status != OfferStatus.Expired)
             {
                 transaction.Rollback();
                 return false;
@@ -97,10 +101,20 @@ namespace DAL.Repositories
                 return false;
             }
 
-            requestOffer.Status = OfferStatus.Pending;
-            requestOffer.OfferedAt = DateTime.UtcNow;
+            if (existingOffer != null)
+            {
+                // שימוש חוזר בהצעה שפגה במקום יצירת רשומה כפולה.
+                existingOffer.Status = OfferStatus.Pending;
+                existingOffer.OfferedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                requestOffer.Status = OfferStatus.Pending;
+                requestOffer.OfferedAt = DateTime.UtcNow;
 
-            _context.RequestOffers.Add(requestOffer);
+                _context.RequestOffers.Add(requestOffer);
+            }
+
             _context.SaveChanges();
 
             transaction.Commit();
@@ -257,6 +271,7 @@ namespace DAL.Repositories
 
             return affectedRequestIds;
         }
+
         public List<int> GetOfferedVolunteerIdsForRequest(int helpRequestId)
         {
             return _context.RequestOffers

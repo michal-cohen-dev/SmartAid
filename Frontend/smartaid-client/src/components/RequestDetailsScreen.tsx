@@ -230,10 +230,10 @@ function RequestDetailsScreen() {
         { method: 'POST' }
       );
 
+      // לאחר שהשרת אישר את הביטול, עוברים מיד למסך המתנדב.
+      // אין לטעון מחדש את פרטי הקריאה, כי היא כבר אינה משויכת למתנדב.
       setIsAssignedVolunteer(false);
-      await loadFullRequest();
-
-      navigate('/volunteer');
+      navigate('/volunteer', { replace: true });
     } catch (error) {
       setError(
         error instanceof Error
@@ -477,7 +477,6 @@ function RequestDetailsScreen() {
                     </p>
 
                     <div className="navigation-buttons">
-
                       <a
                         href={`https://waze.com/ul?ll=${details.latitude},${details.longitude}&navigate=yes`}
                         target="_blank"
