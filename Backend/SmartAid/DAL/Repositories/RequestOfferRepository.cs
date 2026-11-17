@@ -168,6 +168,37 @@ namespace DAL.Repositories
             return true;
         }
 
+        public List<int> GetRequestIdsWithExpiredPendingOffers(
+            DateTime expirationTime)
+        {
+            return _context.RequestOffers
+                .Where(ro =>
+                    ro.Status == OfferStatus.Pending &&
+                    ro.OfferedAt <= expirationTime &&
+                    ro.HelpRequest.Status == RequestStatus.Open &&
+                    ro.HelpRequest.AssignedVolunteerId == null)
+                .Select(ro => ro.HelpRequestId)
+                .Distinct()
+                .ToList();
+        }
+
+        public int ExpirePendingOffersForRequest(
+            int helpRequestId,
+            DateTime expirationTime)
+        {
+            return _context.RequestOffers
+                .Where(ro =>
+                    ro.HelpRequestId == helpRequestId &&
+                    ro.Status == OfferStatus.Pending &&
+                    ro.OfferedAt <= expirationTime &&
+                    ro.HelpRequest.Status == RequestStatus.Open &&
+                    ro.HelpRequest.AssignedVolunteerId == null)
+                .ExecuteUpdate(setters =>
+                    setters.SetProperty(
+                        ro => ro.Status,
+                        OfferStatus.Expired));
+        }
+
         public List<int> ExpirePendingOffers(DateTime expirationTime)
         {
             var expiredRequestIds = _context.RequestOffers

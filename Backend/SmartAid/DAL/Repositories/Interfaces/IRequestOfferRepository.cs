@@ -19,6 +19,13 @@ namespace DAL.Repositories.Interfaces
 
         bool TryDeclineOffer(int offerId, int volunteerId);
 
+        List<int> GetRequestIdsWithExpiredPendingOffers(
+            DateTime expirationTime);
+
+        int ExpirePendingOffersForRequest(
+            int helpRequestId,
+            DateTime expirationTime);
+
         List<int> ExpirePendingOffers(DateTime expirationTime);
     }
 }

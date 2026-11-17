@@ -9,6 +9,8 @@ namespace SmartAid.API.BackgroundServices
 {
     public class OfferExpirationBackgroundService : BackgroundService
     {
+        private const int MaxActiveOffers = 5;
+
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<OfferExpirationBackgroundService> _logger;
 
@@ -38,31 +40,58 @@ namespace SmartAid.API.BackgroundServices
                     var offerService = scope.ServiceProvider
                         .GetRequiredService<IRequestOfferService>();
 
+                    var matchingService = scope.ServiceProvider
+                        .GetRequiredService<IVolunteerMatchingService>();
+
                     var expirationTime = DateTime.UtcNow.AddMinutes(-2);
 
-                    var expiredRequestIds =
-                        repository.ExpirePendingOffers(expirationTime);
+                    var requestIds =
+                        repository.GetRequestIdsWithExpiredPendingOffers(
+                            expirationTime);
 
-                    if (expiredRequestIds.Count == 0)
-                        continue;
-
-                    _logger.LogInformation(
-                        "Expired offers found for {Count} help requests.",
-                        expiredRequestIds.Count);
-
-                    foreach (var requestId in expiredRequestIds)
+                    foreach (var requestId in requestIds)
                     {
                         stoppingToken.ThrowIfCancellationRequested();
 
                         try
                         {
+                            var eligibleVolunteers =
+                                await matchingService.GetEligibleVolunteersAsync(
+                                    requestId,
+                                    stoppingToken);
+
+                            if (eligibleVolunteers.Count < MaxActiveOffers)
+                            {
+                                _logger.LogInformation(
+                                    "Keeping pending offers for help request {RequestId}. Only {EligibleCount} eligible volunteers exist. Minimum required for expiration: {MinimumCount}.",
+                                    requestId,
+                                    eligibleVolunteers.Count,
+                                    MaxActiveOffers);
+
+                                continue;
+                            }
+
+                            int expiredCount =
+                                repository.ExpirePendingOffersForRequest(
+                                    requestId,
+                                    expirationTime);
+
+                            if (expiredCount == 0)
+                                continue;
+
+                            _logger.LogInformation(
+                                "Expired {ExpiredCount} offers for help request {RequestId}. Eligible volunteers: {EligibleCount}.",
+                                expiredCount,
+                                requestId,
+                                eligibleVolunteers.Count);
+
                             int createdOffers =
                                 await offerService.CreateOffersForRequestAsync(
                                     requestId,
                                     stoppingToken);
 
                             _logger.LogInformation(
-                                "Created {Count} new offers for help request {RequestId} after expiration.",
+                                "Created {CreatedCount} new offers for help request {RequestId} after expiration.",
                                 createdOffers,
                                 requestId);
                         }
@@ -75,7 +104,7 @@ namespace SmartAid.API.BackgroundServices
                         {
                             _logger.LogError(
                                 ex,
-                                "Failed to create the next offers for help request {RequestId}.",
+                                "Failed to process offer expiration for help request {RequestId}.",
                                 requestId);
                         }
                     }
