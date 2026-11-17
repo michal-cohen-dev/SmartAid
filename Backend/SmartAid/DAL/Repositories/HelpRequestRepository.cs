@@ -179,9 +179,9 @@ namespace DAL.Repositories
         }
 
         public bool TryAssignToVolunteer(
-    int requestId,
-    int volunteerId,
-    bool allowExpiredOffer)
+            int requestId,
+            int volunteerId,
+            bool allowExpiredOffer)
         {
             using var transaction =
                 _context.Database.BeginTransaction(
@@ -467,6 +467,25 @@ namespace DAL.Repositories
                 return false;
             }
 
+            // במקרה שהמתנדב מבטל, מסמנים את ההצעה שלו
+            // כ-Declined כדי שלא יקבל שוב את אותה קריאה.
+            if (cancelledByVolunteer &&
+                request.AssignedVolunteerId.HasValue)
+            {
+                int assignedVolunteerId =
+                    request.AssignedVolunteerId.Value;
+
+                _context.RequestOffers
+                    .Where(offer =>
+                        offer.HelpRequestId == requestId &&
+                        offer.VolunteerId == assignedVolunteerId &&
+                        offer.Status == OfferStatus.Accepted)
+                    .ExecuteUpdate(setters => setters
+                        .SetProperty(
+                            offer => offer.Status,
+                            OfferStatus.Declined));
+            }
+
             int rowsAffected;
 
             if (cancelledByVolunteer)
@@ -499,6 +518,8 @@ namespace DAL.Repositories
                 return false;
             }
 
+            // יתר ההצעות הממתינות חוזרות למצב Expired,
+            // כדי שניתן יהיה לשלוח אותן מחדש.
             _context.RequestOffers
                 .Where(offer =>
                     offer.HelpRequestId == requestId &&

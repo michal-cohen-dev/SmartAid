@@ -64,6 +64,7 @@ namespace DAL.Repositories
                 return false;
             }
 
+            // אין ליצור הצעות נוספות אם כבר קיימת הצעה שהתקבלה.
             bool alreadyAccepted = _context.RequestOffers
                 .Any(ro =>
                     ro.HelpRequestId == requestOffer.HelpRequestId &&
@@ -75,21 +76,25 @@ namespace DAL.Repositories
                 return false;
             }
 
-            // בדיקה האם קיימת למתנדב הצעה קודמת לאותה קריאה.
+            // בדיקת הצעה קודמת לאותו מתנדב ולאותה קריאה.
             var existingOffer = _context.RequestOffers
                 .FirstOrDefault(ro =>
                     ro.HelpRequestId == requestOffer.HelpRequestId &&
                     ro.VolunteerId == requestOffer.VolunteerId);
 
-            // הצעה Pending או Declined אינה נפתחת מחדש.
-            // רק הצעה שפגה (Expired) יכולה להיפתח שוב.
-            if (existingOffer != null &&
-                existingOffer.Status != OfferStatus.Expired)
+            if (existingOffer != null)
             {
-                transaction.Rollback();
-                return false;
+                // רק הצעה שפגה יכולה להיפתח מחדש.
+                // Declined נשאר חסום, כדי שמתנדב שביטל
+                // או דחה את ההצעה לא יקבל אותה שוב.
+                if (existingOffer.Status != OfferStatus.Expired)
+                {
+                    transaction.Rollback();
+                    return false;
+                }
             }
 
+            // בדיקת מספר ההצעות הפעילות.
             int activeOffersCount = _context.RequestOffers
                 .Count(ro =>
                     ro.HelpRequestId == requestOffer.HelpRequestId &&
@@ -103,7 +108,7 @@ namespace DAL.Repositories
 
             if (existingOffer != null)
             {
-                // שימוש חוזר בהצעה שפגה במקום יצירת רשומה כפולה.
+                // שימוש חוזר ברשומה קיימת שפג תוקפה.
                 existingOffer.Status = OfferStatus.Pending;
                 existingOffer.OfferedAt = DateTime.UtcNow;
             }
@@ -274,6 +279,8 @@ namespace DAL.Repositories
 
         public List<int> GetOfferedVolunteerIdsForRequest(int helpRequestId)
         {
+            // מחזיר את כל המתנדבים שכבר קיבלו הצעה בעבר.
+            // משמש את מנגנון שתי הדקות לזיהוי מתנדבים חדשים.
             return _context.RequestOffers
                 .Where(ro => ro.HelpRequestId == helpRequestId)
                 .Select(ro => ro.VolunteerId)

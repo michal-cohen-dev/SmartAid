@@ -1,6 +1,7 @@
 ﻿
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -209,6 +210,7 @@ namespace BLL.Services
 
             cancellationToken.ThrowIfCancellationRequested();
 
+            // לאחר דחייה, ניתן להציע את הקריאה למתנדבים מתאימים אחרים.
             await CreateOffersForRequestAsync(
                 offer.HelpRequestId,
                 cancellationToken);
@@ -218,7 +220,8 @@ namespace BLL.Services
 
         public async Task<int> CreateOffersForRequestAsync(
             int helpRequestId,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            bool onlyNeverOffered = false)
         {
             if (helpRequestId <= 0)
                 throw new ArgumentException("Invalid help request ID.");
@@ -230,7 +233,8 @@ namespace BLL.Services
             if (helpRequest == null)
                 throw new NotFoundException("Help request not found.");
 
-            if (helpRequest.Status != RequestStatus.Open)
+            if (helpRequest.Status != RequestStatus.Open ||
+                helpRequest.AssignedVolunteerId != null)
                 return 0;
 
             var matches =
@@ -238,16 +242,33 @@ namespace BLL.Services
                     helpRequestId,
                     cancellationToken);
 
+            // במחזור הרגיל של שתי דקות נשלח הצעות רק למתנדבים
+            // שלא קיבלו הצעה לקריאה הזאת בעבר.
+            HashSet<int> previouslyOfferedVolunteerIds =
+                onlyNeverOffered
+                    ? _requestOfferRepository
+                        .GetOfferedVolunteerIdsForRequest(helpRequestId)
+                        .ToHashSet()
+                    : new HashSet<int>();
+
             int createdOffers = 0;
 
             foreach (var match in matches)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
+                int volunteerId = match.Volunteer.Id;
+
+                if (onlyNeverOffered &&
+                    previouslyOfferedVolunteerIds.Contains(volunteerId))
+                {
+                    continue;
+                }
+
                 var offer = new RequestOffer
                 {
                     HelpRequestId = helpRequestId,
-                    VolunteerId = match.Volunteer.Id
+                    VolunteerId = volunteerId
                 };
 
                 bool added =
@@ -261,10 +282,10 @@ namespace BLL.Services
                 createdOffers++;
 
                 _volunteerRepository.IncrementTotalOffersReceived(
-                    match.Volunteer.Id);
+                    volunteerId);
 
                 await NotifyNewOfferSafelyAsync(
-                    match.Volunteer.Id,
+                    volunteerId,
                     helpRequestId,
                     cancellationToken);
             }
@@ -272,11 +293,10 @@ namespace BLL.Services
             return createdOffers;
         }
 
-
         public async Task ReassignPendingOffersAfterVolunteerAssignmentAsync(
-    int volunteerId,
-    int acceptedRequestId,
-    CancellationToken cancellationToken = default)
+            int volunteerId,
+            int acceptedRequestId,
+            CancellationToken cancellationToken = default)
         {
             if (volunteerId <= 0)
                 throw new ArgumentException("Invalid volunteer ID.");
@@ -293,7 +313,6 @@ namespace BLL.Services
                     volunteerId,
                     acceptedRequestId);
 
-            // חיפוש מתנדבים מתאימים חדשים לכל קריאה שהתפנתה.
             foreach (var requestId in affectedRequestIds)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -322,7 +341,6 @@ namespace BLL.Services
             }
         }
 
-
         private async Task NotifyNewOfferSafelyAsync(
             int volunteerId,
             int helpRequestId,
@@ -350,6 +368,5 @@ namespace BLL.Services
                     helpRequestId);
             }
         }
-
     }
 }

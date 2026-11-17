@@ -64,16 +64,22 @@ namespace SmartAid.API.BackgroundServices
                                     requestId,
                                     stoppingToken);
 
+                            // כל המתנדבים שכבר קיבלו הצעה לקריאה הזאת,
+                            // ללא קשר לסטטוס ההצעה.
                             var alreadyOfferedVolunteerIds =
                                 repository.GetOfferedVolunteerIdsForRequest(
                                     requestId)
                                 .ToHashSet();
 
+                            // סופרים רק מתנדבים מתאימים שמעולם לא קיבלו
+                            // הצעה עבור הקריאה הזאת.
                             int alternativeVolunteersCount =
                                 eligibleVolunteers.Count(match =>
                                     !alreadyOfferedVolunteerIds.Contains(
                                         match.Volunteer.Id));
 
+                            // אם אין לפחות 5 מתנדבים חדשים,
+                            // משאירים את ההצעות הקיימות פעילות.
                             if (alternativeVolunteersCount < MaxActiveOffers)
                             {
                                 _logger.LogInformation(
@@ -85,6 +91,8 @@ namespace SmartAid.API.BackgroundServices
                                 continue;
                             }
 
+                            // יש מספיק מתנדבים חדשים:
+                            // מפוגגים את ההצעות הישנות.
                             int expiredCount =
                                 repository.ExpirePendingOffersForRequest(
                                     requestId,
@@ -100,10 +108,13 @@ namespace SmartAid.API.BackgroundServices
                                 requestId,
                                 alternativeVolunteersCount);
 
+                            // שולחים הצעות רק למתנדבים שמעולם לא קיבלו
+                            // הצעה עבור הקריאה הזאת.
                             int createdOffers =
                                 await offerService.CreateOffersForRequestAsync(
                                     requestId,
-                                    stoppingToken);
+                                    stoppingToken,
+                                    onlyNeverOffered: true);
 
                             _logger.LogInformation(
                                 "Created {CreatedCount} new offers for request {RequestId}.",

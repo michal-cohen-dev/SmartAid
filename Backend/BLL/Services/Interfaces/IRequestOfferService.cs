@@ -11,6 +11,7 @@ namespace BLL.Services.Interfaces
         List<RequestOfferDto> GetAll();
 
         RequestOfferDto? GetById(int id);
+
         List<RequestOfferDto> GetPendingByVolunteerId(int volunteerId);
 
         void Add(RequestOfferDto requestOfferDto);
@@ -24,21 +25,17 @@ namespace BLL.Services.Interfaces
 
         Task<int> CreateOffersForRequestAsync(
             int helpRequestId,
-            CancellationToken cancellationToken = default);
+            CancellationToken cancellationToken = default,
+            bool onlyNeverOffered = false);
 
         Task<bool> CreateOfferForVolunteerAsync(
-    int helpRequestId,
-    int volunteerId,
-    CancellationToken cancellationToken = default);
-
+            int helpRequestId,
+            int volunteerId,
+            CancellationToken cancellationToken = default);
 
         Task ReassignPendingOffersAfterVolunteerAssignmentAsync(
-    int volunteerId,
-    int acceptedRequestId,
-    CancellationToken cancellationToken = default);
-
+            int volunteerId,
+            int acceptedRequestId,
+            CancellationToken cancellationToken = default);
     }
-
-
-
 }
