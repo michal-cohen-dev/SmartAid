@@ -316,18 +316,32 @@ namespace BLL.Services
         }
 
         public async Task<bool> TryAssignToVolunteerAsync(
-     int requestId,
-     int userId,
-     CancellationToken cancellationToken = default)
+    int requestId,
+    int userId,
+    CancellationToken cancellationToken = default)
         {
             var volunteer = _volunteerService.GetByUserId(userId);
 
             if (volunteer == null || !volunteer.IsActive)
                 return false;
 
+            var eligibleVolunteers =
+                await _volunteerMatchingService.GetEligibleVolunteersAsync(
+                    requestId,
+                    cancellationToken);
+
+            // בודקים כמה מתנדבים מתאימים קיימים מלבד המתנדב הנוכחי.
+            int alternativeVolunteersCount = eligibleVolunteers
+                .Count(match => match.Volunteer.Id != volunteer.Id);
+
+            // אם יש פחות מחמישה מתנדבים חלופיים,
+            // מאפשרים לקבל גם הצעה שעברו עליה יותר משתי דקות.
+            bool allowExpiredOffer = alternativeVolunteersCount < 5;
+
             bool assigned = _helpRequestRepository.TryAssignToVolunteer(
                 requestId,
-                volunteer.Id);
+                volunteer.Id,
+                allowExpiredOffer);
 
             if (!assigned)
                 return false;
@@ -350,7 +364,6 @@ namespace BLL.Services
                     requestId);
             }
 
-            // השיוך כבר בוצע בהצלחה, גם אם הפצת ההצעות נכשלה.
             return true;
         }
 

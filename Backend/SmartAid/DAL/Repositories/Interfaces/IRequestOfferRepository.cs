@@ -31,5 +31,6 @@ namespace DAL.Repositories.Interfaces
         List<int> ExpirePendingOffersForVolunteerExceptRequest(
             int volunteerId,
             int acceptedHelpRequestId);
+        List<int> GetOfferedVolunteerIdsForRequest(int helpRequestId);
     }
 }

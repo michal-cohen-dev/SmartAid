@@ -179,8 +179,9 @@ namespace DAL.Repositories
         }
 
         public bool TryAssignToVolunteer(
-            int requestId,
-            int volunteerId)
+    int requestId,
+    int volunteerId,
+    bool allowExpiredOffer)
         {
             using var transaction =
                 _context.Database.BeginTransaction(
@@ -212,12 +213,17 @@ namespace DAL.Repositories
                 return false;
             }
 
+            // ההצעה חייבת להיות ממתינה.
+            // אם עברו שתי דקות, נבדוק האם מותר לקבל אותה באיחור.
             bool hasPendingOffer = _context.RequestOffers
                 .Any(offer =>
                     offer.HelpRequestId == requestId &&
                     offer.VolunteerId == volunteerId &&
                     offer.Status == OfferStatus.Pending &&
-                    offer.OfferedAt > DateTime.UtcNow.AddMinutes(-2));
+                    (
+                        allowExpiredOffer ||
+                        offer.OfferedAt > DateTime.UtcNow.AddMinutes(-2)
+                    ));
 
             if (!hasPendingOffer)
             {

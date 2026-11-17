@@ -257,5 +257,13 @@ namespace DAL.Repositories
 
             return affectedRequestIds;
         }
+        public List<int> GetOfferedVolunteerIdsForRequest(int helpRequestId)
+        {
+            return _context.RequestOffers
+                .Where(ro => ro.HelpRequestId == helpRequestId)
+                .Select(ro => ro.VolunteerId)
+                .Distinct()
+                .ToList();
+        }
     }
 }

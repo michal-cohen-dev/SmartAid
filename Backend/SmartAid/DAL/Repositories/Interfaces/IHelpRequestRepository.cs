@@ -15,7 +15,10 @@ namespace DAL.Repositories.Interfaces
         HelpRequest? GetById(int id);
         HelpRequest? GetOwned(int id, int userId);
 
-        bool TryAssignToVolunteer(int requestId, int volunteerId);
+        bool TryAssignToVolunteer(
+     int requestId,
+     int volunteerId,
+     bool allowExpiredOffer);
         bool TryMarkInTreatment(int requestId, int volunteerId);
         bool TryCompleteRequest(int requestId, int volunteerId);
         bool TryRateCompletedRequest(int requestId, int userId, int rating);

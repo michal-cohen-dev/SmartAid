@@ -1,4 +1,8 @@
 ﻿
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using BLL.Services.Interfaces;
 using DAL.Repositories.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,13 +64,23 @@ namespace SmartAid.API.BackgroundServices
                                     requestId,
                                     stoppingToken);
 
-                            if (eligibleVolunteers.Count < MaxActiveOffers)
+                            var alreadyOfferedVolunteerIds =
+                                repository.GetOfferedVolunteerIdsForRequest(
+                                    requestId)
+                                .ToHashSet();
+
+                            int alternativeVolunteersCount =
+                                eligibleVolunteers.Count(match =>
+                                    !alreadyOfferedVolunteerIds.Contains(
+                                        match.Volunteer.Id));
+
+                            if (alternativeVolunteersCount < MaxActiveOffers)
                             {
                                 _logger.LogInformation(
-                                    "Keeping pending offers for help request {RequestId}. Only {EligibleCount} eligible volunteers exist. Minimum required for expiration: {MinimumCount}.",
+                                    "Keeping pending offers for request {RequestId}. " +
+                                    "Only {AlternativeCount} new eligible volunteers are available.",
                                     requestId,
-                                    eligibleVolunteers.Count,
-                                    MaxActiveOffers);
+                                    alternativeVolunteersCount);
 
                                 continue;
                             }
@@ -80,10 +94,11 @@ namespace SmartAid.API.BackgroundServices
                                 continue;
 
                             _logger.LogInformation(
-                                "Expired {ExpiredCount} offers for help request {RequestId}. Eligible volunteers: {EligibleCount}.",
+                                "Expired {ExpiredCount} old offers for request {RequestId}. " +
+                                "{AlternativeCount} new eligible volunteers are available.",
                                 expiredCount,
                                 requestId,
-                                eligibleVolunteers.Count);
+                                alternativeVolunteersCount);
 
                             int createdOffers =
                                 await offerService.CreateOffersForRequestAsync(
@@ -91,7 +106,7 @@ namespace SmartAid.API.BackgroundServices
                                     stoppingToken);
 
                             _logger.LogInformation(
-                                "Created {CreatedCount} new offers for help request {RequestId} after expiration.",
+                                "Created {CreatedCount} new offers for request {RequestId}.",
                                 createdOffers,
                                 requestId);
                         }
@@ -104,7 +119,7 @@ namespace SmartAid.API.BackgroundServices
                         {
                             _logger.LogError(
                                 ex,
-                                "Failed to process offer expiration for help request {RequestId}.",
+                                "Failed to process offer expiration for request {RequestId}.",
                                 requestId);
                         }
                     }
