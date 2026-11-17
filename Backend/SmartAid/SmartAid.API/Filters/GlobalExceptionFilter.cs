@@ -1,4 +1,5 @@
-﻿using BLL.Exceptions;
+﻿
+using BLL.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -17,11 +18,13 @@ public class GlobalExceptionFilter : IExceptionFilter
     public void OnException(ExceptionContext context)
     {
         var ex = context.Exception;
+        var traceId = context.HttpContext.TraceIdentifier;
 
         _logger.LogError(
             ex,
-            "Unhandled exception at {Path}",
-            context.HttpContext.Request.Path);
+            "Unhandled exception at {Path}. TraceId: {TraceId}",
+            context.HttpContext.Request.Path,
+            traceId);
 
         int status = ex switch
         {
@@ -37,12 +40,18 @@ public class GlobalExceptionFilter : IExceptionFilter
             ? "An unexpected error occurred."
             : ex.Message;
 
-        context.Result = new ObjectResult(
-            new ProblemDetails
-            {
-                Status = status,
-                Title = message
-            })
+        var problemDetails = new ProblemDetails
+        {
+            Status = status,
+            Title = message
+        };
+
+        if (status == 500)
+        {
+            problemDetails.Extensions["traceId"] = traceId;
+        }
+
+        context.Result = new ObjectResult(problemDetails)
         {
             StatusCode = status
         };

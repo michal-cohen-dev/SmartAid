@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { apiRequest, type AuthResponse } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import "./LoginScreen.css";
+import { validateEmail } from "../utils/validation";
 
 function getUserRole(token: string): string | null {
   try {
@@ -52,11 +53,18 @@ function LoginScreen() {
     if (loading) return;
 
     setError("");
+    
+const emailError = validateEmail(email);
 
-    if (!email.trim() || !password) {
-      setError("יש למלא כתובת אימייל וסיסמה.");
-      return;
-    }
+if (emailError) {
+  setError(emailError);
+  return;
+}
+
+if (!password) {
+  setError("יש להזין סיסמה.");
+  return;
+}
 
     try {
       setLoading(true);

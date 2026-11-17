@@ -4,6 +4,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { apiRequest, type AuthResponse } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import "./RegistrationScreen.css";
+import {
+  validateEmail,
+  validatePassword,
+  validateFullName,
+  validatePhone,
+  validatePasswordMatch,
+} from "../utils/validation";
 
 function RegistrationScreen() {
   const navigate = useNavigate();
@@ -26,20 +33,38 @@ function RegistrationScreen() {
 
     if (loading) return;
 
-    if (
-      !fullName.trim() ||
-      !phone.trim() ||
-      !email.trim() ||
-      !password
-    ) {
-      setError("יש למלא את כל השדות.");
-      return;
-    }
+const nameError = validateFullName(fullName);
+if (nameError) {
+  setError(nameError);
+  return;
+}
 
-    if (password !== confirmPassword) {
-      setError("הסיסמאות אינן תואמות.");
-      return;
-    }
+const phoneError = validatePhone(phone);
+if (phoneError) {
+  setError(phoneError);
+  return;
+}
+
+const emailError = validateEmail(email);
+if (emailError) {
+  setError(emailError);
+  return;
+}
+
+const passwordError = validatePassword(password);
+if (passwordError) {
+  setError(passwordError);
+  return;
+}
+
+const passwordMatchError = validatePasswordMatch(
+  password,
+  confirmPassword
+);
+if (passwordMatchError) {
+  setError(passwordMatchError);
+  return;
+}
 
     try {
       setLoading(true);
