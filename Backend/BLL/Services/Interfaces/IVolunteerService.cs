@@ -15,6 +15,9 @@ namespace BLL.Services.Interfaces
         VolunteerDto? GetByUserId(int userId);
 
         void Add(RegisterVolunteerDto volunteerDto, int currentUserId);
+        void UpdateForAdmin(
+    int id,
+    AdminVolunteerUpdateDto volunteerDto);
 
         void Update(int id, VolunteerDto volunteerDto, int currentUserId);
         void Delete(int id, int currentUserId);

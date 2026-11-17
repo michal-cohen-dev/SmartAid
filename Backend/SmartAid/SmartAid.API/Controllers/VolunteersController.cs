@@ -46,6 +46,26 @@ namespace SmartAid.API.Controllers
             return Ok(volunteer);
         }
 
+
+
+
+        [Authorize(Roles = "Admin")]
+        [HttpPut("admin/{id:int}")]
+        public ActionResult UpdateForAdmin(
+            int id,
+            [FromBody] AdminVolunteerUpdateDto volunteerDto)
+        {
+            _volunteerService.UpdateForAdmin(id, volunteerDto);
+
+            return Ok(new
+            {
+                message = "Volunteer updated successfully by admin."
+            });
+        }
+
+
+
+
         [HttpPost]
         public ActionResult Add(
             [FromBody] RegisterVolunteerDto volunteerDto)

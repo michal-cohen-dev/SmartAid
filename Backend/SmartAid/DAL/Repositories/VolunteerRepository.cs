@@ -169,6 +169,21 @@ namespace DAL.Repositories
                 .ToList();
         }
 
+
+
+
+        public List<Volunteer> GetAllWithQualificationsForAdmin()
+        {
+            return _context.Volunteers
+                .Include(v => v.VolunteerHelpTypes)
+                    .ThenInclude(vht => vht.HelpType)
+                .Include(v => v.VolunteerEquipments)
+                    .ThenInclude(ve => ve.EquipmentType)
+                .ToList();
+        }
+
+
+
         public void DecreaseReliabilityScore(int volunteerId)
         {
             _context.Volunteers

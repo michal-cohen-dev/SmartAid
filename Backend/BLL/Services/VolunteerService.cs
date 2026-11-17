@@ -42,21 +42,28 @@ namespace BLL.Services
             _requestOfferService = requestOfferService;
         }
 
+
         public List<VolunteerDto> GetAll()
         {
-            var volunteers = _volunteerRepository.GetAll();
+            var volunteers =
+                _volunteerRepository.GetAllWithQualificationsForAdmin();
+
             return _mapper.Map<List<VolunteerDto>>(volunteers);
         }
 
+
+
         public VolunteerDto? GetById(int id)
         {
-            var volunteer = _volunteerRepository.GetById(id);
+            var volunteer =
+                _volunteerRepository.GetByIdWithQualifications(id);
 
             if (volunteer == null)
                 return null;
 
             return _mapper.Map<VolunteerDto>(volunteer);
         }
+
 
         public VolunteerDto? GetByUserId(int userId)
         {
@@ -218,6 +225,72 @@ namespace BLL.Services
                 equipmentIds,
                 helpTypeIds);
         }
+
+
+
+        public void UpdateForAdmin(
+            int id,
+            AdminVolunteerUpdateDto volunteerDto)
+        {
+            var existingVolunteer =
+                _volunteerRepository.GetByIdWithQualifications(id);
+
+            if (existingVolunteer == null)
+                throw new NotFoundException("Volunteer profile not found.");
+
+            var equipmentIds = volunteerDto.EquipmentTypeIds
+                .Distinct()
+                .ToList();
+
+            if (equipmentIds.Count != volunteerDto.EquipmentTypeIds.Count)
+                throw new ConflictException(
+                    "Duplicate equipment types are not allowed.");
+
+            if (equipmentIds.Any(id => id <= 0))
+                throw new ArgumentException("Invalid equipment type ID.");
+
+            foreach (var equipmentId in equipmentIds)
+            {
+                if (_equipmentTypeRepository.GetById(equipmentId) == null)
+                    throw new NotFoundException(
+                        $"Equipment type {equipmentId} was not found.");
+            }
+
+            var helpTypeIds = volunteerDto.HelpTypeIds
+                .Distinct()
+                .ToList();
+
+            if (helpTypeIds.Count == 0)
+                throw new ArgumentException(
+                    "At least one help type must be selected.");
+
+            if (helpTypeIds.Count != volunteerDto.HelpTypeIds.Count)
+                throw new ConflictException(
+                    "Duplicate help types are not allowed.");
+
+            foreach (var helpTypeId in helpTypeIds)
+            {
+                if (helpTypeId <= 0 ||
+                    _helpTypeRepository.GetById(helpTypeId) == null)
+                {
+                    throw new NotFoundException(
+                        $"Help type {helpTypeId} was not found.");
+                }
+            }
+
+            existingVolunteer.FullName = volunteerDto.FullName;
+            existingVolunteer.PhoneNumber = volunteerDto.PhoneNumber;
+
+            _volunteerRepository.Update(existingVolunteer);
+
+            _volunteerRepository.ReplaceQualifications(
+                id,
+                equipmentIds,
+                helpTypeIds);
+        }
+
+
+
 
         public void Delete(int id, int currentUserId)
         {
