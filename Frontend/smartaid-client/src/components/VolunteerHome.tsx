@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react';
+
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../services/api';
 import './VolunteerHome.css';
+import { useAuth } from '../context/AuthContext';
+import { createNotificationsConnection } from '../services/notifications';
 
 interface HelpRequest {
   id: number;
@@ -19,9 +22,11 @@ interface VolunteerLocation {
 }
 
 function VolunteerHome() {
+  const availabilityUpdatePendingRef = useRef(false);
   const navigate = useNavigate();
+  const { token, isVolunteer } = useAuth();
 
-  const [isAvailable, setIsAvailable] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(true);
   const [location, setLocation] =
     useState<VolunteerLocation | null>(null);
 
@@ -32,6 +37,148 @@ function VolunteerHome() {
   const [requests, setRequests] = useState<HelpRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const [soundEnabled, setSoundEnabled] = useState(false);
+
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  // השמעת צליל התראה
+  function playNotificationSound() {
+    const audioContext = audioContextRef.current;
+
+    if (!audioContext || audioContext.state !== 'running') {
+      return;
+    }
+
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(
+      880,
+      audioContext.currentTime
+    );
+
+    gain.gain.setValueAtTime(0.001, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(
+      0.25,
+      audioContext.currentTime + 0.03
+    );
+    gain.gain.exponentialRampToValueAtTime(
+      0.001,
+      audioContext.currentTime + 0.35
+    );
+
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.35);
+  }
+
+  // התחברות להתראות ועדכוני בקשות בזמן אמת באמצעות SignalR
+  useEffect(() => {
+    if (!token || !isVolunteer) {
+      return;
+    }
+
+    let isActive = true;
+
+    const connection = createNotificationsConnection(token);
+
+    const handleNewOffer = () => {
+      if (isActive && soundEnabled) {
+        playNotificationSound();
+      }
+    };
+
+    const handleRequestUpdated = async () => {
+      try {
+        const data = await apiRequest<HelpRequest[]>(
+          '/api/HelpRequests/open'
+        );
+
+        if (isActive) {
+          const validRequests = data.filter(
+            request =>
+              request.title?.trim() &&
+              request.description?.trim()
+          );
+
+          setRequests(validRequests);
+        }
+      } catch (error) {
+        if (isActive) {
+          console.error(
+            'שגיאה ברענון הבקשות לאחר עדכון:',
+            error
+          );
+        }
+      }
+    };
+
+    connection.on('NewOffer', handleNewOffer);
+    connection.on('RequestUpdated', handleRequestUpdated);
+
+    connection.start().catch(error => {
+      if (isActive) {
+        console.error('שגיאה בהתחברות להתראות:', error);
+      }
+    });
+
+    return () => {
+      isActive = false;
+      connection.off('NewOffer', handleNewOffer);
+      connection.off('RequestUpdated', handleRequestUpdated);
+      void connection.stop();
+    };
+  }, [token, isVolunteer, soundEnabled]);
+
+  // הפעלת התראות קוליות לאחר לחיצה של המשתמש
+  async function handleEnableSound() {
+    try {
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as typeof window & {
+          webkitAudioContext?: typeof AudioContext;
+        }).webkitAudioContext;
+
+      if (!AudioContextClass) {
+        setError('הדפדפן אינו תומך בהתראות קוליות.');
+        return;
+      }
+
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioContextClass();
+      }
+
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+
+      setSoundEnabled(true);
+
+      // צליל קצר לבדיקת ההתראות
+      const context = audioContextRef.current;
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+
+      oscillator.frequency.value = 880;
+      gain.gain.setValueAtTime(0.15, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        context.currentTime + 0.25
+      );
+
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.25);
+    } catch {
+      setError('לא הצלחנו להפעיל את הצליל. נסי שוב.');
+    }
+  }
 
   // טעינת בקשות עזרה פתוחות ורענון אוטומטי
   useEffect(() => {
@@ -56,6 +203,8 @@ function VolunteerHome() {
               request.description?.trim()
           );
 
+          // רענון רשימת הבקשות בלבד.
+          // התראות קוליות מתקבלות דרך SignalR.
           setRequests(validRequests);
         }
       } catch (error) {
@@ -145,11 +294,38 @@ function VolunteerHome() {
               }),
             }
           )
-            .then(() => {
-              if (isActive) {
-                setLocationSaveError('');
-              }
-            })
+            .then(async () => {
+    if (!isActive) return;
+
+    setLocationSaveError('');
+
+    // לאחר שהמיקום נשמר, מעדכנים זמינות בשרת
+    if (availabilityUpdatePendingRef.current) {
+        await apiRequest<{ message: string }>(
+            '/api/Volunteers/me/availability',
+            {
+                method: 'PUT',
+                body: JSON.stringify({
+                    isAvailable: true
+                })
+            }
+        );
+
+        availabilityUpdatePendingRef.current = false;
+    }
+})
+.catch(error => {
+    if (!isActive) return;
+
+    availabilityUpdatePendingRef.current = false;
+    setIsAvailable(false);
+
+    setLocationSaveError(
+        error instanceof Error
+            ? error.message
+            : 'עדכון הזמינות נכשל'
+    );
+})
             .catch(error => {
               if (isActive) {
                 setLocationSaveError(
@@ -191,9 +367,46 @@ function VolunteerHome() {
     };
   }, [isAvailable]);
 
-  function handleToggle() {
-    setIsAvailable(previous => !previous);
-  }
+  // סגירת משאב הצליל ביציאה מהעמוד
+  useEffect(() => {
+    return () => {
+      audioContextRef.current?.close();
+      audioContextRef.current = null;
+    };
+  }, []);
+
+ async function handleToggle() {
+    if (isAvailable) {
+        try {
+            await apiRequest<{ message: string }>(
+                '/api/Volunteers/me/availability',
+                {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        isAvailable: false
+                    })
+                }
+            );
+
+            availabilityUpdatePendingRef.current = false;
+            setIsAvailable(false);
+            setLocation(null);
+            setLocationError('');
+            setLocationSaveError('');
+
+        } catch (error) {
+            setLocationSaveError(
+                error instanceof Error
+                    ? error.message
+                    : 'לא הצלחנו לעדכן זמינות'
+            );
+        }
+
+    } else {
+        availabilityUpdatePendingRef.current = true;
+        setIsAvailable(true);
+    }
+}
 
   return (
     <div className="volunteer-page" dir="rtl">
@@ -287,6 +500,27 @@ function VolunteerHome() {
 
       </section>
 
+      <section className="volunteer-notifications">
+        <h2>התראות על בקשות חדשות</h2>
+
+        <p>
+          {soundEnabled
+            ? 'התראות קוליות מופעלות.'
+            : 'כדי לשמוע צליל כאשר מגיעה בקשה חדשה, יש להפעיל התראות.'}
+        </p>
+
+        <button
+          className="volunteer-button"
+          type="button"
+          onClick={handleEnableSound}
+          disabled={soundEnabled}
+        >
+          {soundEnabled
+            ? 'הצליל מופעל'
+            : 'הפעלת צליל התראות'}
+        </button>
+      </section>
+
       <section className="volunteer-requests-section">
 
         <h2>בקשות עזרה פתוחות</h2>
@@ -362,15 +596,6 @@ function VolunteerHome() {
 
       </section>
 
-      <div className="volunteer-create-request">
-        <button
-          className="volunteer-button"
-          type="button"
-          onClick={() => navigate('/request')}
-        >
-          פתיחת בקשת עזרה
-        </button>
-      </div>
 
     </div>
   );

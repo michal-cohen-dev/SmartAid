@@ -1,55 +1,73 @@
 
 .volunteer-reg-page {
   width: 100%;
-  padding: 40px 24px;
+  min-height: 100vh;
+  padding: 48px 20px;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
-  color: #30343b;
+  align-items: flex-start;
+  background:
+    radial-gradient(circle at 10% 5%, rgba(32, 166, 181, 0.08), transparent 28%),
+    #f4f8fc;
+  color: #183b63;
+  font-family: "Segoe UI", Arial, sans-serif;
+  direction: rtl;
 }
 
 .volunteer-reg-card {
   width: 100%;
-  max-width: 720px;
+  max-width: 760px;
   height: fit-content;
-  padding: 36px;
+  padding: 40px;
   box-sizing: border-box;
   background: #ffffff;
-  border: 1px solid #e8eaed;
-  border-radius: 16px;
-  box-shadow: 0 8px 28px rgba(30, 40, 55, 0.06);
+  border: 1px solid #e2ebf2;
+  border-radius: 22px;
+  box-shadow: 0 12px 36px rgba(33, 76, 120, 0.08);
 }
 
 .volunteer-reg-header {
+  margin-bottom: 36px;
   text-align: center;
-  margin-bottom: 32px;
 }
 
 .volunteer-reg-header h1 {
-  margin: 0 0 12px;
-  color: #343d49;
-  font-size: 28px;
+  margin: 0 0 13px;
+  color: #183b63;
+  font-size: 29px;
+  font-weight: 900;
+  line-height: 1.4;
 }
 
-.volunteer-reg-header p,
-.volunteer-reg-section > p {
-  color: #737b86;
-  line-height: 1.6;
+.volunteer-reg-header p {
+  max-width: 520px;
+  margin: 0 auto;
+  color: #718198;
+  font-size: 15px;
+  line-height: 1.8;
 }
 
 .volunteer-reg-section {
-  margin-bottom: 30px;
+  margin-bottom: 32px;
+  padding: 23px;
+  border: 1px solid #e3edf4;
+  border-radius: 16px;
+  background: #f9fbfd;
 }
 
 .volunteer-reg-section h2 {
-  margin: 0 0 6px;
-  color: #424b57;
+  margin: 0 0 8px;
+  color: #24496d;
   font-size: 19px;
+  font-weight: 850;
 }
 
 .volunteer-reg-section > p {
-  margin: 0 0 16px;
-  font-size: 14px;
+  margin: 0 0 18px;
+  color: #8291a4;
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 .volunteer-reg-options {
@@ -61,110 +79,173 @@
 .volunteer-reg-option {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 13px 14px;
-  border: 1px solid #e1e6eb;
-  border-radius: 9px;
+  gap: 12px;
+  min-height: 48px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  border: 1px solid #dfe9f0;
+  border-radius: 12px;
   background: #ffffff;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
+  transition: border-color 0.2s, background 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 
 .volunteer-reg-option:hover {
-  background: #f5f8fa;
-  border-color: #8da1b4;
+  border-color: #80c6d2;
+  background: #f0f9fb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(32, 166, 181, 0.08);
+}
+
+.volunteer-reg-option:has(input:checked) {
+  border-color: #20a6b5;
+  background: #eaf7f8;
+  box-shadow: 0 0 0 2px rgba(32, 166, 181, 0.09);
 }
 
 .volunteer-reg-option input {
-  width: 17px;
-  height: 17px;
-  accent-color: #647b91;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: #20a6b5;
   cursor: pointer;
 }
 
 .volunteer-reg-option span {
-  color: #424b57;
+  color: #365773;
   font-size: 14px;
+  font-weight: 650;
+  line-height: 1.5;
 }
 
 .volunteer-reg-submit {
-  width: 100%;
-  padding: 14px;
-  border: none;
-  border-radius: 8px;
-  background: #647b91;
-  color: #ffffff;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.volunteer-reg-submit:hover:not(:disabled) {
-  background: #526a81;
-}
-
-.volunteer-reg-submit:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.volunteer-reg-error {
-  margin: 0 0 18px;
-  padding: 12px;
-  border-radius: 7px;
-  background: #fff0f0;
-  color: #b42318;
-  font-size: 14px;
-}
-
-.volunteer-reg-info {
-  color: #737b86;
-  text-align: center;
-  padding: 16px;
-}
-
-.volunteer-reg-success {
-  max-width: 520px;
-  text-align: center;
-  margin: auto;
-}
-
-.volunteer-reg-success h1 {
-  color: #343d49;
-  font-size: 25px;
-}
-
-.volunteer-reg-success p {
-  color: #737b86;
-  line-height: 1.7;
-  margin: 18px 0 26px;
-}
-
-.volunteer-reg-success-icon {
-  width: 58px;
-  height: 58px;
-  margin: 0 auto 18px;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  min-height: 51px;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #247bb7, #20a6b5);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 6px 17px rgba(36, 123, 183, 0.17);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.volunteer-reg-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 23px rgba(36, 123, 183, 0.24);
+}
+
+.volunteer-reg-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.volunteer-reg-error {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border: 1px solid #f3cccc;
+  border-radius: 11px;
+  background: #fff4f3;
+  color: #b42318;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.volunteer-reg-info {
+  padding: 18px;
+  border: 1px solid #e2ebf2;
+  border-radius: 12px;
+  background: #f5f9fc;
+  color: #718198;
+  font-size: 14px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.volunteer-reg-success {
+  max-width: 540px;
+  margin: auto;
+  padding: 45px 38px;
+  text-align: center;
+}
+
+.volunteer-reg-success h1 {
+  margin: 0;
+  color: #183b63;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.5;
+}
+
+.volunteer-reg-success p {
+  margin: 18px 0 28px;
+  color: #718198;
+  font-size: 15px;
+  line-height: 1.9;
+}
+
+.volunteer-reg-success-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  margin: 0 auto 22px;
+  border: 1px solid #c9ebe0;
   border-radius: 50%;
-  background: #e8f5ee;
-  color: #278451;
-  font-size: 32px;
-  font-weight: bold;
+  background: #eaf8f2;
+  color: #21865d;
+  font-size: 35px;
+  font-weight: 900;
+}
+
+.volunteer-reg-page button:focus-visible,
+.volunteer-reg-option input:focus-visible {
+  outline: 3px solid rgba(32, 166, 181, 0.35);
+  outline-offset: 3px;
 }
 
 @media (max-width: 600px) {
   .volunteer-reg-page {
-    padding: 24px 14px;
+    padding: 25px 14px;
   }
 
   .volunteer-reg-card {
-    padding: 24px 18px;
+    padding: 25px 18px;
+    border-radius: 17px;
+  }
+
+  .volunteer-reg-header {
+    margin-bottom: 27px;
   }
 
   .volunteer-reg-header h1 {
+    font-size: 23px;
+  }
+
+  .volunteer-reg-section {
+    padding: 17px;
+    margin-bottom: 23px;
+  }
+
+  .volunteer-reg-options {
+    grid-template-columns: 1fr;
+  }
+
+  .volunteer-reg-success {
+    padding: 35px 22px;
+  }
+
+  .volunteer-reg-success h1 {
     font-size: 23px;
   }
 }

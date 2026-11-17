@@ -23,7 +23,6 @@ namespace SmartAid.API.Controllers
             return Ok(_equipmentTypeService.GetAll());
         }
 
-
         [HttpGet("{id}")]
         public ActionResult<EquipmentTypeDto> GetById(int id)
         {
@@ -64,13 +63,6 @@ namespace SmartAid.API.Controllers
             if (dto == null)
             {
                 return BadRequest("Invalid request data.");
-            }
-
-            var existing = _equipmentTypeService.GetById(id);
-
-            if (existing == null)
-            {
-                return NotFound();
             }
 
             _equipmentTypeService.Update(id, dto);

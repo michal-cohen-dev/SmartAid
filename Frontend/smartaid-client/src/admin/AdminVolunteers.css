@@ -1,0 +1,148 @@
+
+.admin-volunteers {
+  color: #263248;
+}
+
+.volunteers-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 25px;
+}
+
+.volunteers-heading h2 {
+  margin: 0 0 8px;
+  font-size: 25px;
+}
+
+.volunteers-heading p {
+  margin: 0;
+  color: #718096;
+}
+
+.refresh-button {
+  border: none;
+  border-radius: 9px;
+  padding: 11px 18px;
+  background: #29466f;
+  color: white;
+  cursor: pointer;
+}
+
+.volunteers-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 25px;
+}
+
+.volunteer-stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 2px 10px #00000008;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.volunteer-stat-card span {
+  color: #718096;
+  font-size: 14px;
+}
+
+.volunteer-stat-card strong {
+  font-size: 28px;
+  color: #29466f;
+}
+
+.volunteers-filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.volunteers-filters input,
+.volunteers-filters select {
+  background: white;
+  border: 1px solid #dce3ed;
+  border-radius: 9px;
+  padding: 12px;
+  font: inherit;
+}
+
+.volunteers-filters input {
+  flex: 1;
+}
+
+.volunteers-table-wrapper {
+  overflow-x: auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px #00000008;
+}
+
+.volunteers-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+  min-width: 850px;
+}
+
+.volunteers-table th,
+.volunteers-table td {
+  padding: 16px;
+  border-bottom: 1px solid #edf0f5;
+  white-space: nowrap;
+}
+
+.volunteers-table th {
+  background: #f8fafd;
+  color: #52627a;
+  font-weight: 600;
+}
+
+.availability-badge {
+  display: inline-block;
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 13px;
+}
+
+.availability-badge.active {
+  background: #e5f6ed;
+  color: #18834b;
+}
+
+.availability-badge.inactive {
+  background: #f1f3f6;
+  color: #697586;
+}
+
+.empty-volunteers,
+.admin-volunteers-message {
+  padding: 35px;
+  text-align: center;
+  color: #718096;
+}
+
+.volunteers-error {
+  background: #fff0f0;
+  color: #b42318;
+  border-radius: 9px;
+  padding: 14px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 700px) {
+  .volunteers-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .volunteers-heading,
+  .volunteers-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

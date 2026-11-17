@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiRequest } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { createNotificationsConnection } from '../services/notifications';
 import './RequestDetailsScreen.css';
 
 interface HelpRequestPreview {
@@ -30,6 +32,7 @@ interface HelpRequestDetails extends HelpRequestPreview {
 function RequestDetailsScreen() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { token } = useAuth();
 
   const [preview, setPreview] = useState<HelpRequestPreview | null>(null);
   const [details, setDetails] = useState<HelpRequestDetails | null>(null);
@@ -37,6 +40,8 @@ function RequestDetailsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAccepting, setIsAccepting] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isAssignedVolunteer, setIsAssignedVolunteer] = useState(false);
   const [error, setError] = useState('');
 
   async function loadFullRequest() {
@@ -48,6 +53,18 @@ function RequestDetailsScreen() {
 
     setDetails(fullRequest);
     setPreview(null);
+
+    try {
+      const myRequests = await apiRequest<HelpRequestPreview[]>(
+        '/api/HelpRequests/volunteer/my'
+      );
+
+      setIsAssignedVolunteer(
+        myRequests.some(request => request.id === fullRequest.id)
+      );
+    } catch {
+      setIsAssignedVolunteer(false);
+    }
   }
 
   useEffect(() => {
@@ -73,7 +90,9 @@ function RequestDetailsScreen() {
         );
 
         if (requestPreview) {
-          if (isMounted) setPreview(requestPreview);
+          if (isMounted) {
+            setPreview(requestPreview);
+          }
           return;
         }
 
@@ -81,7 +100,25 @@ function RequestDetailsScreen() {
           `/api/HelpRequests/${id}`
         );
 
-        if (isMounted) setDetails(fullRequest);
+        if (isMounted) {
+          setDetails(fullRequest);
+
+          try {
+            const myRequests = await apiRequest<HelpRequestPreview[]>(
+              '/api/HelpRequests/volunteer/my'
+            );
+
+            if (isMounted) {
+              setIsAssignedVolunteer(
+                myRequests.some(request => request.id === fullRequest.id)
+              );
+            }
+          } catch {
+            if (isMounted) {
+              setIsAssignedVolunteer(false);
+            }
+          }
+        }
       } catch {
         if (isMounted) {
           setError(
@@ -89,7 +126,9 @@ function RequestDetailsScreen() {
           );
         }
       } finally {
-        if (isMounted) setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     }
 
@@ -99,6 +138,55 @@ function RequestDetailsScreen() {
       isMounted = false;
     };
   }, [id]);
+
+  // קבלת עדכוני סטטוס בזמן אמת באמצעות SignalR
+  useEffect(() => {
+    if (!token || !id) {
+      return;
+    }
+
+    let isActive = true;
+
+    const connection = createNotificationsConnection(token);
+
+    const handleRequestUpdated = (notification: {
+      helpRequestId?: number;
+      HelpRequestId?: number;
+    }) => {
+      const updatedRequestId =
+        notification?.helpRequestId ??
+        notification?.HelpRequestId;
+
+      if (
+        isActive &&
+        Number(updatedRequestId) === Number(id)
+      ) {
+        loadFullRequest().catch(error => {
+          console.error(
+            'שגיאה בטעינת פרטי הבקשה לאחר עדכון:',
+            error
+          );
+        });
+      }
+    };
+
+    connection.on('RequestUpdated', handleRequestUpdated);
+
+    connection.start().catch(error => {
+      if (isActive) {
+        console.error(
+          'שגיאה בהתחברות לעדכוני הבקשה:',
+          error
+        );
+      }
+    });
+
+    return () => {
+      isActive = false;
+      connection.off('RequestUpdated', handleRequestUpdated);
+      void connection.stop();
+    };
+  }, [id, token]);
 
   async function handleAcceptRequest() {
     if (!id) return;
@@ -121,6 +209,39 @@ function RequestDetailsScreen() {
       );
     } finally {
       setIsAccepting(false);
+    }
+  }
+
+  async function handleCancelVolunteer() {
+    if (!id) return;
+
+    const confirmed = window.confirm(
+      'האם את/ה בטוח/ה שברצונך לבטל את ההתנדבות בקריאה זו?'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setIsCancelling(true);
+      setError('');
+
+      await apiRequest<{ message: string }>(
+        `/api/HelpRequests/${id}/cancel`,
+        { method: 'POST' }
+      );
+
+      // לאחר שהשרת אישר את הביטול, עוברים מיד למסך המתנדב.
+      // אין לטעון מחדש את פרטי הקריאה, כי היא כבר אינה משויכת למתנדב.
+      setIsAssignedVolunteer(false);
+      navigate('/volunteer', { replace: true });
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'אירעה שגיאה בביטול ההתנדבות.'
+      );
+    } finally {
+      setIsCancelling(false);
     }
   }
 
@@ -264,15 +385,15 @@ function RequestDetailsScreen() {
           </div>
 
           {details?.imageName && (
-  <div className="details-section">
-    <h3>תמונה שצורפה לבקשה</h3>
-    <img
-      className="request-image"
-      src={`${import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '')}/images/${details.imageName}`}
-      alt="תמונה שצורפה לבקשת העזרה"
-    />
-  </div>
-)}
+            <div className="details-section">
+              <h3>תמונה שצורפה לבקשה</h3>
+              <img
+                className="request-image"
+                src={`${import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '')}/images/${details.imageName}`}
+                alt="תמונה שצורפה לבקשת העזרה"
+              />
+            </div>
+          )}
 
           <div className="details-section">
             <h3>ציוד נדרש</h3>
@@ -313,92 +434,85 @@ function RequestDetailsScreen() {
               </div>
 
               <div className="details-grid">
-  <div className="detail-item">
-    <span>שם הפונה</span>
-    <strong>
-      {details.userFullName || 'לא צוין'}
-    </strong>
-  </div>
+                <div className="detail-item">
+                  <span>שם הפונה</span>
+                  <strong>
+                    {details.userFullName || 'לא צוין'}
+                  </strong>
+                </div>
 
-  <div className="detail-item">
-    <span>כתובת מבקש העזרה</span>
-    <strong>
-      {details.address || 'לא צוינה כתובת'}
-    </strong>
-  </div>
+                <div className="detail-item">
+                  <span>כתובת מבקש העזרה</span>
+                  <strong>
+                    {details.address || 'לא צוינה כתובת'}
+                  </strong>
+                </div>
 
-  <div className="detail-item">
-    <span>הערות מיקום</span>
-    <strong>
-      {details.addressNotes || 'אין הערות נוספות'}
-    </strong>
-  </div>
+                <div className="detail-item">
+                  <span>הערות מיקום</span>
+                  <strong>
+                    {details.addressNotes || 'אין הערות נוספות'}
+                  </strong>
+                </div>
 
-  <div className="detail-item">
-    <span>מזהה הבקשה</span>
-    <strong>{details.id}</strong>
-  </div>
-</div>
+                <div className="detail-item">
+                  <span>מזהה הבקשה</span>
+                  <strong>{details.id}</strong>
+                </div>
+              </div>
 
-{Number.isFinite(details.latitude) &&
- Number.isFinite(details.longitude) &&
- details.latitude >= -90 &&
- details.latitude <= 90 &&
- details.longitude >= -180 &&
- details.longitude <= 180 &&
- (details.latitude !== 0 || details.longitude !== 0) && (
-  <div className="request-navigation">
-    <h3>ניווט למיקום מבקש העזרה</h3>
+              {Number.isFinite(details.latitude) &&
+                Number.isFinite(details.longitude) &&
+                details.latitude >= -90 &&
+                details.latitude <= 90 &&
+                details.longitude >= -180 &&
+                details.longitude <= 180 &&
+                (details.latitude !== 0 || details.longitude !== 0) && (
+                  <div className="request-navigation">
+                    <h3>ניווט למיקום מבקש העזרה</h3>
 
-    <p>
-      ניתן לפתוח את המיקום באפליקציית הניווט
-      לפי הקואורדינטות שהתקבלו.
-    </p>
+                    <p>
+                      ניתן לפתוח את המיקום באפליקציית הניווט
+                      לפי הקואורדינטות שהתקבלו.
+                    </p>
 
-    <div className="navigation-buttons">
-      <a
-        href={`https://www.google.com/maps/dir/?api=1&destination=${details.latitude},${details.longitude}`}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        ניווט באמצעות Google Maps
-      </a>
+                    <div className="navigation-buttons">
+                      <a
+                        href={`https://waze.com/ul?ll=${details.latitude},${details.longitude}&navigate=yes`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        ניווט באמצעות Waze
+                      </a>
+                    </div>
+                  </div>
+                )}
 
-      <a
-        href={`https://waze.com/ul?ll=${details.latitude},${details.longitude}&navigate=yes`}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        ניווט באמצעות Waze
-      </a>
-    </div>
-  </div>
-)}
-{Number.isFinite(details.latitude) &&
- Number.isFinite(details.longitude) &&
- details.latitude >= -90 &&
- details.latitude <= 90 &&
- details.longitude >= -180 &&
- details.longitude <= 180 &&
- (details.latitude !== 0 || details.longitude !== 0) && (
-  <div className="request-map-section">
-    <h3>מיקום מבקש העזרה על המפה</h3>
+              {Number.isFinite(details.latitude) &&
+                Number.isFinite(details.longitude) &&
+                details.latitude >= -90 &&
+                details.latitude <= 90 &&
+                details.longitude >= -180 &&
+                details.longitude <= 180 &&
+                (details.latitude !== 0 || details.longitude !== 0) && (
+                  <div className="request-map-section">
+                    <h3>מיקום מבקש העזרה על המפה</h3>
 
-    <iframe
-      title="מפת מיקום מבקש העזרה"
-      src={`https://maps.google.com/maps?q=${details.latitude},${details.longitude}&z=16&output=embed`}
-      width="100%"
-      height="320"
-      loading="lazy"
-      referrerPolicy="no-referrer-when-downgrade"
-      allowFullScreen
-    />
+                    <iframe
+                      title="מפת מיקום מבקש העזרה"
+                      src={`https://maps.google.com/maps?q=${details.latitude},${details.longitude}&z=16&output=embed`}
+                      width="100%"
+                      height="320"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      allowFullScreen
+                    />
 
-    <p>
-      הסמן מציג את מיקום מבקש העזרה לפי הקואורדינטות שנשמרו בבקשה.
-    </p>
-  </div>
-)}
+                    <p>
+                      הסמן מציג את מיקום מבקש העזרה לפי הקואורדינטות שנשמרו בבקשה.
+                    </p>
+                  </div>
+                )}
             </>
           )}
 
@@ -425,10 +539,20 @@ function RequestDetailsScreen() {
               <button
                 className="accept-request-button"
                 onClick={handleMarkArrived}
-                disabled={isUpdatingStatus}
+                disabled={isUpdatingStatus || isCancelling}
               >
                 {isUpdatingStatus ? 'מעדכן...' : 'הגעתי למיקום'}
               </button>
+
+              {isAssignedVolunteer && (
+                <button
+                  className="secondary-button"
+                  onClick={handleCancelVolunteer}
+                  disabled={isCancelling || isUpdatingStatus}
+                >
+                  {isCancelling ? 'מבטל התנדבות...' : 'ביטול התנדבות'}
+                </button>
+              )}
             </div>
           )}
 
@@ -439,10 +563,20 @@ function RequestDetailsScreen() {
               <button
                 className="accept-request-button"
                 onClick={handleCompleteRequest}
-                disabled={isUpdatingStatus}
+                disabled={isUpdatingStatus || isCancelling}
               >
                 {isUpdatingStatus ? 'מעדכן...' : 'סיום טיפול'}
               </button>
+
+              {isAssignedVolunteer && (
+                <button
+                  className="secondary-button"
+                  onClick={handleCancelVolunteer}
+                  disabled={isCancelling || isUpdatingStatus}
+                >
+                  {isCancelling ? 'מבטל התנדבות...' : 'ביטול התנדבות'}
+                </button>
+              )}
             </div>
           )}
 

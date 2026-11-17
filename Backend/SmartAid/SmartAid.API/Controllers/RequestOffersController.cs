@@ -1,8 +1,11 @@
-﻿
+﻿using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using DTO;
 using BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using SmartAid.API.Extensions;
 
 namespace SmartAid.API.Controllers
 {
@@ -13,17 +16,18 @@ namespace SmartAid.API.Controllers
     {
         private readonly IRequestOfferService _requestOfferService;
 
-        public RequestOffersController(IRequestOfferService requestOfferService)
+        public RequestOffersController(
+            IRequestOfferService requestOfferService)
         {
             _requestOfferService = requestOfferService;
         }
+
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public ActionResult<IEnumerable<RequestOfferDto>> GetAll()
         {
             return Ok(_requestOfferService.GetAll());
         }
-
 
         [Authorize(Roles = "Admin")]
         [HttpGet("{id}")]
@@ -43,7 +47,8 @@ namespace SmartAid.API.Controllers
         }
 
         [HttpPost]
-        public ActionResult Add([FromBody] RequestOfferDto requestOfferDto)
+        public ActionResult Add(
+            [FromBody] RequestOfferDto requestOfferDto)
         {
             return StatusCode(403, new
             {
@@ -51,9 +56,10 @@ namespace SmartAid.API.Controllers
             });
         }
 
-
         [HttpPut("{id}")]
-        public ActionResult Update(int id, [FromBody] RequestOfferDto requestOfferDto)
+        public ActionResult Update(
+            int id,
+            [FromBody] RequestOfferDto requestOfferDto)
         {
             return StatusCode(403, new
             {
@@ -61,7 +67,35 @@ namespace SmartAid.API.Controllers
             });
         }
 
+        [HttpPost("{id}/decline")]
+        public async Task<ActionResult> DeclineOffer(
+            int id,
+            CancellationToken cancellationToken)
+        {
+            var userId = User.GetUserId();
 
+            if (userId == null)
+                return Unauthorized();
+
+            var declined =
+                await _requestOfferService.TryDeclineOfferAsync(
+                    id,
+                    userId.Value,
+                    cancellationToken);
+
+            if (!declined)
+            {
+                return Conflict(new
+                {
+                    message = "לא ניתן לדחות את ההצעה. ייתכן שהיא כבר טופלה או שאינה שייכת לך."
+                });
+            }
+
+            return Ok(new
+            {
+                message = "ההצעה נדחתה בהצלחה."
+            });
+        }
 
         [HttpDelete("{id}")]
         public ActionResult Delete(int id)
@@ -71,6 +105,5 @@ namespace SmartAid.API.Controllers
                 message = "Request offers cannot be deleted manually."
             });
         }
-
     }
 }

@@ -1,9 +1,15 @@
-﻿using AutoMapper;
+﻿
+using AutoMapper;
+using BLL.Exceptions;
+using BLL.Services.Interfaces;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
-using BLL.Services.Interfaces;
-using BLL.Exceptions;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace BLL.Services
 {
@@ -14,31 +20,39 @@ namespace BLL.Services
         private readonly IEquipmentTypeRepository _equipmentTypeRepository;
         private readonly IMapper _mapper;
         private readonly IHelpTypeRepository _helpTypeRepository;
+        private readonly IVolunteerMatchingService _volunteerMatchingService;
+        private readonly IRequestOfferService _requestOfferService;
 
         public VolunteerService(
-    IVolunteerRepository volunteerRepository,
-    IUserRepository userRepository,
-    IEquipmentTypeRepository equipmentTypeRepository,
-    IHelpTypeRepository helpTypeRepository,
-    IMapper mapper)
+            IVolunteerRepository volunteerRepository,
+            IUserRepository userRepository,
+            IEquipmentTypeRepository equipmentTypeRepository,
+            IHelpTypeRepository helpTypeRepository,
+            IMapper mapper,
+            IVolunteerMatchingService volunteerMatchingService,
+            IRequestOfferService requestOfferService)
         {
             _volunteerRepository = volunteerRepository;
             _userRepository = userRepository;
             _equipmentTypeRepository = equipmentTypeRepository;
             _helpTypeRepository = helpTypeRepository;
             _mapper = mapper;
+            _volunteerMatchingService = volunteerMatchingService;
+            _requestOfferService = requestOfferService;
         }
 
         public List<VolunteerDto> GetAll()
         {
-            var volunteers = _volunteerRepository.GetAll();
+            var volunteers =
+                _volunteerRepository.GetAllWithQualificationsForAdmin();
 
             return _mapper.Map<List<VolunteerDto>>(volunteers);
         }
 
         public VolunteerDto? GetById(int id)
         {
-            var volunteer = _volunteerRepository.GetById(id);
+            var volunteer =
+                _volunteerRepository.GetByIdWithQualifications(id);
 
             if (volunteer == null)
                 return null;
@@ -48,7 +62,8 @@ namespace BLL.Services
 
         public VolunteerDto? GetByUserId(int userId)
         {
-            var volunteer = _volunteerRepository.GetByUserId(userId);
+            var volunteer =
+                _volunteerRepository.GetByUserIdWithQualifications(userId);
 
             if (volunteer == null)
                 return null;
@@ -56,12 +71,8 @@ namespace BLL.Services
             return _mapper.Map<VolunteerDto>(volunteer);
         }
 
-        // רישום משתמש קיים כמתנדב
-        public void Add(
-            RegisterVolunteerDto volunteerDto,
-            int currentUserId)
+        public void Add(RegisterVolunteerDto volunteerDto, int currentUserId)
         {
-            // בדיקה שהמשתמש עדיין אינו מתנדב
             var existingVolunteer =
                 _volunteerRepository.GetByUserId(currentUserId);
 
@@ -71,7 +82,6 @@ namespace BLL.Services
                     "This user already has a volunteer profile.");
             }
 
-            // שליפת המשתמש הקיים
             var user = _userRepository.GetById(currentUserId);
 
             if (user == null)
@@ -80,104 +90,79 @@ namespace BLL.Services
                     "The current user was not found.");
             }
 
-            // בדיקת תקינות רשימת הציוד
             var equipmentIds = volunteerDto.EquipmentTypeIds
                 .Distinct()
                 .ToList();
 
             if (equipmentIds.Count != volunteerDto.EquipmentTypeIds.Count)
-            {
                 throw new ConflictException(
                     "Duplicate equipment types are not allowed.");
-            }
 
             if (equipmentIds.Any(id => id <= 0))
-            {
-                throw new ArgumentException(
-                    "Invalid equipment type ID.");
-            }
+                throw new ArgumentException("Invalid equipment type ID.");
 
-            // בדיקה שכל פריטי הציוד קיימים במערכת
             foreach (var equipmentId in equipmentIds)
             {
-                var equipment =
-                    _equipmentTypeRepository.GetById(equipmentId);
-
-                if (equipment == null)
-                {
+                if (_equipmentTypeRepository.GetById(equipmentId) == null)
                     throw new NotFoundException(
                         $"Equipment type {equipmentId} was not found.");
-                }
             }
 
-            // בדיקת תקינות רשימת סוגי העזרה
             var helpTypeIds = volunteerDto.HelpTypeIds
                 .Distinct()
                 .ToList();
 
             if (helpTypeIds.Count == 0)
-            {
                 throw new ArgumentException(
                     "At least one help type must be selected.");
-            }
 
             if (helpTypeIds.Count != volunteerDto.HelpTypeIds.Count)
-            {
                 throw new ConflictException(
                     "Duplicate help types are not allowed.");
-            }
 
             if (helpTypeIds.Any(id => id <= 0))
-            {
-                throw new ArgumentException(
-                    "Invalid help type ID.");
-            }
+                throw new ArgumentException("Invalid help type ID.");
 
-            // בדיקה שכל סוגי העזרה קיימים במערכת
             foreach (var helpTypeId in helpTypeIds)
             {
-                var helpType = _helpTypeRepository.GetById(helpTypeId);
-
-                if (helpType == null)
-                {
+                if (_helpTypeRepository.GetById(helpTypeId) == null)
                     throw new NotFoundException(
                         $"Help type {helpTypeId} was not found.");
-                }
             }
 
-            // יצירת פרופיל המתנדב
             var volunteer = new Volunteer
             {
                 UserId = user.Id,
                 FullName = user.FullName,
                 PhoneNumber = user.PhoneNumber,
-
                 Latitude = volunteerDto.Latitude,
                 Longitude = volunteerDto.Longitude,
-
-                IsActive = true,
-
+                IsActive = false,
                 TotalOffersReceived = 0,
                 TotalOffersAccepted = 0,
                 TotalCompleted = 0,
-
-                ReliabilityScore = 100.0
+                ReliabilityScore = 100.0,
+                LastLocationUpdatedAt =
+                    volunteerDto.Latitude.HasValue &&
+                    volunteerDto.Longitude.HasValue
+                        ? DateTime.UtcNow
+                        : null
             };
 
-            // שמירת המתנדב והציוד שלו
             _volunteerRepository.AddWithEquipmentAndHelpTypes(
-      volunteer,
-      equipmentIds,
-      helpTypeIds);
+                volunteer,
+                equipmentIds,
+                helpTypeIds);
         }
 
-        public void Update(
+        public async Task Update(
             int id,
             VolunteerDto volunteerDto,
-            int currentUserId)
+            int currentUserId,
+            CancellationToken cancellationToken = default)
         {
             var existingVolunteer =
-                _volunteerRepository.GetById(id);
+                _volunteerRepository.GetByIdWithQualifications(id);
 
             if (existingVolunteer == null ||
                 existingVolunteer.UserId != currentUserId)
@@ -186,10 +171,125 @@ namespace BLL.Services
                     "Volunteer profile not found.");
             }
 
+            var equipmentIds = volunteerDto.EquipmentTypeIds
+                .Distinct()
+                .ToList();
+
+            if (equipmentIds.Count != volunteerDto.EquipmentTypeIds.Count)
+                throw new ConflictException(
+                    "Duplicate equipment types are not allowed.");
+
+            if (equipmentIds.Any(id => id <= 0))
+                throw new ArgumentException("Invalid equipment type ID.");
+
+            foreach (var equipmentId in equipmentIds)
+            {
+                if (_equipmentTypeRepository.GetById(equipmentId) == null)
+                    throw new NotFoundException(
+                        $"Equipment type {equipmentId} was not found.");
+            }
+
+            var helpTypeIds = volunteerDto.HelpTypeIds
+                .Distinct()
+                .ToList();
+
+            if (helpTypeIds.Count == 0)
+                throw new ArgumentException(
+                    "At least one help type must be selected.");
+
+            if (helpTypeIds.Count != volunteerDto.HelpTypeIds.Count)
+                throw new ConflictException(
+                    "Duplicate help types are not allowed.");
+
+            foreach (var helpTypeId in helpTypeIds)
+            {
+                if (helpTypeId <= 0 ||
+                    _helpTypeRepository.GetById(helpTypeId) == null)
+                {
+                    throw new NotFoundException(
+                        $"Help type {helpTypeId} was not found.");
+                }
+            }
+
             existingVolunteer.FullName = volunteerDto.FullName;
             existingVolunteer.PhoneNumber = volunteerDto.PhoneNumber;
 
             _volunteerRepository.Update(existingVolunteer);
+
+            _volunteerRepository.ReplaceQualifications(
+                id,
+                equipmentIds,
+                helpTypeIds);
+
+            await SendOffersForOpenRequestsAsync(
+                id,
+                cancellationToken);
+        }
+
+        public async Task UpdateForAdmin(
+            int id,
+            AdminVolunteerUpdateDto volunteerDto,
+            CancellationToken cancellationToken = default)
+        {
+            var existingVolunteer =
+                _volunteerRepository.GetByIdWithQualifications(id);
+
+            if (existingVolunteer == null)
+                throw new NotFoundException("Volunteer profile not found.");
+
+            var equipmentIds = volunteerDto.EquipmentTypeIds
+                .Distinct()
+                .ToList();
+
+            if (equipmentIds.Count != volunteerDto.EquipmentTypeIds.Count)
+                throw new ConflictException(
+                    "Duplicate equipment types are not allowed.");
+
+            if (equipmentIds.Any(id => id <= 0))
+                throw new ArgumentException("Invalid equipment type ID.");
+
+            foreach (var equipmentId in equipmentIds)
+            {
+                if (_equipmentTypeRepository.GetById(equipmentId) == null)
+                    throw new NotFoundException(
+                        $"Equipment type {equipmentId} was not found.");
+            }
+
+            var helpTypeIds = volunteerDto.HelpTypeIds
+                .Distinct()
+                .ToList();
+
+            if (helpTypeIds.Count == 0)
+                throw new ArgumentException(
+                    "At least one help type must be selected.");
+
+            if (helpTypeIds.Count != volunteerDto.HelpTypeIds.Count)
+                throw new ConflictException(
+                    "Duplicate help types are not allowed.");
+
+            foreach (var helpTypeId in helpTypeIds)
+            {
+                if (helpTypeId <= 0 ||
+                    _helpTypeRepository.GetById(helpTypeId) == null)
+                {
+                    throw new NotFoundException(
+                        $"Help type {helpTypeId} was not found.");
+                }
+            }
+
+            existingVolunteer.FullName = volunteerDto.FullName;
+            existingVolunteer.PhoneNumber = volunteerDto.PhoneNumber;
+
+            _volunteerRepository.Update(existingVolunteer);
+
+            _volunteerRepository.ReplaceQualifications(
+                id,
+                equipmentIds,
+                helpTypeIds);
+
+            await SendOffersForOpenRequestsAsync(
+                id,
+                cancellationToken);
         }
 
         public void Delete(int id, int currentUserId)
@@ -217,11 +317,11 @@ namespace BLL.Services
             _volunteerRepository.IncreaseReliabilityScore(volunteerId);
         }
 
-
-        public void UpdateLocation(
+        public async Task UpdateLocation(
             int userId,
             double latitude,
-            double longitude)
+            double longitude,
+            CancellationToken cancellationToken = default)
         {
             if (latitude < -90 || latitude > 90)
                 throw new ArgumentException("Invalid latitude.");
@@ -239,7 +339,78 @@ namespace BLL.Services
             volunteer.LastLocationUpdatedAt = DateTime.UtcNow;
 
             _volunteerRepository.Update(volunteer);
+
+            await SendOffersForOpenRequestsAsync(
+                volunteer.Id,
+                cancellationToken);
         }
 
+        public async Task UpdateAvailabilityAsync(
+            int userId,
+            bool isAvailable,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var volunteer = _volunteerRepository.GetByUserId(userId);
+
+            if (volunteer == null)
+                throw new NotFoundException("Volunteer profile not found.");
+
+            if (isAvailable)
+            {
+                var locationFreshnessCutoff =
+                    DateTime.UtcNow.AddMinutes(-5);
+
+                if (!volunteer.Latitude.HasValue ||
+                    !volunteer.Longitude.HasValue ||
+                    !volunteer.LastLocationUpdatedAt.HasValue ||
+                    volunteer.LastLocationUpdatedAt.Value <
+                        locationFreshnessCutoff)
+                {
+                    throw new ConflictException(
+                        "A fresh location is required to become available.");
+                }
+            }
+
+            volunteer.IsActive = isAvailable;
+            _volunteerRepository.Update(volunteer);
+
+            if (!isAvailable)
+                return;
+
+            await SendOffersForOpenRequestsAsync(
+                volunteer.Id,
+                cancellationToken);
+        }
+
+        private async Task SendOffersForOpenRequestsAsync(
+            int volunteerId,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var volunteer =
+                _volunteerRepository.GetByIdWithQualifications(volunteerId);
+
+            if (volunteer == null || !volunteer.IsActive)
+                return;
+
+            var eligibleRequests =
+                await _volunteerMatchingService
+                    .GetEligibleRequestsForVolunteerAsync(
+                        volunteerId,
+                        cancellationToken);
+
+            foreach (var match in eligibleRequests)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                await _requestOfferService.CreateOfferForVolunteerAsync(
+                    match.HelpRequest.Id,
+                    volunteerId,
+                    cancellationToken);
+            }
+        }
     }
 }

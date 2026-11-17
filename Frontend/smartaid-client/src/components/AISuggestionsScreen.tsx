@@ -14,15 +14,29 @@ interface HelpRequest {
   assignedVolunteerName?: string | null;
 }
 
+interface DraftRequest {
+  title: string;
+  description: string;
+  helpTypeId: string;
+  latitude: number;
+  longitude: number;
+  address: string;
+  addressNotes: string;
+  selectedImage: File | null;
+  requiredEquipmentTypeIds?: number[];
+}
+
 interface ImageAnalysisResult {
   problemName: string;
   description: string;
   category: string;
+  helpTypeId?: number | null;
   riskLevel: string;
   recommendation: string;
   safeActions: string[];
   volunteerRequired: boolean;
   confidence: number;
+  suggestedEquipmentTypeIds?: number[];
 }
 
 function AISuggestionsScreen() {
@@ -30,20 +44,39 @@ function AISuggestionsScreen() {
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
 
-  const analysis = (
-    location.state as { analysis?: ImageAnalysisResult | null } | null
-  )?.analysis;
+  const navigationState = location.state as {
+    analysis?: ImageAnalysisResult | null;
+    draft?: DraftRequest;
+  } | null;
+
+  const analysis = navigationState?.analysis;
+  const draft = navigationState?.draft;
 
   const [request, setRequest] = useState<HelpRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    document.title = "הצעות לפתרון עצמי | SmartAid";
+    document.title = "הצעות לפתרון | SmartAid";
 
     const loadRequest = async () => {
+      if (draft) {
+        setRequest({
+          id: 0,
+          title: draft.title,
+          description: draft.description,
+          createdAt: new Date().toISOString(),
+          status: 0,
+          address: draft.address
+        });
+
+        setLoading(false);
+        return;
+      }
+
       if (!id || !Number.isInteger(Number(id)) || Number(id) <= 0) {
-        setError("מזהה הבקשה אינו תקין.");
+        setError("לא נמצאו פרטי בקשה תקינים.");
         setLoading(false);
         return;
       }
@@ -66,7 +99,93 @@ function AISuggestionsScreen() {
     };
 
     loadRequest();
-  }, [id]);
+  }, [id, draft]);
+
+  // יצירת הקריאה מתבצעת רק לאחר לחיצה מפורשת על הזמנת מתנדב.
+  const handleVolunteerRequest = async () => {
+    if (!draft) {
+      if (request?.id) {
+        navigate(`/request-tracking/${request.id}`);
+      }
+      return;
+    }
+
+    if (isSubmitting) return;
+
+    if (!analysis) {
+      setError("לא נמצאו תוצאות ניתוח AI עבור הבקשה.");
+      return;
+    }
+
+    if (!analysis.volunteerRequired) {
+      setError("לפי ניתוח ה-AI לא ניתן להזמין מתנדב לבקשה זו.");
+      return;
+    }
+
+    if (
+      analysis.riskLevel?.trim().toLowerCase() === "high" ||
+      analysis.riskLevel?.trim().toLowerCase() === "unknown" ||
+      analysis.riskLevel === "גבוה" ||
+      analysis.riskLevel === "גבוהה" ||
+      analysis.riskLevel === "לא ידוע" ||
+      analysis.riskLevel === "לא ידועה"
+    ) {
+      setError(
+        "הניתוח מצביע על צורך בבדיקה מקצועית. לא ניתן להזמין מתנדב."
+      );
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError("");
+
+    try {
+      const formData = new FormData();
+
+      if (draft.selectedImage) {
+        formData.append("ImageFile", draft.selectedImage);
+      }
+
+      formData.append("Title", draft.title);
+      formData.append("Description", draft.description);
+      formData.append("Latitude", String(draft.latitude));
+      formData.append("Longitude", String(draft.longitude));
+      formData.append("Address", draft.address);
+      formData.append("HelpTypeId", draft.helpTypeId);
+
+      if (draft.addressNotes) {
+        formData.append("AddressNotes", draft.addressNotes);
+      }
+
+      // מעבירים לשרת כל סוג ציוד שנבחר.
+      (draft.requiredEquipmentTypeIds || []).forEach((equipmentId) => {
+        formData.append(
+          "RequiredEquipmentTypeIds",
+          String(equipmentId)
+        );
+      });
+
+      const response = await apiRequest<{
+        message: string;
+        id: number;
+      }>("/api/HelpRequests", {
+        method: "POST",
+        body: formData
+      });
+
+      navigate(`/request-tracking/${response.id}`, {
+        replace: true
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "אירעה שגיאה בשליחת הבקשה למתנדבים."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -78,12 +197,13 @@ function AISuggestionsScreen() {
     );
   }
 
-  if (error || !request) {
+  if (error && !request) {
     return (
       <main className="ai-page" dir="rtl">
         <div className="ai-container">
           <h2>לא ניתן להציג את ההצעות</h2>
-          <p>{error || "הבקשה לא נמצאה."}</p>
+          <p>{error}</p>
+
           <button
             type="button"
             className="volunteer-button"
@@ -95,6 +215,8 @@ function AISuggestionsScreen() {
       </main>
     );
   }
+
+  if (!request) return null;
 
   const normalizedRisk = analysis?.riskLevel?.trim().toLowerCase();
 
@@ -120,9 +242,10 @@ function AISuggestionsScreen() {
       <div className="ai-container">
         <div className="ai-heading">
           <span className="ai-badge">ניתוח חכם</span>
-          <h2>תוצאות בדיקת הבקשה</h2>
+          <h2>תוצאות ניתוח הבקשה</h2>
           <p>
-            המערכת ניתחה את המידע שסיפקת כדי להציע את דרך הפעולה המתאימה.
+            המערכת ניתחה את תיאור הבעיה ואת התמונה,
+            אם צורפה, כדי להציע את דרך הפעולה המתאימה.
           </p>
         </div>
 
@@ -140,7 +263,7 @@ function AISuggestionsScreen() {
 
         {analysis ? (
           <div className="solutions-section">
-            <h2>תוצאות ניתוח התמונה</h2>
+            <h2>תוצאות ניתוח ה-AI</h2>
 
             <div className="solution-card">
               <div className="solution-content">
@@ -148,11 +271,13 @@ function AISuggestionsScreen() {
                 <p>{analysis.description}</p>
 
                 <p>
-                  <strong>קטגוריה:</strong> {analysis.category}
+                  <strong>קטגוריה:</strong>{" "}
+                  {analysis.category}
                 </p>
 
                 <p>
-                  <strong>רמת סיכון:</strong> {analysis.riskLevel}
+                  <strong>רמת סיכון:</strong>{" "}
+                  {analysis.riskLevel}
                 </p>
 
                 <p>
@@ -187,9 +312,9 @@ function AISuggestionsScreen() {
                 <div className="solution-content">
                   <h3>נדרשת בדיקה מקצועית</h3>
                   <p>
-                    לא מומלץ לנסות לטפל בבעיה באופן עצמאי או להסתמך
-                    על מתנדב. יש להתרחק מהאזור או מהגורם המסוכן,
-                    ולהיעזר באיש מקצוע מוסמך.
+                    לא מומלץ לנסות לטפל בבעיה באופן עצמאי
+                    או להסתמך על מתנדב. יש להתרחק מהאזור
+                    או מהגורם המסוכן ולהיעזר באיש מקצוע מוסמך.
                   </p>
                 </div>
               </div>
@@ -198,73 +323,59 @@ function AISuggestionsScreen() {
                 <div>
                   <h3>מומלץ להיעזר במתנדב</h3>
                   <p>
-                    לפי הניתוח, כדאי לקבל עזרה ממתנדב מהקהילה.
+                    לפי ניתוח ה-AI, כדאי לקבל עזרה
+                    ממתנדב מהקהילה.
                   </p>
                 </div>
 
                 <button
                   type="button"
                   className="volunteer-button"
-                  onClick={() =>
-                    navigate(`/request-tracking/${request.id}`)
-                  }
+                  onClick={handleVolunteerRequest}
+                  disabled={isSubmitting}
                 >
-                  המשך לקבלת עזרת מתנדב
+                  {isSubmitting
+                    ? "שולח בקשה..."
+                    : "אני צריכה מתנדב"}
                 </button>
               </div>
             ) : (
               <div className="solution-card">
                 <div className="solution-content">
-                  <h3>אפשר להתחיל בבדיקה עצמית בטוחה</h3>
+                  <h3>לא זוהה צורך במתנדב</h3>
                   <p>
                     לפי הניתוח, לא זוהה צורך מיידי במתנדב.
-                    אם אינך בטוח כיצד לפעול, אל תבצע פעולה
-                    שאינך מכיר ופנה לאיש מקצוע מתאים.
+                    אם אינך בטוחה כיצד לפעול, אל תבצעי
+                    פעולה שאינך מכירה ופני לאיש מקצוע מתאים.
                   </p>
                 </div>
               </div>
             )}
 
             <p>
-              חשוב: הניתוח מבוסס על תמונה בלבד ואינו מהווה אבחון
-              מקצועי. ייתכן שהמערכת לא זיהתה את כל פרטי הבעיה.
+              חשוב: תוצאות הניתוח הן המלצה ממוחשבת
+              ואינן מהוות אבחון מקצועי. ייתכן שהמערכת
+              לא זיהתה את כל פרטי הבעיה.
             </p>
           </div>
         ) : (
           <div className="solutions-section">
-            <h2>הצעות לפתרון עצמי</h2>
+            <h2>פרטי הבקשה</h2>
 
             <div className="solution-card">
               <div className="solution-content">
-                <h3>בדיקה ראשונית</h3>
                 <p>
-                  לא הועלתה תמונה לניתוח. חשוב לבדוק אם קיימת
-                  פעולה פשוטה ובטוחה שניתן לבצע, בלי להסתכן.
+                  לא צורפו תוצאות ניתוח AI להצגה במסך זה.
                 </p>
               </div>
             </div>
-
-            <p>
-              ההצעה המוצגת היא כללית ואינה אבחון מותאם אישית.
-            </p>
-
-            <div className="volunteer-help">
-              <div>
-                <h3>עדיין זקוקה לעזרה?</h3>
-                <p>אפשר להיעזר במתנדב מהקהילה.</p>
-              </div>
-
-              <button
-                type="button"
-                className="volunteer-button"
-                onClick={() =>
-                  navigate(`/request-tracking/${request.id}`)
-                }
-              >
-                אני צריכה מתנדב
-              </button>
-            </div>
           </div>
+        )}
+
+        {error && (
+          <p className="create-request-error" role="alert">
+            {error}
+          </p>
         )}
       </div>
     </div>

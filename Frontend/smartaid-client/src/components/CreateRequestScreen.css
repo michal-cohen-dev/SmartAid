@@ -1,60 +1,79 @@
 
 .create-request-page {
   min-height: 100vh;
-  padding: 42px 24px;
+  padding: 55px 24px;
   box-sizing: border-box;
-  background: #f7f8fa;
-  color: #30343b;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(32, 166, 181, 0.08), transparent 30%),
+    #f4f8fc;
+  color: #183b63;
   direction: rtl;
+  font-family: "Segoe UI", Arial, sans-serif;
 }
 
 .create-request-container {
   width: 100%;
-  max-width: 760px;
+  max-width: 850px;
   margin: 0 auto;
 }
 
 .create-request-header {
-  margin-bottom: 28px;
+  margin-bottom: 32px;
+  text-align: center;
 }
 
 .create-request-header h1 {
   margin: 0 0 12px;
-  color: #343d49;
-  font-size: 30px;
+  color: #183b63;
+  font-size: 36px;
+  font-weight: 800;
 }
 
 .create-request-header p {
   margin: 0;
-  color: #737b86;
-  font-size: 16px;
-  line-height: 1.7;
+  color: #718198;
+  font-size: 17px;
+  line-height: 1.8;
 }
 
 .create-request-card {
-  padding: 34px 36px;
+  padding: 42px;
   background: #ffffff;
-  border: 1px solid #e8eaed;
-  border-radius: 12px;
-  box-shadow: 0 8px 28px rgba(30, 40, 55, 0.05);
+  border: 1px solid #e3edf5;
+  border-radius: 22px;
+  box-shadow: 0 16px 45px rgba(33, 76, 120, 0.08);
 }
 
 .create-request-form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 25px;
+}
+
+.create-request-form h2 {
+  margin: 0;
+  color: #183b63;
+  font-size: 25px;
+  font-weight: 800;
+}
+
+.create-request-form > p {
+  color: #718198;
+  font-size: 15px;
+  line-height: 1.8;
 }
 
 .create-request-field {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 10px;
 }
 
-.create-request-field label {
-  color: #414b57;
+.create-request-field label,
+.create-request-location > label {
+  color: #24496d;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .create-request-field input,
@@ -62,101 +81,184 @@
 .create-request-field select {
   width: 100%;
   box-sizing: border-box;
-  padding: 12px 14px;
-  border: 1px solid #d9dee5;
-  border-radius: 7px;
-  background: #ffffff;
-  color: #30343b;
-  font: inherit;
+  padding: 14px 16px;
+  border: 1px solid #dce6ef;
+  border-radius: 11px;
+  background: #f9fbfd;
+  color: #183b63;
+  font-family: inherit;
   font-size: 15px;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.create-request-field textarea {
-  min-height: 125px;
-  resize: vertical;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
 
 .create-request-field input:focus,
 .create-request-field textarea:focus,
 .create-request-field select:focus {
-  border-color: #647b91;
-  box-shadow: 0 0 0 3px rgba(100, 123, 145, 0.12);
+  border-color: #20a6b5;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(32, 166, 181, 0.11);
+}
+
+.create-request-field textarea {
+  min-height: 125px;
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.create-request-field input::placeholder,
+.create-request-field textarea::placeholder {
+  color: #a0adbb;
+}
+
+.create-request-field input[type="file"] {
+  padding: 12px;
+  background: #f5f9fc;
+  cursor: pointer;
+}
+
+.create-request-field input[type="file"]::file-selector-button {
+  margin-left: 12px;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #e4f2f8;
+  color: #247bb7;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .create-request-location {
-  padding: 20px;
-  border: 1px solid #e5e9ed;
-  border-radius: 8px;
-  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid #dceaf2;
+  border-radius: 15px;
+  background: #f5f9fc;
 }
 
-.create-request-location label {
-  display: block;
-  margin-bottom: 12px;
-  color: #414b57;
-  font-weight: 600;
+.create-request-location > label {
+  margin-bottom: 0;
+  font-size: 18px;
 }
 
 .create-request-button,
 .create-request-submit {
-  padding: 13px 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 48px;
+  padding: 13px 25px;
   border: none;
-  border-radius: 7px;
-  background: #647b91;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #247bb7, #20a6b5);
   color: #ffffff;
+  font-family: inherit;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+  box-shadow: 0 6px 16px rgba(36, 123, 183, 0.16);
+  transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
 }
 
-.create-request-button:hover,
+.create-request-button:hover:not(:disabled),
 .create-request-submit:hover:not(:disabled) {
-  background: #526a81;
+  transform: translateY(-2px);
+  box-shadow: 0 9px 22px rgba(36, 123, 183, 0.24);
+  filter: brightness(1.04);
 }
 
 .create-request-submit {
   align-self: flex-start;
-  min-width: 180px;
-  margin-top: 4px;
+  min-width: 210px;
+  margin-top: 5px;
 }
 
 .create-request-button:disabled,
 .create-request-submit:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .create-request-status {
-  margin: 12px 0 0;
-  color: #647b91;
+  margin: 0;
+  padding: 12px 15px;
+  border-radius: 9px;
+  background: #eaf7f5;
+  color: #168276;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .create-request-error {
   margin: 0;
-  padding: 12px 14px;
-  border: 1px solid #f0d3d3;
-  border-radius: 7px;
-  background: #fff7f7;
-  color: #a33b3b;
+  padding: 14px 16px;
+  border: 1px solid #f1cccc;
+  border-radius: 10px;
+  background: #fff5f5;
+  color: #b33e4b;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
-@media (max-width: 600px) {
-  .create-request-page {
-    padding: 28px 16px;
-  }
+.solution-card {
+  padding: 22px;
+  border: 1px solid #dcecf4;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f3f9fd, #f0fbfa);
+}
 
-  .create-request-card {
-    padding: 24px 18px;
+.solution-content h3 {
+  margin: 0 0 14px;
+  color: #183b63;
+  font-size: 21px;
+}
+
+.solution-content p {
+  color: #5f7185;
+  line-height: 1.8;
+}
+
+.solution-content strong {
+  color: #247bb7;
+}
+
+.create-request-form button:focus-visible {
+  outline: 3px solid rgba(32, 166, 181, 0.4);
+  outline-offset: 3px;
+}
+
+@media (max-width: 650px) {
+  .create-request-page {
+    padding: 35px 15px;
   }
 
   .create-request-header h1 {
-    font-size: 26px;
+    font-size: 29px;
+  }
+
+  .create-request-header p {
+    font-size: 15px;
+  }
+
+  .create-request-card {
+    padding: 25px 18px;
+    border-radius: 17px;
+  }
+
+  .create-request-location {
+    padding: 18px 14px;
+  }
+
+  .create-request-button,
+  .create-request-submit {
+    width: 100%;
+  }
+
+  .create-request-submit {
+    align-self: stretch;
   }
 }

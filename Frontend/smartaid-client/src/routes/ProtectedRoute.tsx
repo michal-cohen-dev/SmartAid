@@ -5,13 +5,15 @@ import { useAuth } from "../context/AuthContext";
 interface ProtectedRouteProps {
   children: ReactNode;
   requireVolunteer?: boolean;
+  requireAdmin?: boolean;
 }
 
 function ProtectedRoute({
   children,
   requireVolunteer = false,
+  requireAdmin = false,
 }: ProtectedRouteProps) {
-  const { isAuthenticated, isVolunteer } = useAuth();
+  const { isAuthenticated, isVolunteer, isAdmin } = useAuth();
   const location = useLocation();
 
   if (!isAuthenticated) {
@@ -22,6 +24,10 @@ function ProtectedRoute({
         state={{ from: location }}
       />
     );
+  }
+
+  if (requireAdmin && !isAdmin) {
+    return <Navigate to="/" replace />;
   }
 
   if (requireVolunteer && !isVolunteer) {

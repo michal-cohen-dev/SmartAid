@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace SmartAid.API.Controllers
 {
-
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
@@ -14,7 +13,8 @@ namespace SmartAid.API.Controllers
     {
         private readonly IRequestEquipmentService _service;
 
-        public RequestEquipmentsController(IRequestEquipmentService service)
+        public RequestEquipmentsController(
+            IRequestEquipmentService service)
         {
             _service = service;
         }
@@ -24,7 +24,6 @@ namespace SmartAid.API.Controllers
         {
             return Ok(_service.GetAll());
         }
-
 
         [Authorize(Roles = "Admin")]
         [HttpGet("{id}")]
@@ -54,28 +53,34 @@ namespace SmartAid.API.Controllers
 
             _service.Add(dto);
 
-            return Ok(new { message = "RequestEquipment added successfully." });
+            return Ok(new
+            {
+                message = "RequestEquipment added successfully."
+            });
         }
 
         [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
-        public ActionResult Update(int id, [FromBody] RequestEquipmentDto dto)
+        public ActionResult Update(
+            int id,
+            [FromBody] RequestEquipmentDto dto)
         {
             if (dto == null)
             {
                 return BadRequest("Invalid request data.");
             }
 
-            var existing = _service.GetById(id);
-
-            if (existing == null)
-            {
-                return NotFound();
-            }
+            // בדיקת קיום הרשומה מתבצעת ב-Service.
+            // במקרה שהרשומה אינה קיימת, ה-Service זורק
+            // NotFoundException וה-GlobalExceptionFilter
+            // מחזיר HTTP 404.
 
             _service.Update(id, dto);
 
-            return Ok(new { message = "RequestEquipment updated successfully." });
+            return Ok(new
+            {
+                message = "RequestEquipment updated successfully."
+            });
         }
 
         [Authorize(Roles = "Admin")]
@@ -91,7 +96,10 @@ namespace SmartAid.API.Controllers
 
             _service.Delete(id);
 
-            return Ok(new { message = "RequestEquipment deleted successfully." });
+            return Ok(new
+            {
+                message = "RequestEquipment deleted successfully."
+            });
         }
     }
 }

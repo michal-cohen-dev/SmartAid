@@ -1,0 +1,166 @@
+
+.admin-requests {
+  color: #263248;
+}
+
+.requests-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 25px;
+}
+
+.requests-heading h2 {
+  margin: 0 0 8px;
+  font-size: 25px;
+}
+
+.requests-heading p {
+  margin: 0;
+  color: #718096;
+}
+
+.requests-refresh-button {
+  border: none;
+  border-radius: 9px;
+  padding: 11px 18px;
+  background: #29466f;
+  color: white;
+  cursor: pointer;
+  font: inherit;
+}
+
+.requests-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-bottom: 25px;
+}
+
+.request-stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 2px 10px #00000008;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.request-stat-card span {
+  color: #718096;
+  font-size: 14px;
+}
+
+.request-stat-card strong {
+  font-size: 28px;
+  color: #29466f;
+}
+
+.requests-filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.requests-filters input,
+.requests-filters select {
+  background: white;
+  border: 1px solid #dce3ed;
+  border-radius: 9px;
+  padding: 12px;
+  font: inherit;
+}
+
+.requests-filters input {
+  flex: 1;
+}
+
+.requests-table-wrapper {
+  overflow-x: auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px #00000008;
+}
+
+.requests-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+  min-width: 900px;
+}
+
+.requests-table th,
+.requests-table td {
+  padding: 16px;
+  border-bottom: 1px solid #edf0f5;
+  white-space: nowrap;
+}
+
+.requests-table th {
+  background: #f8fafd;
+  color: #52627a;
+  font-weight: 600;
+}
+
+.request-status {
+  display: inline-block;
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 13px;
+}
+
+.status-0 {
+  background: #e8f1ff;
+  color: #245a9b;
+}
+
+.status-1,
+.status-4 {
+  background: #fff3d9;
+  color: #946200;
+}
+
+.status-2 {
+  background: #e5f6ed;
+  color: #18834b;
+}
+
+.status-3 {
+  background: #fce8e8;
+  color: #b42318;
+}
+
+.empty-requests,
+.admin-requests-message {
+  padding: 35px;
+  text-align: center;
+  color: #718096;
+}
+
+.requests-error {
+  background: #fff0f0;
+  color: #b42318;
+  border-radius: 9px;
+  padding: 14px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 900px) {
+  .requests-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .requests-heading,
+  .requests-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .requests-stats {
+    grid-template-columns: 1fr;
+  }
+}

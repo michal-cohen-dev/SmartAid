@@ -24,6 +24,7 @@ export class ApiError extends Error {
 }
 
 
+
 function getErrorMessage(data: unknown, status: number): string {
   if (typeof data === "string" && data.trim()) {
     return data;
@@ -32,9 +33,7 @@ function getErrorMessage(data: unknown, status: number): string {
   if (data && typeof data === "object") {
     const body = data as Record<string, unknown>;
 
-    if (typeof body.message === "string") return body.message;
-    if (typeof body.title === "string") return body.title;
-
+    // קודם בודקים שגיאות ולידציה לפי שדות
     if (body.errors && typeof body.errors === "object") {
       const errors = Object.values(
         body.errors as Record<string, unknown>
@@ -43,15 +42,27 @@ function getErrorMessage(data: unknown, status: number): string {
       );
 
       const messages = errors.filter(
-        (value): value is string => typeof value === "string"
+        (value): value is string =>
+          typeof value === "string" && value.trim().length > 0
       );
 
-      if (messages.length > 0) return messages.join("\n");
+      if (messages.length > 0) {
+        return [...new Set(messages)].join("\n");
+      }
+    }
+
+    if (typeof body.message === "string" && body.message.trim()) {
+      return body.message;
+    }
+
+    if (typeof body.title === "string" && body.title.trim()) {
+      return body.title;
     }
   }
 
   return `שגיאת שרת: ${status}`;
 }
+
 
 export async function apiRequest<T>(
   endpoint: string,

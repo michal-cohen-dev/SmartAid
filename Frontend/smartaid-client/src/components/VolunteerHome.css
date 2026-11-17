@@ -1,198 +1,224 @@
 
 .volunteer-page {
   min-height: 100vh;
-  padding: 36px 6%;
-  background: #f7f8fa;
-  color: #30343b;
   box-sizing: border-box;
+  padding: 45px 6%;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(32, 166, 181, 0.07), transparent 27%),
+    #f4f8fc;
+  color: #183b63;
+  direction: rtl;
+  font-family: "Segoe UI", Arial, sans-serif;
 }
 
 .volunteer-header {
-  margin-bottom: 30px;
+  margin-bottom: 32px;
 }
 
 .volunteer-header h1 {
-  margin: 0 0 8px;
-  color: #424b57;
-  font-size: 30px;
+  margin: 0 0 9px;
+  color: #183b63;
+  font-size: 32px;
+  font-weight: 900;
 }
 
 .volunteer-header p {
   margin: 0;
-  color: #737b86;
-  font-size: 16px;
+  color: #718198;
+  font-size: 15px;
+  line-height: 1.7;
 }
 
-.volunteer-availability {
+.volunteer-availability,
+.volunteer-notifications {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 24px 28px;
-  margin-bottom: 38px;
+  margin-bottom: 24px;
+  padding: 27px 30px;
+  border: 1px solid #e2ebf2;
+  border-radius: 19px;
   background: #ffffff;
-  border: 1px solid #e8eaed;
-  border-radius: 12px;
+  box-shadow: 0 7px 23px rgba(33, 76, 120, 0.055);
 }
 
-.volunteer-availability h2 {
-  margin: 0 0 8px;
-  font-size: 20px;
-  color: #343d49;
+.volunteer-availability h2,
+.volunteer-notifications h2 {
+  margin: 0 0 9px;
+  color: #183b63;
+  font-size: 21px;
+  font-weight: 800;
 }
 
-.volunteer-availability p {
+.volunteer-availability > div > p,
+.volunteer-notifications > p {
   margin: 0;
-  color: #647b91;
-  font-size: 15px;
+  color: #718198;
+  font-size: 14px;
+  line-height: 1.7;
 }
 
 .volunteer-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 45px;
   padding: 11px 20px;
-  border: 1px solid #647b91;
-  border-radius: 7px;
-  background: #647b91;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #247bb7, #20a6b5);
   color: #ffffff;
+  font-family: inherit;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 750;
   cursor: pointer;
+  box-shadow: 0 5px 15px rgba(36, 123, 183, 0.15);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.volunteer-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 9px 21px rgba(36, 123, 183, 0.22);
+}
+
+.volunteer-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.volunteer-location-status {
+  margin-top: 17px;
+  padding: 16px 18px;
+  border: 1px solid #dceaf2;
+  border-radius: 13px;
+  background: #f5f9fc;
+}
+
+.volunteer-location-status p {
+  margin: 7px 0;
+  color: #526f89;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.volunteer-location-details {
+  margin-top: 15px;
+}
+
+.volunteer-map {
+  margin-top: 20px;
+  padding: 19px;
+  border: 1px solid #dceaf2;
+  border-radius: 15px;
+  background: #ffffff;
+}
+
+.volunteer-map h3 {
+  margin: 0 0 15px;
+  color: #24496d;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.volunteer-map iframe {
+  display: block;
+  width: 100%;
+  height: 300px;
+  border: 0;
+  border-radius: 11px;
+}
+
+.volunteer-map a {
+  display: inline-flex;
+  margin-top: 14px;
+  padding: 9px 14px;
+  border: 1px solid #cfe5f0;
+  border-radius: 9px;
+  background: #eff7fb;
+  color: #2473a4;
+  font-size: 13px;
+  font-weight: 750;
+  text-decoration: none;
   transition: background 0.2s;
 }
 
-.volunteer-button:hover {
-  background: #526a81;
+.volunteer-map a:hover {
+  background: #e1f1f8;
 }
 
-.volunteer-requests-section h2 {
+.volunteer-requests-section {
+  margin-top: 38px;
+}
+
+.volunteer-requests-section > h2 {
   margin: 0 0 22px;
-  color: #343d49;
-  font-size: 24px;
+  color: #183b63;
+  font-size: 25px;
+  font-weight: 850;
 }
 
 .volunteer-requests-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  gap: 21px;
 }
 
 .volunteer-request-card {
-  padding: 24px;
+  min-width: 0;
+  padding: 25px;
+  border: 1px solid #e2ebf2;
+  border-radius: 18px;
   background: #ffffff;
-  border: 1px solid #e8eaed;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(30, 40, 55, 0.04);
+  box-shadow: 0 7px 22px rgba(33, 76, 120, 0.055);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.volunteer-request-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(33, 76, 120, 0.1);
 }
 
 .volunteer-request-card h3 {
-  margin: 0 0 12px;
-  color: #343d49;
-  font-size: 19px;
+  margin: 0 0 13px;
+  color: #183b63;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .volunteer-request-description {
   margin: 0 0 18px;
-  color: #626d79;
-  font-size: 15px;
-  line-height: 1.7;
+  color: #61748a;
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .volunteer-request-meta {
-  margin: 8px 0;
-  color: #737b86;
+  margin: 9px 0;
+  color: #8291a4;
   font-size: 13px;
-}
-
-.volunteer-request-card .volunteer-button {
-  margin-top: 14px;
-}
-
-.volunteer-message {
-  padding: 22px;
-  background: #ffffff;
-  border: 1px solid #e8eaed;
-  border-radius: 10px;
-  color: #737b86;
-}
-
-.volunteer-create-request {
-  margin-top: 34px;
-}
-
-@media (max-width: 800px) {
-  .volunteer-requests-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .volunteer-availability {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-}
-
-
-.volunteer-location-status {
-  margin-top: 14px;
-  padding: 12px 16px;
-  background: #f7f8fa;
-  border: 1px solid #e8eaed;
-  border-radius: 8px;
-}
-
-.volunteer-location-status p {
-  margin: 6px 0;
-  font-size: 14px;
-  color: #526a81;
-}
-
-.volunteer-location-details {
-  margin-top: 14px;
-}
-
-.volunteer-map {
-  margin-top: 18px;
-  padding: 18px;
-  background: #fff;
-  border: 1px solid #e8eaed;
-  border-radius: 10px;
-}
-
-.volunteer-map h3 {
-  margin: 0 0 14px;
-  color: #343d49;
-  font-size: 18px;
-}
-
-.volunteer-map iframe {
-  display: block;
-  border: 0;
-  border-radius: 8px;
-}
-
-.volunteer-map a {
-  display: inline-block;
-  margin-top: 12px;
-  color: #176d59;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.volunteer-map a:hover {
-  text-decoration: underline;
+  line-height: 1.6;
 }
 
 .volunteer-request-equipment {
-  margin: 14px 0 18px;
-  padding: 12px 16px;
-  background: #f3f6f8;
-  border: 1px solid #e1e7ec;
-  border-radius: 8px;
+  margin: 16px 0;
+  padding: 15px;
+  border: 1px solid #dceaf2;
+  border-radius: 12px;
+  background: #f5f9fc;
 }
 
 .volunteer-request-equipment strong {
   display: block;
-  margin-bottom: 8px;
-  color: #343d49;
-  font-size: 14px;
+  margin-bottom: 10px;
+  color: #365773;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .volunteer-request-equipment ul {
@@ -205,10 +231,92 @@
 }
 
 .volunteer-request-equipment li {
-  padding: 5px 10px;
-  background: #ffffff;
-  border: 1px solid #dce4ea;
+  padding: 6px 11px;
+  border: 1px solid #d7e8f1;
   border-radius: 20px;
-  color: #526a81;
-  font-size: 13px;
+  background: #ffffff;
+  color: #2473a4;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.volunteer-request-card .volunteer-button {
+  width: 100%;
+  margin-top: 17px;
+}
+
+.volunteer-message {
+  margin: 0 0 18px;
+  padding: 22px;
+  border: 1px solid #e2ebf2;
+  border-radius: 13px;
+  background: #ffffff;
+  color: #718198;
+  font-size: 14px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.volunteer-create-request {
+  display: flex;
+  justify-content: center;
+  margin-top: 35px;
+}
+
+.volunteer-create-request .volunteer-button {
+  min-width: 230px;
+  min-height: 49px;
+}
+
+.volunteer-page button:focus-visible {
+  outline: 3px solid rgba(32, 166, 181, 0.35);
+  outline-offset: 3px;
+}
+
+@media (max-width: 800px) {
+  .volunteer-page {
+    padding: 30px 20px;
+  }
+
+  .volunteer-requests-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .volunteer-availability,
+  .volunteer-notifications {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 23px;
+  }
+
+  .volunteer-availability > .volunteer-button,
+  .volunteer-notifications > .volunteer-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 500px) {
+  .volunteer-page {
+    padding: 25px 14px;
+  }
+
+  .volunteer-header h1 {
+    font-size: 27px;
+  }
+
+  .volunteer-request-card {
+    padding: 20px;
+  }
+
+  .volunteer-map {
+    padding: 13px;
+  }
+
+  .volunteer-map iframe {
+    height: 250px;
+  }
+
+  .volunteer-create-request .volunteer-button {
+    width: 100%;
+  }
 }

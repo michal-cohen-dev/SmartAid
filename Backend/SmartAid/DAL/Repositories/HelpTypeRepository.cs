@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿
 using System.Collections.Generic;
 using System.Linq;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
-using Microsoft.EntityFrameworkCore;
 
 namespace DAL.Repositories
 {
@@ -31,6 +26,12 @@ namespace DAL.Repositories
                 .FirstOrDefault(h => h.Id == id);
         }
 
+        public bool IsInUse(int id)
+        {
+            return _context.HelpRequests.Any(r => r.HelpTypeId == id)
+                || _context.VolunteerHelpTypes.Any(v => v.HelpTypeId == id);
+        }
+
         public void Add(HelpType helpType)
         {
             _context.HelpTypes.Add(helpType);
@@ -44,8 +45,6 @@ namespace DAL.Repositories
             if (entity != null)
             {
                 entity.Name = helpType.Name;
-
-                _context.HelpTypes.Update(entity);
                 _context.SaveChanges();
             }
         }

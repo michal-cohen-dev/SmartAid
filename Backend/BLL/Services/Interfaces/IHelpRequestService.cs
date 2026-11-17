@@ -19,15 +19,27 @@ namespace BLL.Services.Interfaces
         List<HelpRequestDto> GetByUserId(int userId);
         List<HelpRequestDto> GetByVolunteerId(int userId);
 
-        int Add(HelpRequestPostDto helpRequestDto, int userId);
+        Task<int> Add(
+            HelpRequestPostDto helpRequestDto,
+            int userId,
+            CancellationToken cancellationToken = default);
+
         bool Update(int id, HelpRequestUpdateDto helpRequestDto, int userId);
         bool Delete(int id, int userId);
         bool IsOwner(int requestId, int userId);
         bool IsAssignedVolunteer(int requestId, int userId);
-        bool TryAssignToVolunteer(int requestId, int userId);
+        Task<bool> TryAssignToVolunteerAsync(
+     int requestId,
+     int userId,
+     CancellationToken cancellationToken = default);
         bool TryMarkInTreatment(int requestId, int userId);
         bool TryCompleteRequest(int requestId, int userId);
         bool TryRateCompletedRequest(int requestId, int userId, int rating);
-        bool TryCancelRequest(int requestId, int userId);
+        bool AdminCancelRequest(int requestId);
+        Task<bool> TryCancelRequestAsync(
+    int requestId,
+    int userId,
+    CancellationToken cancellationToken = default);
+
     }
 }

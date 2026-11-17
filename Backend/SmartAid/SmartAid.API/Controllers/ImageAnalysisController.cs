@@ -22,18 +22,42 @@ public class ImageAnalysisController : ControllerBase
     [HttpPost("analyze")]
     [Consumes("multipart/form-data")]
     public async Task<ActionResult<ImageAnalysisResultDto>> Analyze(
-    IFormFile image,
-    CancellationToken cancellationToken)
+        [FromForm] string? description,
+IFormFile? image,
+        CancellationToken cancellationToken)
     {
-        if (image == null || image.Length == 0)
+        bool hasDescription =
+            !string.IsNullOrWhiteSpace(description);
+
+        bool hasImage =
+            image != null && image.Length > 0;
+
+        if (!hasDescription && !hasImage)
         {
             return BadRequest(new
             {
-                message = "Please upload an image."
+                message = "יש להזין תיאור של הבעיה או להעלות תמונה."
             });
         }
 
-        var result = await _imageAnalysisService.AnalyzeImageAsync(
+        if (image != null && image.Length == 0)
+        {
+            return BadRequest(new
+            {
+                message = "הקובץ שהועלה ריק."
+            });
+        }
+
+        if (hasDescription && description!.Length > 1000)
+        {
+            return BadRequest(new
+            {
+                message = "תיאור הבעיה לא יכול לעלות על 1000 תווים."
+            });
+        }
+
+        var result = await _imageAnalysisService.AnalyzeAsync(
+            description,
             image,
             cancellationToken);
 

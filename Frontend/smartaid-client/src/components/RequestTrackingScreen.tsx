@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { apiRequest } from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import { createNotificationsConnection } from "../services/notifications";
 import "./RequestTrackingScreen.css";
 
 interface HelpRequest {
@@ -11,13 +13,25 @@ interface HelpRequest {
   createdAt: string;
   status: number;
   address: string;
+  latitude: number;
+  longitude: number;
   assignedVolunteerName?: string | null;
+  assignedVolunteerLatitude?: number | null;
+  assignedVolunteerLongitude?: number | null;
+  assignedVolunteerLastLocationUpdatedAt?: string | null;
+  estimatedArrivalSeconds?: number | null;
   rating?: number | null;
+}
+
+interface RequestUpdatedNotification {
+  helpRequestId?: number;
+  HelpRequestId?: number;
 }
 
 function RequestTrackingScreen() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { token } = useAuth();
 
   const [request, setRequest] = useState<HelpRequest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,68 +42,119 @@ function RequestTrackingScreen() {
   const [ratingLoading, setRatingLoading] = useState(false);
   const [ratingMessage, setRatingMessage] = useState("");
 
-useEffect(() => {
-  document.title = "מעקב אחר בקשת עזרה | SmartAid";
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelMessage, setCancelMessage] = useState("");
 
-  if (!id || !Number.isInteger(Number(id)) || Number(id) <= 0) {
-    setError("מזהה הבקשה אינו תקין.");
-    setLoading(false);
-    return;
-  }
+  useEffect(() => {
+    document.title = "מעקב אחר בקשת עזרה | SmartAid";
 
-  let isMounted = true;
-  let intervalId: number | undefined;
-
-  const loadRequest = async (showLoading = false) => {
-    if (showLoading) {
-      setLoading(true);
+    if (!id || !Number.isInteger(Number(id)) || Number(id) <= 0) {
+      setError("מזהה הבקשה אינו תקין.");
+      setLoading(false);
+      return;
     }
 
-    try {
-      const data = await apiRequest<HelpRequest>(
-        `/api/HelpRequests/${id}`
-      );
+    let isMounted = true;
+    let intervalId: number | undefined;
 
-      if (isMounted) {
-        setRequest(data);
-        setError("");
+    const loadRequest = async (showLoading = false) => {
+      if (showLoading) {
+        setLoading(true);
+      }
 
-        // מפסיקים לרענן כשהקריאה הסתיימה או בוטלה
-        if (data.status === 2 || data.status === 3) {
-          if (intervalId !== undefined) {
-            window.clearInterval(intervalId);
+      try {
+        const data = await apiRequest<HelpRequest>(
+          `/api/HelpRequests/${id}`
+        );
+
+        if (isMounted) {
+          setRequest(data);
+          setError("");
+
+          if (data.status === 2 || data.status === 3) {
+            if (intervalId !== undefined) {
+              window.clearInterval(intervalId);
+            }
           }
         }
+      } catch (err) {
+        if (isMounted) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "לא ניתן לטעון את פרטי הבקשה."
+          );
+        }
+      } finally {
+        if (isMounted && showLoading) {
+          setLoading(false);
+        }
       }
-    } catch (err) {
-      if (isMounted) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "לא ניתן לטעון את פרטי הבקשה."
+    };
+
+    // טעינה ראשונית
+    loadRequest(true);
+
+    // התחברות לעדכוני SignalR בזמן אמת
+    let connection:
+      | ReturnType<typeof createNotificationsConnection>
+      | undefined;
+
+    if (token) {
+      try {
+        connection = createNotificationsConnection(token);
+
+        const handleRequestUpdated = (
+          notification: RequestUpdatedNotification
+        ) => {
+          const updatedRequestId =
+            notification?.helpRequestId ??
+            notification?.HelpRequestId;
+
+          if (
+            isMounted &&
+            Number(updatedRequestId) === Number(id)
+          ) {
+            void loadRequest();
+          }
+        };
+
+        connection.on("RequestUpdated", handleRequestUpdated);
+
+connection.start().catch((connectionError: Error) => {
+          if (isMounted) {
+            console.error(
+              "שגיאה בהתחברות לעדכוני הבקשה:",
+              connectionError
+            );
+          }
+        });
+} catch (connectionError: unknown) {
+        console.error(
+          "לא ניתן ליצור חיבור SignalR:",
+          connectionError
         );
       }
-    } finally {
-      if (isMounted && showLoading) {
-        setLoading(false);
+    }
+
+    // רענון תקופתי נשאר לצורך עדכון מיקום המתנדב וזמן ההגעה
+    intervalId = window.setInterval(() => {
+      loadRequest();
+    }, 5000);
+
+    return () => {
+      isMounted = false;
+
+      if (intervalId !== undefined) {
+        window.clearInterval(intervalId);
       }
-    }
-  };
 
-  loadRequest(true);
-
-  intervalId = window.setInterval(() => {
-    loadRequest();
-  }, 5000);
-
-  return () => {
-    isMounted = false;
-
-    if (intervalId !== undefined) {
-      window.clearInterval(intervalId);
-    }
-  };
-}, [id]);
+      if (connection) {
+        connection.off("RequestUpdated");
+        void connection.stop();
+      }
+    };
+  }, [id, token]);
 
   const submitRating = async () => {
     if (!id || selectedRating < 1 || selectedRating > 5) {
@@ -125,6 +190,39 @@ useEffect(() => {
     }
   };
 
+  const cancelRequest = async () => {
+    if (!id || cancelLoading) return;
+
+    const confirmed = window.confirm(
+      "האם את בטוחה שברצונך לבטל את בקשת העזרה?"
+    );
+
+    if (!confirmed) return;
+
+    setCancelLoading(true);
+    setCancelMessage("");
+
+    try {
+      await apiRequest(`/api/HelpRequests/${id}/cancel`, {
+        method: "POST",
+      });
+
+      setRequest((previous) =>
+        previous ? { ...previous, status: 3 } : previous
+      );
+
+      setCancelMessage("בקשת העזרה בוטלה בהצלחה.");
+    } catch (err) {
+      setCancelMessage(
+        err instanceof Error
+          ? err.message
+          : "לא ניתן לבטל את הבקשה."
+      );
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
   const statusInfo: Record<
     number,
     { title: string; description: string; icon: string }
@@ -151,7 +249,7 @@ useEffect(() => {
     },
     4: {
       title: "המתנדב הגיע ומטפל בבקשה",
-      description: "המתנדב הגיע למקום והחל בטיפול בבקשת העזרה שלך.",
+      description: "המתנדב הגיע למקום והחל בטיפול בבקשת העזרה.",
       icon: "🙋",
     },
   };
@@ -172,6 +270,7 @@ useEffect(() => {
         <div className="tracking-container">
           <h2>לא ניתן להציג את המעקב</h2>
           <p>{error || "הבקשה לא נמצאה."}</p>
+
           <button onClick={() => navigate("/my-requests")}>
             חזרה לקריאות שלי
           </button>
@@ -187,6 +286,54 @@ useEffect(() => {
   };
 
   const isCancelled = request.status === 3;
+
+  const hasValidVolunteerCoordinates =
+    request.assignedVolunteerLatitude != null &&
+    request.assignedVolunteerLongitude != null &&
+    Number.isFinite(request.assignedVolunteerLatitude) &&
+    Number.isFinite(request.assignedVolunteerLongitude) &&
+    request.assignedVolunteerLatitude >= -90 &&
+    request.assignedVolunteerLatitude <= 90 &&
+    request.assignedVolunteerLongitude >= -180 &&
+    request.assignedVolunteerLongitude <= 180;
+
+  const showVolunteerMap =
+    (request.status === 1 || request.status === 4) &&
+    hasValidVolunteerCoordinates;
+
+  const volunteerMapUrl = showVolunteerMap
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${
+        request.assignedVolunteerLongitude! - 0.01
+      }%2C${
+        request.assignedVolunteerLatitude! - 0.01
+      }%2C${
+        request.assignedVolunteerLongitude! + 0.01
+      }%2C${
+        request.assignedVolunteerLatitude! + 0.01
+      }&layer=mapnik&marker=${
+        request.assignedVolunteerLatitude
+      }%2C${request.assignedVolunteerLongitude}`
+    : "";
+
+  const hasValidEta =
+    request.estimatedArrivalSeconds != null &&
+    Number.isFinite(request.estimatedArrivalSeconds) &&
+    request.estimatedArrivalSeconds >= 0;
+
+  const formatEta = (seconds: number) => {
+    if (seconds < 60) {
+      return "פחות מדקה";
+    }
+
+    if (seconds < 3600) {
+      return `${Math.ceil(seconds / 60)} דקות`;
+    }
+
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.ceil((seconds % 3600) / 60);
+
+    return `${hours} שעות ו-${minutes} דקות`;
+  };
 
   const timelineSteps = [
     {
@@ -251,6 +398,59 @@ useEffect(() => {
           </div>
         </div>
 
+        {(request.status === 1 || request.status === 4) && (
+          <>
+            {hasValidEta && (
+              <section className="tracking-eta-card">
+                <span className="tracking-eta-icon">⏱️</span>
+                <div>
+                  <span className="tracking-eta-label">
+                    זמן הגעה משוער
+                  </span>
+                  <h2>
+                    {formatEta(request.estimatedArrivalSeconds!)}
+                  </h2>
+                  <p>
+                    הזמן מחושב לפי מיקום המתנדב והתנועה בכבישים.
+                  </p>
+                </div>
+              </section>
+            )}
+
+            <section className="tracking-map-card">
+              <h2>מעקב אחר מיקום המתנדב</h2>
+
+              {hasValidVolunteerCoordinates ? (
+                <>
+                  <p>
+                    מיקום המתנדב מתעדכן אוטומטית במהלך הטיפול בבקשה.
+                  </p>
+
+                  <iframe
+                    title="מיקום המתנדב על המפה"
+                    src={volunteerMapUrl}
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                  />
+
+                  {request.assignedVolunteerLastLocationUpdatedAt && (
+                    <p className="tracking-location-update">
+                      עדכון מיקום אחרון:{" "}
+                      {new Date(
+                        request.assignedVolunteerLastLocationUpdatedAt
+                      ).toLocaleTimeString("he-IL")}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p>
+                  מיקום המתנדב עדיין לא התקבל. המפה תוצג כאשר המיקום יהיה זמין.
+                </p>
+              )}
+            </section>
+          </>
+        )}
+
         <section className="current-status-card">
           <span className="current-status-icon">
             {currentStatus.icon}
@@ -292,6 +492,27 @@ useEffect(() => {
                 </div>
               </div>
             ))}
+          </section>
+        )}
+
+        {request.status === 0 && (
+          <section className="cancel-request-section">
+            <button
+              type="button"
+              className="cancel-request-button"
+              onClick={cancelRequest}
+              disabled={cancelLoading}
+            >
+              {cancelLoading
+                ? "מבטלים את הבקשה..."
+                : "ביטול בקשת העזרה"}
+            </button>
+
+            {cancelMessage && (
+              <p className="cancel-request-message" role="status">
+                {cancelMessage}
+              </p>
+            )}
           </section>
         )}
 
@@ -355,28 +576,28 @@ useEffect(() => {
         )}
 
         {request.assignedVolunteerName && (
-  <section className="volunteer-info-card">
-    <div className="volunteer-info-icon">🙋</div>
+          <section className="volunteer-info-card">
+            <div className="volunteer-info-icon">🙋</div>
 
-    <div className="volunteer-info-content">
-      <span className="volunteer-info-label">
-        המתנדב שמטפל בבקשה שלך
-      </span>
+            <div className="volunteer-info-content">
+              <span className="volunteer-info-label">
+                המתנדב שמטפל בבקשה שלך
+              </span>
 
-      <h3>{request.assignedVolunteerName}</h3>
+              <h3>{request.assignedVolunteerName}</h3>
 
-      <p>
-        {request.status === 1
-          ? "המתנדב אישר את הבקשה ונמצא בדרכו אליך."
-          : request.status === 4
-          ? "המתנדב הגיע אליך ומטפל בבקשה."
-          : request.status === 2
-          ? "המתנדב השלים את הטיפול בבקשה."
-          : "המתנדב משויך לבקשת העזרה שלך."}
-      </p>
-    </div>
-  </section>
-)}
+              <p>
+                {request.status === 1
+                  ? "המתנדב אישר את הבקשה ונמצא בדרכו אליך."
+                  : request.status === 4
+                  ? "המתנדב הגיע אליך ומטפל בבקשה."
+                  : request.status === 2
+                  ? "המתנדב השלים את הטיפול בבקשה."
+                  : "המתנדב משויך לבקשת העזרה שלך."}
+              </p>
+            </div>
+          </section>
+        )}
 
         {isCancelled && (
           <div className="tracking-info">

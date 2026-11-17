@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using DTO;
 using BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
+using SmartAid.API.Extensions;
 
 namespace SmartAid.API.Controllers
 {
@@ -19,54 +19,37 @@ namespace SmartAid.API.Controllers
             _userService = userService;
         }
 
-        private int? GetCurrentUserId()
-        {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (int.TryParse(userIdClaim, out var currentUserId))
-                return currentUserId;
-
-            return null;
-        }
+        // פעולות משתמש רגיל
 
         [HttpGet("{id:int}")]
         public ActionResult<UserDto> GetById(int id)
         {
-            var currentUserId = GetCurrentUserId();
+            var currentUserId = User.GetUserId();
 
             if (currentUserId == null)
                 return Unauthorized();
 
-            var user = _userService.GetById(id, currentUserId.Value);
-
-            if (user == null)
-            {
-                return NotFound(new
-                {
-                    message = "User not found."
-                });
-            }
+            var user = _userService.GetById(
+                id,
+                currentUserId.Value);
 
             return Ok(user);
         }
 
         [HttpPut("{id:int}")]
-        public ActionResult Update(int id, [FromBody] UserUpdateDto userDto)
+        public ActionResult Update(
+            int id,
+            [FromBody] UserUpdateDto userDto)
         {
-            var currentUserId = GetCurrentUserId();
+            var currentUserId = User.GetUserId();
 
             if (currentUserId == null)
                 return Unauthorized();
 
-            var updated = _userService.Update(id, userDto, currentUserId.Value);
-
-            if (!updated)
-            {
-                return NotFound(new
-                {
-                    message = "User not found."
-                });
-            }
+            _userService.Update(
+                id,
+                userDto,
+                currentUserId.Value);
 
             return Ok(new
             {
@@ -77,20 +60,60 @@ namespace SmartAid.API.Controllers
         [HttpDelete("{id:int}")]
         public ActionResult Delete(int id)
         {
-            var currentUserId = GetCurrentUserId();
+            var currentUserId = User.GetUserId();
 
             if (currentUserId == null)
                 return Unauthorized();
 
-            var deleted = _userService.Delete(id, currentUserId.Value);
+            _userService.Delete(
+                id,
+                currentUserId.Value);
 
-            if (!deleted)
+            return Ok(new
             {
-                return NotFound(new
-                {
-                    message = "User not found."
-                });
-            }
+                message = "User deleted successfully."
+            });
+        }
+
+        // פעולות מנהל בלבד
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("admin")]
+        public ActionResult<List<UserDto>> GetAllForAdmin()
+        {
+            var users = _userService.GetAllForAdmin();
+
+            return Ok(users);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("admin/{id:int}")]
+        public ActionResult<UserDto> GetByIdForAdmin(int id)
+        {
+            var user = _userService.GetByIdForAdmin(id);
+
+            return Ok(user);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPut("admin/{id:int}")]
+        public ActionResult UpdateForAdmin(
+            int id,
+            [FromBody] UserUpdateDto userDto)
+        {
+            _userService.UpdateForAdmin(id, userDto);
+
+            return Ok(new
+            {
+                message = "User updated successfully."
+            });
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("admin/{id:int}")]
+        public ActionResult DeleteForAdmin(int id)
+        {
+            _userService.DeleteForAdmin(id);
 
             return Ok(new
             {

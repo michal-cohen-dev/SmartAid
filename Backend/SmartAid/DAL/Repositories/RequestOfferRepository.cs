@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿
+using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
@@ -31,27 +34,258 @@ namespace DAL.Repositories
                 .FirstOrDefault(ro => ro.Id == id);
         }
 
-        public void Add(RequestOffer requestOffer)
+        public List<RequestOffer> GetPendingByVolunteerId(int volunteerId)
         {
-            requestOffer.OfferedAt = DateTime.UtcNow;
-            _context.RequestOffers.Add(requestOffer);
-            _context.SaveChanges();
+            return _context.RequestOffers
+                .Where(ro =>
+                    ro.VolunteerId == volunteerId &&
+                    ro.Status == OfferStatus.Pending)
+                .ToList();
         }
 
-        public void Update(RequestOffer requestOffer)
+        public bool TryAddIfCapacityAvailable(
+            RequestOffer requestOffer,
+            int maxActiveOffers)
         {
-            _context.RequestOffers.Update(requestOffer);
-            _context.SaveChanges();
-        }
+            using var transaction = _context.Database.BeginTransaction(
+                IsolationLevel.Serializable);
 
-        public void Delete(int id)
-        {
-            var entity = _context.RequestOffers.Find(id);
-            if (entity != null)
+            var helpRequest = _context.HelpRequests
+                .FromSqlInterpolated(
+                    $"SELECT * FROM HelpRequests WITH (UPDLOCK, HOLDLOCK) WHERE Id = {requestOffer.HelpRequestId}")
+                .AsNoTracking()
+                .FirstOrDefault();
+
+            if (helpRequest == null ||
+                helpRequest.Status != RequestStatus.Open ||
+                helpRequest.AssignedVolunteerId != null)
             {
-                _context.RequestOffers.Remove(entity);
-                _context.SaveChanges();
+                transaction.Rollback();
+                return false;
             }
+
+            // אין ליצור הצעות נוספות אם כבר קיימת הצעה שהתקבלה.
+            bool alreadyAccepted = _context.RequestOffers
+                .Any(ro =>
+                    ro.HelpRequestId == requestOffer.HelpRequestId &&
+                    ro.Status == OfferStatus.Accepted);
+
+            if (alreadyAccepted)
+            {
+                transaction.Rollback();
+                return false;
+            }
+
+            // בדיקת הצעה קודמת לאותו מתנדב ולאותה קריאה.
+            var existingOffer = _context.RequestOffers
+                .FirstOrDefault(ro =>
+                    ro.HelpRequestId == requestOffer.HelpRequestId &&
+                    ro.VolunteerId == requestOffer.VolunteerId);
+
+            if (existingOffer != null)
+            {
+                // רק הצעה שפגה יכולה להיפתח מחדש.
+                // Declined נשאר חסום, כדי שמתנדב שביטל
+                // או דחה את ההצעה לא יקבל אותה שוב.
+                if (existingOffer.Status != OfferStatus.Expired)
+                {
+                    transaction.Rollback();
+                    return false;
+                }
+            }
+
+            // בדיקת מספר ההצעות הפעילות.
+            int activeOffersCount = _context.RequestOffers
+                .Count(ro =>
+                    ro.HelpRequestId == requestOffer.HelpRequestId &&
+                    ro.Status == OfferStatus.Pending);
+
+            if (activeOffersCount >= maxActiveOffers)
+            {
+                transaction.Rollback();
+                return false;
+            }
+
+            if (existingOffer != null)
+            {
+                // שימוש חוזר ברשומה קיימת שפג תוקפה.
+                existingOffer.Status = OfferStatus.Pending;
+                existingOffer.OfferedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                requestOffer.Status = OfferStatus.Pending;
+                requestOffer.OfferedAt = DateTime.UtcNow;
+
+                _context.RequestOffers.Add(requestOffer);
+            }
+
+            _context.SaveChanges();
+
+            transaction.Commit();
+            return true;
+        }
+
+        public bool TryDeclineOffer(int offerId, int volunteerId)
+        {
+            using var transaction = _context.Database.BeginTransaction(
+                IsolationLevel.Serializable);
+
+            var initialOffer = _context.RequestOffers
+                .AsNoTracking()
+                .FirstOrDefault(ro => ro.Id == offerId);
+
+            if (initialOffer == null)
+            {
+                transaction.Rollback();
+                return false;
+            }
+
+            var helpRequest = _context.HelpRequests
+                .FromSqlInterpolated(
+                    $"SELECT * FROM HelpRequests WITH (UPDLOCK, HOLDLOCK) WHERE Id = {initialOffer.HelpRequestId}")
+                .AsNoTracking()
+                .FirstOrDefault();
+
+            if (helpRequest == null ||
+                helpRequest.Status != RequestStatus.Open ||
+                helpRequest.AssignedVolunteerId != null)
+            {
+                transaction.Rollback();
+                return false;
+            }
+
+            var offer = _context.RequestOffers
+                .FromSqlInterpolated(
+                    $"SELECT * FROM RequestOffers WITH (UPDLOCK, HOLDLOCK) WHERE Id = {offerId}")
+                .FirstOrDefault();
+
+            if (offer == null ||
+                offer.VolunteerId != volunteerId ||
+                offer.Status != OfferStatus.Pending)
+            {
+                transaction.Rollback();
+                return false;
+            }
+
+            bool alreadyAccepted = _context.RequestOffers
+                .Any(ro =>
+                    ro.HelpRequestId == offer.HelpRequestId &&
+                    ro.Status == OfferStatus.Accepted);
+
+            if (alreadyAccepted)
+            {
+                transaction.Rollback();
+                return false;
+            }
+
+            offer.Status = OfferStatus.Declined;
+
+            _context.SaveChanges();
+            transaction.Commit();
+
+            return true;
+        }
+
+        public List<int> GetRequestIdsWithExpiredPendingOffers(
+            DateTime expirationTime)
+        {
+            return _context.RequestOffers
+                .Where(ro =>
+                    ro.Status == OfferStatus.Pending &&
+                    ro.OfferedAt <= expirationTime &&
+                    ro.HelpRequest.Status == RequestStatus.Open &&
+                    ro.HelpRequest.AssignedVolunteerId == null)
+                .Select(ro => ro.HelpRequestId)
+                .Distinct()
+                .ToList();
+        }
+
+        public int ExpirePendingOffersForRequest(
+            int helpRequestId,
+            DateTime expirationTime)
+        {
+            return _context.RequestOffers
+                .Where(ro =>
+                    ro.HelpRequestId == helpRequestId &&
+                    ro.Status == OfferStatus.Pending &&
+                    ro.OfferedAt <= expirationTime &&
+                    ro.HelpRequest.Status == RequestStatus.Open &&
+                    ro.HelpRequest.AssignedVolunteerId == null)
+                .ExecuteUpdate(setters =>
+                    setters.SetProperty(
+                        ro => ro.Status,
+                        OfferStatus.Expired));
+        }
+
+        public List<int> ExpirePendingOffers(DateTime expirationTime)
+        {
+            var expiredRequestIds = _context.RequestOffers
+                .Where(ro =>
+                    ro.Status == OfferStatus.Pending &&
+                    ro.OfferedAt <= expirationTime)
+                .Select(ro => ro.HelpRequestId)
+                .Distinct()
+                .ToList();
+
+            if (expiredRequestIds.Count == 0)
+                return expiredRequestIds;
+
+            _context.RequestOffers
+                .Where(ro =>
+                    ro.Status == OfferStatus.Pending &&
+                    ro.OfferedAt <= expirationTime)
+                .ExecuteUpdate(setters =>
+                    setters.SetProperty(
+                        ro => ro.Status,
+                        OfferStatus.Expired));
+
+            return expiredRequestIds;
+        }
+
+        public List<int> ExpirePendingOffersForVolunteerExceptRequest(
+            int volunteerId,
+            int acceptedRequestId)
+        {
+            using var transaction = _context.Database.BeginTransaction(
+                IsolationLevel.Serializable);
+
+            var offersToExpire = _context.RequestOffers
+                .Where(ro =>
+                    ro.VolunteerId == volunteerId &&
+                    ro.Status == OfferStatus.Pending &&
+                    ro.HelpRequestId != acceptedRequestId &&
+                    ro.HelpRequest.Status == RequestStatus.Open &&
+                    ro.HelpRequest.AssignedVolunteerId == null)
+                .ToList();
+
+            var affectedRequestIds = offersToExpire
+                .Select(ro => ro.HelpRequestId)
+                .Distinct()
+                .ToList();
+
+            foreach (var offer in offersToExpire)
+            {
+                offer.Status = OfferStatus.Expired;
+            }
+
+            if (offersToExpire.Count > 0)
+                _context.SaveChanges();
+
+            transaction.Commit();
+
+            return affectedRequestIds;
+        }
+
+        public List<int> GetOfferedVolunteerIdsForRequest(int helpRequestId)
+        {
+            // מחזיר את כל המתנדבים שכבר קיבלו הצעה בעבר.
+            // משמש את מנגנון שתי הדקות לזיהוי מתנדבים חדשים.
+            return _context.RequestOffers
+                .Where(ro => ro.HelpRequestId == helpRequestId)
+                .Select(ro => ro.VolunteerId)
+                .Distinct()
+                .ToList();
         }
     }
 }

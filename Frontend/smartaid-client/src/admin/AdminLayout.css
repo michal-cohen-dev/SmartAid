@@ -1,0 +1,262 @@
+
+.admin-layout {
+  --admin-navy: #17324d;
+  --admin-primary: #087f8c;
+  --admin-primary-dark: #066873;
+  --admin-bg: #f4f7fa;
+  --admin-surface: #ffffff;
+  --admin-muted: #718096;
+  --admin-border: #e3eaf0;
+  --admin-sidebar-width: 264px;
+
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  direction: rtl;
+  background: var(--admin-bg);
+  color: var(--admin-navy);
+  font-family: "Heebo", "Segoe UI", Arial, sans-serif;
+}
+
+.admin-sidebar {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: var(--admin-sidebar-width);
+  min-height: 100vh;
+  padding: 30px 18px;
+  overflow-y: auto;
+  color: #fff;
+  background: linear-gradient(180deg, #17324d 0%, #10283e 100%);
+  box-shadow: 4px 0 22px rgba(23, 50, 77, 0.10);
+}
+
+.admin-sidebar h2 {
+  margin: 0;
+  padding: 0 12px;
+  color: #fff;
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.admin-sidebar > p {
+  margin: 4px 12px 34px;
+  color: #b9cbd9;
+  font-size: 13px;
+}
+
+.admin-sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 48px;
+  padding: 11px 14px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  color: #d5e1ea;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.admin-nav-link > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  font-size: 19px;
+}
+
+.admin-nav-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.admin-nav-link.active {
+  color: #fff;
+  background: linear-gradient(100deg, #087f8c, #1199a3);
+  border-color: rgba(255, 255, 255, 0.13);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.admin-nav-link:focus-visible {
+  outline: 3px solid #72d5d8;
+  outline-offset: 3px;
+}
+
+.admin-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100vh;
+  margin-inline-start: var(--admin-sidebar-width);
+}
+
+.admin-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 82px;
+  padding: 16px 34px;
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid var(--admin-border);
+  box-shadow: 0 3px 15px rgba(23, 50, 77, 0.04);
+  backdrop-filter: blur(10px);
+}
+
+.admin-header h1 {
+  margin: 0;
+  color: var(--admin-navy);
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.admin-header > span {
+  margin-inline-start: auto;
+  color: var(--admin-muted);
+  font-size: 13px;
+}
+
+.admin-content {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  padding: 26px;
+}
+
+.admin-logout-button {
+  flex-shrink: 0;
+  border: 1px solid #f1c9c5;
+  border-radius: 9px;
+  padding: 9px 17px;
+  background: #fff5f4;
+  color: #c34235;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.admin-logout-button:hover {
+  background: #c34235;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.admin-logout-button:focus-visible {
+  outline: 3px solid #f5a69a;
+  outline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+  .admin-sidebar {
+    width: 220px;
+    padding-inline: 13px;
+  }
+
+  .admin-main {
+    margin-inline-start: 220px;
+  }
+
+  .admin-header {
+    padding-inline: 22px;
+  }
+
+  .admin-content {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 650px) {
+  .admin-layout {
+    flex-direction: column;
+  }
+
+  .admin-sidebar {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    min-height: auto;
+    padding: 13px 14px;
+    overflow: visible;
+  }
+
+  .admin-sidebar h2 {
+    padding-inline: 5px;
+    font-size: 22px;
+  }
+
+  .admin-sidebar > p {
+    margin: 0 5px 12px;
+    font-size: 12px;
+  }
+
+  .admin-sidebar nav {
+    flex-direction: row;
+    gap: 7px;
+    padding-bottom: 3px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .admin-nav-link {
+    flex: 0 0 auto;
+    min-height: 40px;
+    gap: 7px;
+    padding: 8px 11px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .admin-nav-link > span {
+    width: auto;
+    font-size: 16px;
+  }
+
+  .admin-main {
+    min-height: auto;
+    margin-inline-start: 0;
+  }
+
+  .admin-header {
+    position: relative;
+    min-height: 68px;
+    flex-wrap: wrap;
+    gap: 9px;
+    padding: 12px 15px;
+  }
+
+  .admin-header h1 {
+    font-size: 18px;
+  }
+
+  .admin-header > span {
+    display: none;
+  }
+
+  .admin-logout-button {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .admin-content {
+    padding: 12px;
+  }
+}

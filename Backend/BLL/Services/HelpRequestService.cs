@@ -10,6 +10,7 @@ using BLL.Services.Interfaces;
 using DAL.Entities;
 using DAL.Repositories.Interfaces;
 using DTO;
+using Microsoft.Extensions.Logging;
 
 namespace BLL.Services
 {
@@ -21,30 +22,33 @@ namespace BLL.Services
         private readonly IVolunteerMatchingService _volunteerMatchingService;
         private readonly IMapper _mapper;
         private readonly IImageService _imageService;
-        private readonly IRequestEquipmentRepository _requestEquipmentRepository;
         private readonly IEquipmentTypeRepository _equipmentTypeRepository;
         private readonly IHelpTypeRepository _helpTypeRepository;
+        private readonly IRequestOfferService _requestOfferService;
+        private readonly ILogger<HelpRequestService> _logger;
 
         public HelpRequestService(
             IHelpRequestRepository helpRequestRepository,
             IMapper mapper,
             IImageService imageService,
-            IRequestEquipmentRepository requestEquipmentRepository,
             IEquipmentTypeRepository equipmentTypeRepository,
             IHelpTypeRepository helpTypeRepository,
             IVolunteerService volunteerService,
             IVolunteerRepository volunteerRepository,
-            IVolunteerMatchingService volunteerMatchingService)
+            IVolunteerMatchingService volunteerMatchingService,
+            IRequestOfferService requestOfferService,
+            ILogger<HelpRequestService> logger)
         {
             _helpRequestRepository = helpRequestRepository;
             _mapper = mapper;
             _imageService = imageService;
-            _requestEquipmentRepository = requestEquipmentRepository;
             _equipmentTypeRepository = equipmentTypeRepository;
             _helpTypeRepository = helpTypeRepository;
             _volunteerService = volunteerService;
             _volunteerRepository = volunteerRepository;
             _volunteerMatchingService = volunteerMatchingService;
+            _requestOfferService = requestOfferService;
+            _logger = logger;
         }
 
         public List<HelpRequestDto> GetAll()
@@ -88,8 +92,21 @@ namespace BLL.Services
                     volunteer.Id,
                     cancellationToken);
 
+            var pendingOffers =
+                _requestOfferService.GetPendingByVolunteerId(volunteer.Id);
+
+            var pendingRequestIds = pendingOffers
+                .Select(offer => offer.HelpRequestId)
+                .ToList();
+
+            var eligibleRequests = matches
+                .Where(match =>
+                    pendingRequestIds.Contains(match.HelpRequest.Id))
+                .Select(match => match.HelpRequest)
+                .ToList();
+
             var fullDtos = _mapper.Map<List<HelpRequestDto>>(
-                matches.Select(match => match.HelpRequest).ToList());
+                eligibleRequests);
 
             return fullDtos.Select(request => new HelpRequestPreviewDto
             {
@@ -109,7 +126,23 @@ namespace BLL.Services
             if (request == null)
                 return null;
 
-            return _mapper.Map<HelpRequestDto>(request);
+            var dto = _mapper.Map<HelpRequestDto>(request);
+
+            if (request.AssignedVolunteerId.HasValue)
+            {
+                var volunteer = _volunteerRepository.GetById(
+                    request.AssignedVolunteerId.Value);
+
+                if (volunteer != null)
+                {
+                    dto.AssignedVolunteerLatitude = volunteer.Latitude;
+                    dto.AssignedVolunteerLongitude = volunteer.Longitude;
+                    dto.AssignedVolunteerLastLocationUpdatedAt =
+                        volunteer.LastLocationUpdatedAt;
+                }
+            }
+
+            return dto;
         }
 
         public bool IsOwner(int requestId, int userId)
@@ -133,8 +166,13 @@ namespace BLL.Services
             return request.AssignedVolunteerId == volunteer.Id;
         }
 
-        public int Add(HelpRequestPostDto helpRequestDto, int userId)
+        public async Task<int> Add(
+            HelpRequestPostDto helpRequestDto,
+            int userId,
+            CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var equipmentTypeIds = helpRequestDto.RequiredEquipmentTypeIds
                 .Distinct()
                 .ToList();
@@ -158,6 +196,7 @@ namespace BLL.Services
             }
 
             var request = _mapper.Map<HelpRequest>(helpRequestDto);
+
             request.UserId = userId;
             request.HelpTypeId = helpRequestDto.HelpTypeId;
 
@@ -167,20 +206,15 @@ namespace BLL.Services
             {
                 if (helpRequestDto.ImageFile != null)
                 {
-                    savedImageName = _imageService.Save(helpRequestDto.ImageFile);
+                    savedImageName = _imageService.Save(
+                        helpRequestDto.ImageFile);
+
                     request.ImageName = savedImageName;
                 }
 
-                _helpRequestRepository.Add(request);
-
-                foreach (var equipmentTypeId in equipmentTypeIds)
-                {
-                    _requestEquipmentRepository.Add(new RequestEquipment
-                    {
-                        HelpRequestId = request.Id,
-                        EquipmentTypeId = equipmentTypeId
-                    });
-                }
+                _helpRequestRepository.AddWithEquipment(
+                    request,
+                    equipmentTypeIds);
             }
             catch
             {
@@ -199,6 +233,24 @@ namespace BLL.Services
                 throw;
             }
 
+            try
+            {
+                await _requestOfferService.CreateOffersForRequestAsync(
+                    request.Id,
+                    cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to create offers for help request {RequestId}.",
+                    request.Id);
+            }
+
             return request.Id;
         }
 
@@ -211,6 +263,13 @@ namespace BLL.Services
 
             if (existingRequest == null)
                 throw new NotFoundException("Help request not found.");
+
+            if (existingRequest.Status != RequestStatus.Open ||
+                existingRequest.AssignedVolunteerId != null)
+            {
+                throw new BusinessRuleException(
+                    "A help request can only be edited while it is open and has not been assigned to a volunteer.");
+            }
 
             var equipmentTypeIds = helpRequestDto.RequiredEquipmentTypeIds
                 .Distinct()
@@ -225,13 +284,6 @@ namespace BLL.Services
                 }
             }
 
-            existingRequest.Title = helpRequestDto.Title;
-            existingRequest.Description = helpRequestDto.Description;
-            existingRequest.Latitude = helpRequestDto.Latitude;
-            existingRequest.Longitude = helpRequestDto.Longitude;
-            existingRequest.Address = helpRequestDto.Address;
-            existingRequest.AddressNotes = helpRequestDto.AddressNotes;
-
             var helpType = _helpTypeRepository.GetById(
                 helpRequestDto.HelpTypeId);
 
@@ -241,52 +293,78 @@ namespace BLL.Services
                     $"Help type with ID {helpRequestDto.HelpTypeId} does not exist.");
             }
 
+            existingRequest.Title = helpRequestDto.Title;
+            existingRequest.Description = helpRequestDto.Description;
+            existingRequest.Latitude = helpRequestDto.Latitude;
+            existingRequest.Longitude = helpRequestDto.Longitude;
+            existingRequest.Address = helpRequestDto.Address;
+            existingRequest.AddressNotes = helpRequestDto.AddressNotes;
             existingRequest.HelpTypeId = helpRequestDto.HelpTypeId;
 
-            var existingEquipments =
-                _requestEquipmentRepository.GetByHelpRequestId(id);
-
-            foreach (var equipment in existingEquipments)
-            {
-                _requestEquipmentRepository.Delete(equipment.Id);
-            }
-
-            foreach (var equipmentTypeId in equipmentTypeIds)
-            {
-                _requestEquipmentRepository.Add(new RequestEquipment
-                {
-                    HelpRequestId = id,
-                    EquipmentTypeId = equipmentTypeId
-                });
-            }
-
-            _helpRequestRepository.Update(existingRequest);
-
-            return true;
+            return _helpRequestRepository.TryUpdateWithEquipment(
+                existingRequest,
+                userId,
+                equipmentTypeIds);
         }
 
         public bool Delete(int id, int userId)
         {
-            var existingRequest = _helpRequestRepository.GetOwned(id, userId);
-
-            if (existingRequest == null)
-                return false;
-
-            _helpRequestRepository.Delete(id);
-
-            return true;
+            return _helpRequestRepository.TryCancelRequest(
+                id,
+                userId,
+                cancelledByVolunteer: false);
         }
 
-        public bool TryAssignToVolunteer(int requestId, int userId)
+        public async Task<bool> TryAssignToVolunteerAsync(
+    int requestId,
+    int userId,
+    CancellationToken cancellationToken = default)
         {
             var volunteer = _volunteerService.GetByUserId(userId);
 
             if (volunteer == null || !volunteer.IsActive)
                 return false;
 
-            return _helpRequestRepository.TryAssignToVolunteer(
+            var eligibleVolunteers =
+                await _volunteerMatchingService.GetEligibleVolunteersAsync(
+                    requestId,
+                    cancellationToken);
+
+            // בודקים כמה מתנדבים מתאימים קיימים מלבד המתנדב הנוכחי.
+            int alternativeVolunteersCount = eligibleVolunteers
+                .Count(match => match.Volunteer.Id != volunteer.Id);
+
+            // אם יש פחות מחמישה מתנדבים חלופיים,
+            // מאפשרים לקבל גם הצעה שעברו עליה יותר משתי דקות.
+            bool allowExpiredOffer = alternativeVolunteersCount < 5;
+
+            bool assigned = _helpRequestRepository.TryAssignToVolunteer(
                 requestId,
-                volunteer.Id);
+                volunteer.Id,
+                allowExpiredOffer);
+
+            if (!assigned)
+                return false;
+
+            try
+            {
+                await _requestOfferService
+                    .ReassignPendingOffersAfterVolunteerAssignmentAsync(
+                        volunteer.Id,
+                        requestId,
+                        cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Volunteer {VolunteerId} was assigned to request {RequestId}, " +
+                    "but redistributing the volunteer's other offers failed.",
+                    volunteer.Id,
+                    requestId);
+            }
+
+            return true;
         }
 
         public bool TryMarkInTreatment(int requestId, int userId)
@@ -339,13 +417,25 @@ namespace BLL.Services
                 rating);
         }
 
-        public bool TryCancelRequest(int requestId, int userId)
+
+
+        public bool AdminCancelRequest(int requestId)
+        {
+            return _helpRequestRepository.TryAdminCancelRequest(requestId);
+        }
+
+
+        public async Task<bool> TryCancelRequestAsync(
+    int requestId,
+    int userId,
+    CancellationToken cancellationToken = default)
         {
             var request = _helpRequestRepository.GetById(requestId);
 
             if (request == null)
                 return false;
 
+            // ביטול על ידי הפונה – נשאר ללא שינוי
             if (request.UserId == userId)
             {
                 return _helpRequestRepository.TryCancelRequest(
@@ -372,9 +462,25 @@ namespace BLL.Services
             if (!cancelled)
                 return false;
 
+            // הורדת ציון האמינות נשארת
             _volunteerService.DecreaseReliabilityScore(volunteer.Id);
 
             transaction.Commit();
+
+            // חיפוש מתנדבים חדשים לקריאה
+            try
+            {
+                await _requestOfferService.CreateOffersForRequestAsync(
+                    requestId,
+                    CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to create new offers for request {RequestId} after volunteer cancellation.",
+                    requestId);
+            }
 
             return true;
         }

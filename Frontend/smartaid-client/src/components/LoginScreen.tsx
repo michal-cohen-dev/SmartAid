@@ -4,6 +4,37 @@ import { Link, useNavigate } from "react-router-dom";
 import { apiRequest, type AuthResponse } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import "./LoginScreen.css";
+import { validateEmail } from "../utils/validation";
+
+function getUserRole(token: string): string | null {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+
+    const base64 = payload
+      .replace(/-/g, "+")
+      .replace(/_/g, "/")
+      .padEnd(Math.ceil(payload.length / 4) * 4, "=");
+
+    const binary = atob(base64);
+    const bytes = Uint8Array.from(
+      binary,
+      (character) => character.charCodeAt(0)
+    );
+
+    const decoded = JSON.parse(
+      new TextDecoder().decode(bytes)
+    );
+
+    return (
+      decoded.role ??
+      decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ??
+      null
+    );
+  } catch {
+    return null;
+  }
+}
 
 function LoginScreen() {
   const navigate = useNavigate();
@@ -22,11 +53,18 @@ function LoginScreen() {
     if (loading) return;
 
     setError("");
+    
+const emailError = validateEmail(email);
 
-    if (!email.trim() || !password) {
-      setError("יש למלא כתובת אימייל וסיסמה.");
-      return;
-    }
+if (emailError) {
+  setError(emailError);
+  return;
+}
+
+if (!password) {
+  setError("יש להזין סיסמה.");
+  return;
+}
 
     try {
       setLoading(true);
@@ -83,11 +121,15 @@ function LoginScreen() {
           }
         })();
 
-      if (decodedIsVolunteer) {
-        navigate("/volunteer");
-      } else {
-        navigate("/requester");
-      }
+const role = getUserRole(response.token);
+
+if (role?.toLowerCase() === "admin") {
+  navigate("/admin");
+} else if (decodedIsVolunteer) {
+  navigate("/volunteer");
+} else {
+  navigate("/requester");
+}
 
     } catch (err) {
       setError(

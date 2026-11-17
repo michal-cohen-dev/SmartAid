@@ -22,6 +22,14 @@ import ProfileScreen from './components/ProfileScreen';
 
 import ProtectedRoute from './routes/ProtectedRoute';
 
+import AdminLayout from './admin/AdminLayout';
+import AdminDashboard from './admin/AdminDashboard';
+import AdminUsers from './admin/AdminUsers';
+import AdminVolunteers from './admin/AdminVolunteers';
+import AdminRequests from './admin/AdminRequests';
+import AdminEquipment from './admin/AdminEquipment';
+import AdminHelpTypes from './admin/AdminHelpTypes';
+
 function App() {
   return (
     <Routes>
@@ -30,26 +38,7 @@ function App() {
       <Route path="/login" element={<LoginScreen />} />
       <Route path="/register" element={<RegistrationScreen />} />
 
-      {/* מסכים למתנדבים בלבד */}
-      <Route
-        path="/volunteer/accepted-requests"
-        element={
-          <ProtectedRoute requireVolunteer>
-            <VolunteerAcceptedRequestsScreen />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/volunteer/completed-requests"
-        element={
-          <ProtectedRoute requireVolunteer>
-            <VolunteerCompletedRequestsScreen />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* כל המסכים הפנימיים דורשים התחברות */}
+      {/* מסכים פנימיים */}
       <Route
         element={
           <ProtectedRoute>
@@ -86,6 +75,24 @@ function App() {
         />
 
         <Route
+          path="/volunteer/accepted-requests"
+          element={
+            <ProtectedRoute requireVolunteer>
+              <VolunteerAcceptedRequestsScreen />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/volunteer/completed-requests"
+          element={
+            <ProtectedRoute requireVolunteer>
+              <VolunteerCompletedRequestsScreen />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/request-details/:id"
           element={
             <ProtectedRoute requireVolunteer>
@@ -95,40 +102,31 @@ function App() {
         />
 
         {/* מסכי משתמש */}
-        <Route
-          path="/volunteer-registration"
-          element={<VolunteerReg />}
-        />
+        <Route path="/volunteer-registration" element={<VolunteerReg />} />
+        <Route path="/requester" element={<RequesterHomeScreen />} />
+        <Route path="/request" element={<CreateRequestScreen />} />
+        <Route path="/suggestions" element={<AISuggestionsScreen />} />
+        <Route path="/suggestions/:id" element={<AISuggestionsScreen />} />
+        <Route path="/request-tracking/:id" element={<RequestTrackingScreen />} />
+        <Route path="/my-requests" element={<MyRequestsScreen />} />
+        <Route path="/profile" element={<ProfileScreen />} />
+      </Route>
 
-        <Route
-          path="/requester"
-          element={<RequesterHomeScreen />}
-        />
-
-        <Route
-          path="/request"
-          element={<CreateRequestScreen />}
-        />
-
-        <Route
-          path="/suggestions/:id"
-          element={<AISuggestionsScreen />}
-        />
-
-        <Route
-          path="/request-tracking/:id"
-          element={<RequestTrackingScreen />}
-        />
-
-        <Route
-          path="/my-requests"
-          element={<MyRequestsScreen />}
-        />
-
-        <Route
-          path="/profile"
-          element={<ProfileScreen />}
-        />
+      {/* מסכי מנהל */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="volunteers" element={<AdminVolunteers />} />
+        <Route path="requests" element={<AdminRequests />} />
+        <Route path="equipment" element={<AdminEquipment />} />
+        <Route path="help-types" element={<AdminHelpTypes />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />

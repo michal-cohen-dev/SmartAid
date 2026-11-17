@@ -12,7 +12,10 @@ function AppLayout() {
 
   
 
-  const { isVolunteer: hasVolunteerRole } = useAuth();
+const {
+  isVolunteer: hasVolunteerRole,
+  logout,
+} = useAuth();
 
   const isVolunteerPage =
     location.pathname === "/" ||
@@ -55,6 +58,12 @@ function AppLayout() {
     setIsProfileMenuOpen(false);
     navigate(path);
   }
+
+function handleLogout() {
+  setIsProfileMenuOpen(false);
+  logout();
+  navigate("/login", { replace: true });
+}
 
   return (
     <div className="app-layout" dir="rtl">
@@ -386,8 +395,19 @@ function AppLayout() {
                 )}
 
                 <div className="profile-dropdown-footer">
-                  SmartAid · עזרה חכמה. קהילה חזקה.
-                </div>
+  SmartAid · עזרה חכמה. קהילה חזקה.
+</div>
+
+<button
+  type="button"
+  className="profile-menu-item"
+  onClick={handleLogout}
+>
+  <span className="menu-item-icon orange">
+    ↪
+  </span>
+  <span>התנתקות מהמערכת</span>
+</button>
               </div>
             )}
           </div>

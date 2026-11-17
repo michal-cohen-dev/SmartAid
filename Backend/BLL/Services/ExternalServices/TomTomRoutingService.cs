@@ -32,9 +32,6 @@ namespace BLL.Services.ExternalServices
                 ?? throw new InvalidOperationException(
                     "TomTom API key is missing. Configure TomTom:ApiKey.");
 
-            Console.WriteLine(
-                $"TomTom API key loaded: {!string.IsNullOrWhiteSpace(_apiKey)}");
-
             if (string.IsNullOrWhiteSpace(_apiKey))
             {
                 throw new InvalidOperationException(
@@ -178,19 +175,56 @@ namespace BLL.Services.ExternalServices
                 JsonOptions,
                 cancellationToken);
 
+            var responseBody = await response.Content.ReadAsStringAsync(
+                cancellationToken);
+
+            var contentType =
+                response.Content.Headers.ContentType?.MediaType;
+
+            var responsePreview = responseBody.Length > 500
+                ? responseBody[..500]
+                : responseBody;
+
             if (!response.IsSuccessStatusCode)
             {
                 throw new HttpRequestException(
-                    $"TomTom request failed. HTTP status: " +
-                    $"{(int)response.StatusCode} ({response.StatusCode}).",
+                    $"TomTom request failed. " +
+                    $"HTTP: {(int)response.StatusCode} ({response.StatusCode}). " +
+                    $"Content-Type: {contentType ?? "missing"}. " +
+                    $"Response preview: {responsePreview}",
                     null,
                     response.StatusCode);
             }
 
-            var matrixResponse =
-                await response.Content.ReadFromJsonAsync<TomTomMatrixResponse>(
-                    JsonOptions,
-                    cancellationToken);
+            if (string.IsNullOrWhiteSpace(contentType) ||
+                !contentType.Contains(
+                    "json",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"TomTom returned a non-JSON response. " +
+                    $"HTTP: {(int)response.StatusCode} ({response.StatusCode}). " +
+                    $"Content-Type: {contentType ?? "missing"}. " +
+                    $"Response preview: {responsePreview}");
+            }
+
+            TomTomMatrixResponse? matrixResponse;
+
+            try
+            {
+                matrixResponse =
+                    JsonSerializer.Deserialize<TomTomMatrixResponse>(
+                        responseBody,
+                        JsonOptions);
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidOperationException(
+                    $"TomTom returned invalid JSON. " +
+                    $"HTTP: {(int)response.StatusCode}. " +
+                    $"Response preview: {responsePreview}",
+                    ex);
+            }
 
             if (matrixResponse?.Data == null)
             {

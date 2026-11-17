@@ -1,9 +1,13 @@
-﻿
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using DTO;
 using BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
+using SmartAid.API.Services;
+using Microsoft.AspNetCore.SignalR;
+using SmartAid.API.Hubs;
+using SmartAid.API.Extensions;
 
 namespace SmartAid.API.Controllers
 {
@@ -13,16 +17,50 @@ namespace SmartAid.API.Controllers
     public class HelpRequestsController : ControllerBase
     {
         private readonly IHelpRequestService _helpRequestService;
+        private readonly EstimatedArrivalService _estimatedArrivalService;
+        private readonly IHubContext<NotificationsHub> _hubContext;
 
-        public HelpRequestsController(IHelpRequestService helpRequestService)
+        public HelpRequestsController(
+            IHelpRequestService helpRequestService,
+            EstimatedArrivalService estimatedArrivalService,
+            IHubContext<NotificationsHub> hubContext)
         {
             _helpRequestService = helpRequestService;
+            _estimatedArrivalService = estimatedArrivalService;
+            _hubContext = hubContext;
         }
 
+        private async Task NotifyRequestUpdatedAsync(
+            int requestId,
+            int? ownerUserId = null,
+            int? volunteerId = null)
+        {
+            var request = _helpRequestService.GetById(requestId);
 
+            var requesterId = ownerUserId ?? request?.UserId;
+            var assignedVolunteerId =
+                volunteerId ?? request?.AssignedVolunteerId;
 
+            var notification = new
+            {
+                HelpRequestId = requestId,
+                Status = request?.Status
+            };
 
+            if (requesterId.HasValue)
+            {
+                await _hubContext.Clients
+                    .Group($"user:{requesterId.Value}")
+                    .SendAsync("RequestUpdated", notification);
+            }
 
+            if (assignedVolunteerId.HasValue)
+            {
+                await _hubContext.Clients
+                    .Group($"volunteer:{assignedVolunteerId.Value}")
+                    .SendAsync("RequestUpdated", notification);
+            }
+        }
 
         [Authorize(Roles = "Admin")]
         [HttpGet]
@@ -31,73 +69,61 @@ namespace SmartAid.API.Controllers
             return Ok(_helpRequestService.GetAll());
         }
 
-
-
-
         [HttpGet("open")]
         public async Task<ActionResult<IEnumerable<HelpRequestPreviewDto>>> GetOpenForVolunteer(
-     CancellationToken cancellationToken)
+            CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
             var requests = await _helpRequestService.GetOpenForVolunteerAsync(
-                userId,
+                userId.Value,
                 cancellationToken);
 
             return Ok(requests);
         }
 
-
-
-
-
-        [Authorize]
         [HttpGet("my")]
         public IActionResult GetMyRequests()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out int userId))
-            {
+            if (userId == null)
                 return Unauthorized();
-            }
 
-            var requests = _helpRequestService.GetByUserId(userId);
-
-            return Ok(requests);
+            return Ok(_helpRequestService.GetByUserId(userId.Value));
         }
 
         [HttpGet("volunteer/my")]
         public IActionResult GetMyVolunteerRequests()
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
-            var requests = _helpRequestService.GetByVolunteerId(userId);
-
-            return Ok(requests);
+            return Ok(_helpRequestService.GetByVolunteerId(userId.Value));
         }
 
-
-
         [HttpGet("{id}")]
-        public ActionResult<HelpRequestDto> GetById(int id)
+        public async Task<ActionResult<HelpRequestDto>> GetById(
+            int id,
+            CancellationToken cancellationToken)
         {
             if (!User.IsInRole("Admin"))
             {
-                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var userId = User.GetUserId();
 
-                if (!int.TryParse(userIdClaim, out var userId))
+                if (userId == null)
                     return Unauthorized();
 
-                bool isOwner = _helpRequestService.IsOwner(id, userId);
+                bool isOwner =
+                    _helpRequestService.IsOwner(id, userId.Value);
+
                 bool isAssignedVolunteer =
-                    _helpRequestService.IsAssignedVolunteer(id, userId);
+                    _helpRequestService.IsAssignedVolunteer(id, userId.Value);
 
                 if (!isOwner && !isAssignedVolunteer)
                     return NotFound();
@@ -113,22 +139,29 @@ namespace SmartAid.API.Controllers
                 });
             }
 
+            request.EstimatedArrivalSeconds =
+                await _estimatedArrivalService.GetEstimatedArrivalSecondsAsync(
+                    request,
+                    cancellationToken);
+
             return Ok(request);
         }
 
-
-
         [HttpPost]
         [Consumes("multipart/form-data")]
-        public ActionResult Add([FromForm] HelpRequestPostDto helpRequestDto)
+        public async Task<ActionResult> Add(
+            [FromForm] HelpRequestPostDto helpRequestDto,
+            CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
-            // שמירת הבקשה וקבלת המזהה שנוצר
-            var requestId = _helpRequestService.Add(helpRequestDto, userId);
+            var requestId = await _helpRequestService.Add(
+                helpRequestDto,
+                userId.Value,
+                cancellationToken);
 
             return Ok(new
             {
@@ -137,16 +170,20 @@ namespace SmartAid.API.Controllers
             });
         }
 
-
         [HttpPut("{id}")]
-        public ActionResult Update(int id, [FromBody] HelpRequestUpdateDto helpRequestDto)
+        public ActionResult Update(
+            int id,
+            [FromBody] HelpRequestUpdateDto helpRequestDto)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
-            var updated = _helpRequestService.Update(id, helpRequestDto, userId);
+            var updated = _helpRequestService.Update(
+                id,
+                helpRequestDto,
+                userId.Value);
 
             if (!updated)
             {
@@ -162,42 +199,90 @@ namespace SmartAid.API.Controllers
             });
         }
 
-        [HttpDelete("{id}")]
-        public ActionResult Delete(int id)
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            if (!int.TryParse(userIdClaim, out var userId))
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("{id}/admin-cancel")]
+        public async Task<IActionResult> AdminCancel(int id)
+        {
+            var requestBeforeCancel = _helpRequestService.GetById(id);
+
+            if (requestBeforeCancel == null)
+            {
+                return NotFound(new
+                {
+                    message = "הקריאה לא נמצאה."
+                });
+            }
+
+            bool cancelled =
+                _helpRequestService.AdminCancelRequest(id);
+
+            if (!cancelled)
+            {
+                return Conflict(new
+                {
+                    message = "לא ניתן לבטל קריאה שכבר הושלמה או בוטלה."
+                });
+            }
+
+            await NotifyRequestUpdatedAsync(
+                id,
+                requestBeforeCancel.UserId,
+                requestBeforeCancel.AssignedVolunteerId);
+
+            return Ok(new
+            {
+                message = "הקריאה בוטלה בהצלחה על ידי המנהל."
+            });
+        }
+
+
+
+
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> Delete(int id)
+        {
+            var requestBeforeDelete = _helpRequestService.GetById(id);
+
+            var userId = User.GetUserId();
+
+            if (userId == null)
                 return Unauthorized();
 
-            var deleted = _helpRequestService.Delete(id, userId);
+            var deleted = _helpRequestService.Delete(id, userId.Value);
 
             if (!deleted)
             {
                 return NotFound(new
                 {
-                    message = "Help request not found."
+                    message = "Request not found."
                 });
             }
 
+            await NotifyRequestUpdatedAsync(
+                id,
+                requestBeforeDelete?.UserId,
+                requestBeforeDelete?.AssignedVolunteerId);
+
             return Ok(new
             {
-                message = "Help request deleted successfully."
+                message = "Help request cancelled successfully."
             });
         }
 
-
         [HttpPost("{id}/accept")]
-        public ActionResult AcceptRequest(int id)
+        public async Task<ActionResult> AcceptRequest(int id)
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
-            var accepted = _helpRequestService.TryAssignToVolunteer(
-                id,
-                userId);
+            var accepted = await _helpRequestService.TryAssignToVolunteerAsync(
+     id,
+     userId.Value,
+     HttpContext.RequestAborted);
 
             if (!accepted)
             {
@@ -207,6 +292,8 @@ namespace SmartAid.API.Controllers
                 });
             }
 
+            await NotifyRequestUpdatedAsync(id);
+
             return Ok(new
             {
                 message = "הבקשה הוקצתה אליך בהצלחה."
@@ -214,16 +301,16 @@ namespace SmartAid.API.Controllers
         }
 
         [HttpPost("{id}/arrive")]
-        public ActionResult MarkArrived(int id)
+        public async Task<ActionResult> MarkArrived(int id)
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
             var marked = _helpRequestService.TryMarkInTreatment(
                 id,
-                userId);
+                userId.Value);
 
             if (!marked)
             {
@@ -233,6 +320,8 @@ namespace SmartAid.API.Controllers
                 });
             }
 
+            await NotifyRequestUpdatedAsync(id);
+
             return Ok(new
             {
                 message = "הגעתך סומנה בהצלחה."
@@ -240,16 +329,16 @@ namespace SmartAid.API.Controllers
         }
 
         [HttpPost("{id}/complete")]
-        public ActionResult CompleteRequest(int id)
+        public async Task<ActionResult> CompleteRequest(int id)
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
             var completed = _helpRequestService.TryCompleteRequest(
                 id,
-                userId);
+                userId.Value);
 
             if (!completed)
             {
@@ -259,26 +348,27 @@ namespace SmartAid.API.Controllers
                 });
             }
 
+            await NotifyRequestUpdatedAsync(id);
+
             return Ok(new
             {
                 message = "הטיפול הסתיים בהצלחה."
             });
         }
 
-
         [HttpPost("{id}/rate")]
         public ActionResult RateRequest(
-    int id,
-    [FromBody] RateHelpRequestDto ratingDto)
+            int id,
+            [FromBody] RateHelpRequestDto ratingDto)
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
             var rated = _helpRequestService.TryRateCompletedRequest(
                 id,
-                userId,
+                userId.Value,
                 ratingDto.Rating);
 
             if (!rated)
@@ -296,23 +386,32 @@ namespace SmartAid.API.Controllers
         }
 
         [HttpPost("{id}/cancel")]
-        public IActionResult Cancel(int id)
+        public async Task<IActionResult> Cancel(
+     int id,
+     CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var requestBeforeCancel = _helpRequestService.GetById(id);
 
-            if (userIdClaim == null ||
-                !int.TryParse(userIdClaim.Value, out int userId))
-            {
+            var userId = User.GetUserId();
+
+            if (userId == null)
                 return Unauthorized();
-            }
 
-            bool cancelled = _helpRequestService.TryCancelRequest(id, userId);
+            bool cancelled = await _helpRequestService.TryCancelRequestAsync(
+                id,
+                userId.Value,
+                cancellationToken);
 
             if (!cancelled)
             {
                 return BadRequest(
                     "לא ניתן לבטל את הבקשה. ייתכן שהיא כבר בוטלה או שהמשתמש אינו מורשה לבטל אותה.");
             }
+
+            await NotifyRequestUpdatedAsync(
+                id,
+                requestBeforeCancel?.UserId,
+                requestBeforeCancel?.AssignedVolunteerId);
 
             return Ok("הבקשה בוטלה בהצלחה.");
         }
