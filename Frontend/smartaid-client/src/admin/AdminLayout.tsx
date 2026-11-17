@@ -1,5 +1,6 @@
 
-import { Outlet, NavLink } from "react-router-dom";
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "./AdminLayout.css";
 
 const menuItems = [
@@ -12,6 +13,14 @@ const menuItems = [
 ];
 
 export default function AdminLayout() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  function handleLogout() {
+    logout();
+    navigate("/login", { replace: true });
+  }
+
   return (
     <div className="admin-layout" dir="rtl">
       <aside className="admin-sidebar">
@@ -39,6 +48,14 @@ export default function AdminLayout() {
         <header className="admin-header">
           <h1>שלום, מנהל 👋</h1>
           <span>SmartAid | מערכת ניהול</span>
+
+          <button
+            type="button"
+            className="admin-logout-button"
+            onClick={handleLogout}
+          >
+            התנתקות
+          </button>
         </header>
 
         <section className="admin-content">
