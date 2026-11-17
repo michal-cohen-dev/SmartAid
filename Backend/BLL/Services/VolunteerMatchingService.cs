@@ -81,6 +81,11 @@ namespace BLL.Services
                 cancellationToken.ThrowIfCancellationRequested();
 
                 string? rejectionReason = null;
+                // לא לשלוח הצעה למתנדב שפתח בעצמו את בקשת העזרה
+                if (volunteer.UserId == helpRequest.UserId)
+                {
+                    continue;
+                }
 
                 if (!volunteer.IsActive)
                 {
