@@ -23,7 +23,7 @@ public class ImageAnalysisController : ControllerBase
     [Consumes("multipart/form-data")]
     public async Task<ActionResult<ImageAnalysisResultDto>> Analyze(
         [FromForm] string? description,
-        [FromForm] IFormFile? image,
+IFormFile? image,
         CancellationToken cancellationToken)
     {
         bool hasDescription =
