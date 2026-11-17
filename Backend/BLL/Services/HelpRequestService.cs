@@ -412,13 +412,17 @@ namespace BLL.Services
         }
 
 
-        public bool TryCancelRequest(int requestId, int userId)
+        public async Task<bool> TryCancelRequestAsync(
+    int requestId,
+    int userId,
+    CancellationToken cancellationToken = default)
         {
             var request = _helpRequestRepository.GetById(requestId);
 
             if (request == null)
                 return false;
 
+            // ביטול על ידי הפונה – נשאר ללא שינוי
             if (request.UserId == userId)
             {
                 return _helpRequestRepository.TryCancelRequest(
@@ -445,9 +449,25 @@ namespace BLL.Services
             if (!cancelled)
                 return false;
 
+            // הורדת ציון האמינות נשארת
             _volunteerService.DecreaseReliabilityScore(volunteer.Id);
 
             transaction.Commit();
+
+            // חיפוש מתנדבים חדשים לקריאה
+            try
+            {
+                await _requestOfferService.CreateOffersForRequestAsync(
+                    requestId,
+                    CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to create new offers for request {RequestId} after volunteer cancellation.",
+                    requestId);
+            }
 
             return true;
         }

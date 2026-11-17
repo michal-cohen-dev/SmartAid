@@ -36,7 +36,10 @@ namespace BLL.Services.Interfaces
         bool TryCompleteRequest(int requestId, int userId);
         bool TryRateCompletedRequest(int requestId, int userId, int rating);
         bool AdminCancelRequest(int requestId);
-        bool TryCancelRequest(int requestId, int userId);
-        
+        Task<bool> TryCancelRequestAsync(
+    int requestId,
+    int userId,
+    CancellationToken cancellationToken = default);
+
     }
 }
