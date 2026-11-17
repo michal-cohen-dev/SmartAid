@@ -12,6 +12,7 @@ using BLL.Services.Interfaces;
 using BLL.Services.ExternalServices;
 using BLL.Services.Models;
 using BLL.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace BLL.Services
 {
@@ -22,15 +23,18 @@ namespace BLL.Services
         private readonly IVolunteerRepository _volunteerRepository;
         private readonly IHelpRequestRepository _helpRequestRepository;
         private readonly ITomTomRoutingService _tomTomRoutingService;
+        private readonly ILogger<VolunteerMatchingService> _logger;
 
         public VolunteerMatchingService(
-            IVolunteerRepository volunteerRepository,
-            IHelpRequestRepository helpRequestRepository,
-            ITomTomRoutingService tomTomRoutingService)
+    IVolunteerRepository volunteerRepository,
+    IHelpRequestRepository helpRequestRepository,
+    ITomTomRoutingService tomTomRoutingService,
+    ILogger<VolunteerMatchingService> logger)
         {
             _volunteerRepository = volunteerRepository;
             _helpRequestRepository = helpRequestRepository;
             _tomTomRoutingService = tomTomRoutingService;
+            _logger = logger;
         }
 
         public async Task<List<VolunteerMatchResult>> GetEligibleVolunteersAsync(
