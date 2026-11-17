@@ -307,25 +307,90 @@ public class ImageAnalysisService : IImageAnalysisService
 
         var jsonRequest = JsonSerializer.Serialize(requestBody);
 
-        using var request = new HttpRequestMessage(
-    HttpMethod.Post,
-    "v1beta/models/gemini-3.5-flash-lite:generateContent");
-        request.Content = new StringContent(
-            jsonRequest,
-            Encoding.UTF8,
-            "application/json");
 
-        using var response = await _httpClient.SendAsync(
-            request,
-            cancellationToken);
+        string responseContent = "";
+        System.Net.HttpStatusCode? responseStatus = null;
 
-        var responseContent = await response.Content.ReadAsStringAsync(
-            cancellationToken);
+        const int maxRetries = 3;
 
-        if (!response.IsSuccessStatusCode)
+        for (int attempt = 0; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                using var request = new HttpRequestMessage(
+                    HttpMethod.Post,
+                    "v1beta/models/gemini-3.5-flash-lite:generateContent");
+
+                request.Content = new StringContent(
+                    jsonRequest,
+                    Encoding.UTF8,
+                    "application/json");
+
+                using var response = await _httpClient.SendAsync(
+                    request,
+                    cancellationToken);
+
+                responseStatus = response.StatusCode;
+
+                responseContent = await response.Content.ReadAsStringAsync(
+                    cancellationToken);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    break;
+                }
+
+                bool shouldRetry =
+                    response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
+                    response.StatusCode == System.Net.HttpStatusCode.TooManyRequests ||
+                    response.StatusCode == System.Net.HttpStatusCode.InternalServerError ||
+                    response.StatusCode == System.Net.HttpStatusCode.BadGateway;
+
+                if (!shouldRetry || attempt == maxRetries)
+                {
+                    break;
+                }
+
+                var delay = TimeSpan.FromSeconds(
+                    Math.Pow(2, attempt));
+
+                if (response.Headers.RetryAfter?.Delta is TimeSpan retryAfter)
+                {
+                    delay = retryAfter;
+                }
+
+                Console.WriteLine(
+                    $"Gemini returned {(int)response.StatusCode}. " +
+                    $"Retry {attempt + 1}/{maxRetries} after {delay.TotalSeconds} seconds.");
+
+                await Task.Delay(delay, cancellationToken);
+            }
+            catch (HttpRequestException ex) when (attempt < maxRetries)
+            {
+                var delay = TimeSpan.FromSeconds(
+                    Math.Pow(2, attempt));
+
+                Console.WriteLine(
+                    $"Gemini connection error: {ex.Message}. " +
+                    $"Retry {attempt + 1}/{maxRetries} after {delay.TotalSeconds} seconds.");
+
+                await Task.Delay(delay, cancellationToken);
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new InvalidOperationException(
+                    "Gemini service is unavailable after multiple attempts.",
+                    ex);
+            }
+        }
+
+        if (responseStatus == null ||
+            (int)responseStatus.Value < 200 ||
+            (int)responseStatus.Value >= 300)
         {
             throw new InvalidOperationException(
-                $"Gemini API error: {(int)response.StatusCode}");
+                $"Gemini API error: {(int?)responseStatus}. " +
+                $"Response: {responseContent}");
         }
 
         using var jsonDocument = JsonDocument.Parse(responseContent);
