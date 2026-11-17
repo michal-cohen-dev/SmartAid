@@ -1,5 +1,5 @@
 ﻿
-using DAL.Repositories.Interfaces;
+using BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace SmartAid.API.Controllers
@@ -8,24 +8,17 @@ namespace SmartAid.API.Controllers
     [ApiController]
     public class HelpTypesController : ControllerBase
     {
-        private readonly IHelpTypeRepository _helpTypeRepository;
+        private readonly IHelpTypeService _helpTypeService;
 
-        public HelpTypesController(
-            IHelpTypeRepository helpTypeRepository)
+        public HelpTypesController(IHelpTypeService helpTypeService)
         {
-            _helpTypeRepository = helpTypeRepository;
+            _helpTypeService = helpTypeService;
         }
 
         [HttpGet]
         public IActionResult GetAll()
         {
-            var helpTypes = _helpTypeRepository.GetAll()
-                .Select(h => new
-                {
-                    h.Id,
-                    h.Name
-                })
-                .ToList();
+            var helpTypes = _helpTypeService.GetAll();
 
             return Ok(helpTypes);
         }

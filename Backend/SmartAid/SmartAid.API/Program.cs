@@ -147,6 +147,7 @@ builder.Services.AddScoped<IHelpRequestService, HelpRequestService>();
 builder.Services.AddScoped<IRequestEquipmentService, RequestEquipmentService>();
 builder.Services.AddScoped<IRequestOfferService, RequestOfferService>();
 builder.Services.AddScoped<IEquipmentTypeService, EquipmentTypeService>();
+builder.Services.AddScoped<IHelpTypeService, HelpTypeService>();
 
 builder.Services.AddScoped<
     IVolunteerMatchingService,
