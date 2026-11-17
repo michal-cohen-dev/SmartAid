@@ -4,36 +4,44 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px 24px;
-  background: #f7f8fa;
-  color: #30343b;
+  box-sizing: border-box;
+  padding: 35px 20px;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(32, 166, 181, 0.13), transparent 30%),
+    radial-gradient(circle at 85% 85%, rgba(36, 123, 183, 0.1), transparent 30%),
+    #f4f8fc;
+  color: #183b63;
+  font-family: "Segoe UI", Arial, sans-serif;
 }
 
 .registration-card {
   width: 100%;
-  max-width: 500px;
-  padding: 40px;
+  max-width: 510px;
+  box-sizing: border-box;
+  padding: 38px 42px;
+  border: 1px solid #e2ebf2;
+  border-radius: 23px;
   background: #ffffff;
-  border: 1px solid #e8eaed;
-  border-radius: 14px;
-  box-shadow: 0 8px 28px rgba(30, 40, 55, 0.06);
+  box-shadow: 0 18px 55px rgba(24, 59, 99, 0.1);
 }
 
 .registration-header {
-  text-align: center;
   margin-bottom: 30px;
+  text-align: center;
 }
 
 .registration-header h1 {
   margin: 0 0 10px;
+  color: #183b63;
   font-size: 29px;
-  color: #343d49;
+  font-weight: 900;
 }
 
 .registration-header p {
   margin: 0;
-  color: #737b86;
-  font-size: 16px;
+  color: #718198;
+  font-size: 15px;
+  line-height: 1.7;
 }
 
 .registration-form {
@@ -45,58 +53,79 @@
 .registration-field {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
 }
 
 .registration-field label {
-  font-size: 15px;
-  font-weight: 600;
-  color: #424b57;
+  color: #365773;
+  font-size: 14px;
+  font-weight: 750;
 }
 
 .registration-field input {
   width: 100%;
+  min-height: 46px;
   box-sizing: border-box;
-  padding: 12px 14px;
-  border: 1px solid #d9dee5;
-  border-radius: 7px;
-  background: #ffffff;
-  color: #30343b;
-  font-size: 15px;
+  padding: 12px 15px;
+  border: 1px solid #dce6ee;
+  border-radius: 11px;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #f9fbfd;
+  color: #183b63;
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.registration-field input::placeholder {
+  color: #a0adba;
+}
+
+.registration-field input:hover {
+  border-color: #b7ccd9;
 }
 
 .registration-field input:focus {
-  border-color: #647b91;
-  box-shadow: 0 0 0 3px rgba(100, 123, 145, 0.12);
+  border-color: #20a6b5;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(32, 166, 181, 0.11);
 }
 
 .registration-error {
   margin: 0;
-  padding: 10px 12px;
-  border-radius: 6px;
-  background: #fff0f0;
+  padding: 13px 15px;
+  border: 1px solid #f1cccc;
+  border-radius: 10px;
+  background: #fff4f3;
   color: #b42318;
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 .registration-submit {
   width: 100%;
-  padding: 13px;
+  min-height: 50px;
   margin-top: 5px;
+  padding: 13px 20px;
   border: none;
-  border-radius: 7px;
-  background: #647b91;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #247bb7, #20a6b5);
   color: #ffffff;
+  font-family: inherit;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 800;
   cursor: pointer;
-  transition: background 0.2s;
+  box-shadow: 0 7px 18px rgba(36, 123, 183, 0.2);
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
 }
 
 .registration-submit:hover:not(:disabled) {
-  background: #526a81;
+  transform: translateY(-2px);
+  box-shadow: 0 11px 24px rgba(36, 123, 183, 0.25);
+}
+
+.registration-submit:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .registration-submit:disabled {
@@ -107,16 +136,33 @@
 .registration-login {
   margin: 25px 0 0;
   text-align: center;
-  color: #737b86;
+  color: #718198;
   font-size: 14px;
 }
 
 .registration-login a {
-  color: #526a81;
-  font-weight: 600;
+  color: #247bb7;
+  font-weight: 800;
   text-decoration: none;
+  transition: color 0.2s;
 }
 
 .registration-login a:hover {
+  color: #20a6b5;
   text-decoration: underline;
+}
+
+@media (max-width: 520px) {
+  .registration-page {
+    padding: 22px 14px;
+  }
+
+  .registration-card {
+    padding: 30px 22px;
+    border-radius: 18px;
+  }
+
+  .registration-header h1 {
+    font-size: 25px;
+  }
 }
