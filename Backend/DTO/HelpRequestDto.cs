@@ -18,6 +18,9 @@ namespace DTO
         public string Address { get; set; } = string.Empty;
         public string? AddressNotes { get; set; }
 
+        public int? HelpTypeId { get; set; }
+        public string? HelpTypeName { get; set; }
+
         public int Status { get; set; }
         public int? AssignedVolunteerId { get; set; }
         public string? AssignedVolunteerName { get; set; }

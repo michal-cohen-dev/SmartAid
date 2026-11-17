@@ -18,23 +18,23 @@ namespace DAL.Repositories
             _context = context;
         }
 
-
         public List<HelpRequest> GetAll()
         {
             return _context.HelpRequests
                 .Include(hr => hr.User)
                 .Include(hr => hr.AssignedVolunteer)
+                .Include(hr => hr.HelpType)
                 .Include(hr => hr.RequiredEquipments)
                     .ThenInclude(re => re.EquipmentType)
                 .ToList();
         }
-
 
         public List<HelpRequest> GetByUserId(int userId)
         {
             return _context.HelpRequests
                 .Include(hr => hr.User)
                 .Include(hr => hr.AssignedVolunteer)
+                .Include(hr => hr.HelpType)
                 .Include(hr => hr.RequiredEquipments)
                     .ThenInclude(re => re.EquipmentType)
                 .Where(hr => hr.UserId == userId)
@@ -47,6 +47,7 @@ namespace DAL.Repositories
             return _context.HelpRequests
                 .Include(hr => hr.User)
                 .Include(hr => hr.AssignedVolunteer)
+                .Include(hr => hr.HelpType)
                 .Include(hr => hr.RequiredEquipments)
                     .ThenInclude(re => re.EquipmentType)
                 .Where(hr => hr.AssignedVolunteerId == volunteerId)
@@ -59,6 +60,7 @@ namespace DAL.Repositories
             return _context.HelpRequests
                 .Include(hr => hr.User)
                 .Include(hr => hr.AssignedVolunteer)
+                .Include(hr => hr.HelpType)
                 .Include(hr => hr.RequiredEquipments)
                     .ThenInclude(re => re.EquipmentType)
                 .FirstOrDefault(hr => hr.Id == id);
@@ -107,14 +109,12 @@ namespace DAL.Repositories
                 _context.Database.BeginTransaction(
                     IsolationLevel.Serializable);
 
-            // Lock the request row and read its current database state.
             var currentRequest = _context.HelpRequests
                 .FromSqlInterpolated(
                     $"SELECT * FROM HelpRequests WITH (UPDLOCK, HOLDLOCK) WHERE Id = {entity.Id}")
                 .AsNoTracking()
                 .FirstOrDefault();
 
-            // Revalidate ownership and status while holding the lock.
             if (currentRequest == null ||
                 currentRequest.UserId != userId ||
                 currentRequest.Status != RequestStatus.Open ||
@@ -124,7 +124,6 @@ namespace DAL.Repositories
                 return false;
             }
 
-            // Replace the equipment records within the same transaction.
             var existingEquipments = _context.RequestEquipments
                 .Where(equipment =>
                     equipment.HelpRequestId == entity.Id)
@@ -143,7 +142,6 @@ namespace DAL.Repositories
 
             _context.RequestEquipments.AddRange(newEquipments);
 
-            // Save request changes and equipment changes together.
             _context.SaveChanges();
 
             transaction.Commit();
@@ -360,8 +358,6 @@ namespace DAL.Repositories
             return rowsAffected == 1;
         }
 
-
-
         public bool TryAdminCancelRequest(int requestId)
         {
             using var transaction =
@@ -413,9 +409,6 @@ namespace DAL.Repositories
 
             return true;
         }
-
-
-
 
         public bool TryCancelRequest(
             int requestId,
