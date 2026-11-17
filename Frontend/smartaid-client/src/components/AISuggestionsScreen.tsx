@@ -23,17 +23,20 @@ interface DraftRequest {
   address: string;
   addressNotes: string;
   selectedImage: File | null;
+  requiredEquipmentTypeIds?: number[];
 }
 
 interface ImageAnalysisResult {
   problemName: string;
   description: string;
   category: string;
+  helpTypeId?: number | null;
   riskLevel: string;
   recommendation: string;
   safeActions: string[];
   volunteerRequired: boolean;
   confidence: number;
+  suggestedEquipmentTypeIds?: number[];
 }
 
 function AISuggestionsScreen() {
@@ -55,10 +58,9 @@ function AISuggestionsScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    document.title = "הצעות לפתרון עצמי | SmartAid";
+    document.title = "הצעות לפתרון | SmartAid";
 
     const loadRequest = async () => {
-      // בקשה חדשה שעדיין לא נשלחה לשרת
       if (draft) {
         setRequest({
           id: 0,
@@ -73,7 +75,6 @@ function AISuggestionsScreen() {
         return;
       }
 
-      // תמיכה גם בכתובות ישנות שבהן כבר קיים מזהה בקשה
       if (!id || !Number.isInteger(Number(id)) || Number(id) <= 0) {
         setError("לא נמצאו פרטי בקשה תקינים.");
         setLoading(false);
@@ -100,7 +101,7 @@ function AISuggestionsScreen() {
     loadRequest();
   }, [id, draft]);
 
-  // יצירת הקריאה מתבצעת רק לאחר לחיצה מפורשת על הזמנת מתנדב
+  // יצירת הקריאה מתבצעת רק לאחר לחיצה מפורשת על הזמנת מתנדב.
   const handleVolunteerRequest = async () => {
     if (!draft) {
       if (request?.id) {
@@ -110,6 +111,30 @@ function AISuggestionsScreen() {
     }
 
     if (isSubmitting) return;
+
+    if (!analysis) {
+      setError("לא נמצאו תוצאות ניתוח AI עבור הבקשה.");
+      return;
+    }
+
+    if (!analysis.volunteerRequired) {
+      setError("לפי ניתוח ה-AI לא ניתן להזמין מתנדב לבקשה זו.");
+      return;
+    }
+
+    if (
+      analysis.riskLevel?.trim().toLowerCase() === "high" ||
+      analysis.riskLevel?.trim().toLowerCase() === "unknown" ||
+      analysis.riskLevel === "גבוה" ||
+      analysis.riskLevel === "גבוהה" ||
+      analysis.riskLevel === "לא ידוע" ||
+      analysis.riskLevel === "לא ידועה"
+    ) {
+      setError(
+        "הניתוח מצביע על צורך בבדיקה מקצועית. לא ניתן להזמין מתנדב."
+      );
+      return;
+    }
 
     setIsSubmitting(true);
     setError("");
@@ -131,6 +156,14 @@ function AISuggestionsScreen() {
       if (draft.addressNotes) {
         formData.append("AddressNotes", draft.addressNotes);
       }
+
+      // מעבירים לשרת כל סוג ציוד שנבחר.
+      (draft.requiredEquipmentTypeIds || []).forEach((equipmentId) => {
+        formData.append(
+          "RequiredEquipmentTypeIds",
+          String(equipmentId)
+        );
+      });
 
       const response = await apiRequest<{
         message: string;
@@ -170,6 +203,7 @@ function AISuggestionsScreen() {
         <div className="ai-container">
           <h2>לא ניתן להציג את ההצעות</h2>
           <p>{error}</p>
+
           <button
             type="button"
             className="volunteer-button"
@@ -198,8 +232,6 @@ function AISuggestionsScreen() {
 
   const professionalRequired = isHighRisk || isUnknownRisk;
 
-  
-
   return (
     <div dir="rtl" className="ai-page">
       <div className="ai-header">
@@ -210,10 +242,10 @@ function AISuggestionsScreen() {
       <div className="ai-container">
         <div className="ai-heading">
           <span className="ai-badge">ניתוח חכם</span>
-          <h2>תוצאות בדיקת הבקשה</h2>
+          <h2>תוצאות ניתוח הבקשה</h2>
           <p>
-            המערכת ניתחה את המידע שסיפקת כדי להציע
-            את דרך הפעולה המתאימה.
+            המערכת ניתחה את תיאור הבעיה ואת התמונה,
+            אם צורפה, כדי להציע את דרך הפעולה המתאימה.
           </p>
         </div>
 
@@ -231,7 +263,7 @@ function AISuggestionsScreen() {
 
         {analysis ? (
           <div className="solutions-section">
-            <h2>תוצאות ניתוח התמונה</h2>
+            <h2>תוצאות ניתוח ה-AI</h2>
 
             <div className="solution-card">
               <div className="solution-content">
@@ -239,11 +271,13 @@ function AISuggestionsScreen() {
                 <p>{analysis.description}</p>
 
                 <p>
-                  <strong>קטגוריה:</strong> {analysis.category}
+                  <strong>קטגוריה:</strong>{" "}
+                  {analysis.category}
                 </p>
 
                 <p>
-                  <strong>רמת סיכון:</strong> {analysis.riskLevel}
+                  <strong>רמת סיכון:</strong>{" "}
+                  {analysis.riskLevel}
                 </p>
 
                 <p>
@@ -289,7 +323,8 @@ function AISuggestionsScreen() {
                 <div>
                   <h3>מומלץ להיעזר במתנדב</h3>
                   <p>
-                    לפי הניתוח, כדאי לקבל עזרה ממתנדב מהקהילה.
+                    לפי ניתוח ה-AI, כדאי לקבל עזרה
+                    ממתנדב מהקהילה.
                   </p>
                 </div>
 
@@ -307,7 +342,7 @@ function AISuggestionsScreen() {
             ) : (
               <div className="solution-card">
                 <div className="solution-content">
-                  <h3>אפשר להתחיל בבדיקה עצמית בטוחה</h3>
+                  <h3>לא זוהה צורך במתנדב</h3>
                   <p>
                     לפי הניתוח, לא זוהה צורך מיידי במתנדב.
                     אם אינך בטוחה כיצד לפעול, אל תבצעי
@@ -318,45 +353,21 @@ function AISuggestionsScreen() {
             )}
 
             <p>
-              חשוב: הניתוח מבוסס על תמונה בלבד ואינו
-              מהווה אבחון מקצועי. ייתכן שהמערכת לא זיהתה
-              את כל פרטי הבעיה.
+              חשוב: תוצאות הניתוח הן המלצה ממוחשבת
+              ואינן מהוות אבחון מקצועי. ייתכן שהמערכת
+              לא זיהתה את כל פרטי הבעיה.
             </p>
           </div>
         ) : (
           <div className="solutions-section">
-            <h2>הצעות לפתרון עצמי</h2>
+            <h2>פרטי הבקשה</h2>
 
             <div className="solution-card">
               <div className="solution-content">
-                <h3>בדיקה ראשונית</h3>
                 <p>
-                  לא הועלתה תמונה לניתוח. חשוב לבדוק אם קיימת
-                  פעולה פשוטה ובטוחה שניתן לבצע, בלי להסתכן.
+                  לא צורפו תוצאות ניתוח AI להצגה במסך זה.
                 </p>
               </div>
-            </div>
-
-            <p>
-              ההצעה המוצגת היא כללית ואינה אבחון מותאם אישית.
-            </p>
-
-            <div className="volunteer-help">
-              <div>
-                <h3>עדיין זקוקה לעזרה?</h3>
-                <p>אפשר להיעזר במתנדב מהקהילה.</p>
-              </div>
-
-              <button
-                type="button"
-                className="volunteer-button"
-                onClick={handleVolunteerRequest}
-                disabled={isSubmitting}
-              >
-                {isSubmitting
-                  ? "שולח בקשה..."
-                  : "אני צריכה מתנדב"}
-              </button>
             </div>
           </div>
         )}
