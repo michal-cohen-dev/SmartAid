@@ -19,7 +19,7 @@ using System.Text;
 using SmartAid.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Logging.SetMinimumLevel(LogLevel.Information);
 // API Keys diagnostics
 Console.WriteLine(
     $"TomTom key loaded: {!string.IsNullOrWhiteSpace(builder.Configuration["TomTom:ApiKey"])}");
