@@ -163,9 +163,23 @@ builder.Services.AddHttpClient<
     });
 
 // AI Image Analysis
+if (string.IsNullOrWhiteSpace(geminiApiKey))
+{
+    throw new InvalidOperationException(
+        "Gemini API key is missing. Configure Gemini__ApiKey.");
+}
+
 builder.Services.AddHttpClient<
     IImageAnalysisService,
-    ImageAnalysisService>();
+    ImageAnalysisService>(client =>
+    {
+        client.BaseAddress = new Uri(
+            "https://generativelanguage.googleapis.com/");
+
+        client.DefaultRequestHeaders.Add(
+            "x-goog-api-key",
+            geminiApiKey);
+    });
 
 // Image service
 builder.Services.AddSingleton<IImageService>(
