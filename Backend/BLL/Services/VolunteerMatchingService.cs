@@ -65,19 +65,26 @@ namespace BLL.Services
                 .Distinct()
                 .ToList();
 
-            var eligibleVolunteers = volunteers
-                .Where(volunteer =>
+            var eligibleVolunteers = new List<Volunteer>();
+
+            _logger.LogInformation(
+                "Starting volunteer matching for help request {HelpRequestId}. Volunteers found: {VolunteerCount}",
+                helpRequestId,
+                volunteers.Count);
+
+            foreach (var volunteer in volunteers)
+            {
+                string rejectionReason = null;
+
+                if (!volunteer.IsActive)
+                    rejectionReason = "Volunteer is inactive";
+                else if (!volunteer.Latitude.HasValue ||
+                         !volunteer.Longitude.HasValue)
+                    rejectionReason = "Missing location coordinates";
+                else if (_helpRequestRepository.HasActiveAssignment(volunteer.Id))
+                    rejectionReason = "Has active assignment";
+                else
                 {
-                    if (!volunteer.IsActive)
-                        return false;
-
-                    if (!volunteer.Latitude.HasValue ||
-                        !volunteer.Longitude.HasValue)
-                        return false;
-
-                    if (_helpRequestRepository.HasActiveAssignment(volunteer.Id))
-                        return false;
-
                     bool hasRequiredHelpType =
                         volunteer.VolunteerHelpTypes.Any(
                             ht => ht.HelpTypeId == helpRequest.HelpTypeId);
@@ -92,11 +99,37 @@ namespace BLL.Services
                         volunteer.LastLocationUpdatedAt.HasValue &&
                         volunteer.LastLocationUpdatedAt.Value >= locationFreshnessCutoff;
 
-                    return hasRequiredHelpType &&
-                           hasAllRequiredEquipment &&
-                           hasFreshLocation;
-                })
-                .ToList();
+                    if (!hasRequiredHelpType)
+                        rejectionReason = "Missing required help type";
+                    else if (!hasAllRequiredEquipment)
+                        rejectionReason = "Missing required equipment";
+                    else if (!hasFreshLocation)
+                        rejectionReason = "Location is not fresh";
+                }
+
+                if (rejectionReason != null)
+                {
+                    _logger.LogInformation(
+                        "Volunteer {VolunteerId} rejected for help request {HelpRequestId}: {Reason}",
+                        volunteer.Id,
+                        helpRequestId,
+                        rejectionReason);
+
+                    continue;
+                }
+
+                eligibleVolunteers.Add(volunteer);
+
+                _logger.LogInformation(
+                    "Volunteer {VolunteerId} passed initial matching for help request {HelpRequestId}",
+                    volunteer.Id,
+                    helpRequestId);
+            }
+
+            _logger.LogInformation(
+                "Initial matching completed for help request {HelpRequestId}. Eligible volunteers: {EligibleCount}",
+                helpRequestId,
+                eligibleVolunteers.Count);
 
             const double maxAirDistanceKm = 15;
 
