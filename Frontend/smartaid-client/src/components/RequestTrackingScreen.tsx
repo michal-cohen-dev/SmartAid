@@ -121,7 +121,7 @@ function RequestTrackingScreen() {
 
         connection.on("RequestUpdated", handleRequestUpdated);
 
-        connection.start().catch((connectionError) => {
+connection.start().catch((connectionError: Error) => {
           if (isMounted) {
             console.error(
               "שגיאה בהתחברות לעדכוני הבקשה:",
@@ -129,7 +129,7 @@ function RequestTrackingScreen() {
             );
           }
         });
-      } catch (connectionError) {
+} catch (connectionError: unknown) {
         console.error(
           "לא ניתן ליצור חיבור SignalR:",
           connectionError

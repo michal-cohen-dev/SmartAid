@@ -22,6 +22,9 @@ import ProfileScreen from './components/ProfileScreen';
 
 import ProtectedRoute from './routes/ProtectedRoute';
 
+import AdminLayout from './admin/AdminLayout';
+import AdminDashboard from './admin/AdminDashboard';
+
 function App() {
   return (
     <Routes>
@@ -134,6 +137,16 @@ function App() {
           element={<ProfileScreen />}
         />
       </Route>
+      <Route
+  path="/admin"
+  element={
+    <ProtectedRoute requireAdmin>
+      <AdminLayout />
+    </ProtectedRoute>
+  }
+>
+  <Route index element={<AdminDashboard />} />
+</Route>
 
       <Route path="*" element={<NotFound />} />
     </Routes>
