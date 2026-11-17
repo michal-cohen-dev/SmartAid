@@ -1,3 +1,4 @@
+
 name: Build and Deploy SmartAid
 
 on:
@@ -19,10 +20,10 @@ jobs:
           dotnet-version: 9.0.x
 
       - name: Restore
-        run: dotnet restore Backend/SmartAid/SmartAid.sln
+        run: dotnet restore Backend/SmartAid/SmartAid.API/SmartAid.API.csproj
 
       - name: Build
-        run: dotnet build Backend/SmartAid/SmartAid.sln --configuration Release --no-restore
+        run: dotnet build Backend/SmartAid/SmartAid.API/SmartAid.API.csproj --configuration Release --no-restore
 
       - name: Publish API
         run: dotnet publish Backend/SmartAid/SmartAid.API/SmartAid.API.csproj --configuration Release --output ./publish
@@ -41,7 +42,7 @@ jobs:
           server-computer-name: ${{ secrets.SERVER_COMPUTER_NAME }}
           server-username: ${{ secrets.SERVER_USERNAME }}
           server-password: ${{ secrets.SERVER_PASSWORD }}
-          source-path: '\publish\'
+          source-path: '\\publish\\'
 
   deploy-client:
     name: Build and Deploy React Client
