@@ -1,9 +1,8 @@
-﻿
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using DTO;
 using BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
+using SmartAid.API.Extensions;
 
 namespace SmartAid.API.Controllers
 {
@@ -19,20 +18,10 @@ namespace SmartAid.API.Controllers
             _userService = userService;
         }
 
-        private int? GetCurrentUserId()
-        {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (int.TryParse(userIdClaim, out var currentUserId))
-                return currentUserId;
-
-            return null;
-        }
-
         [HttpGet("{id:int}")]
         public ActionResult<UserDto> GetById(int id)
         {
-            var currentUserId = GetCurrentUserId();
+            var currentUserId = User.GetUserId();
 
             if (currentUserId == null)
                 return Unauthorized();
@@ -53,12 +42,15 @@ namespace SmartAid.API.Controllers
         [HttpPut("{id:int}")]
         public ActionResult Update(int id, [FromBody] UserUpdateDto userDto)
         {
-            var currentUserId = GetCurrentUserId();
+            var currentUserId = User.GetUserId();
 
             if (currentUserId == null)
                 return Unauthorized();
 
-            var updated = _userService.Update(id, userDto, currentUserId.Value);
+            var updated = _userService.Update(
+                id,
+                userDto,
+                currentUserId.Value);
 
             if (!updated)
             {
@@ -77,7 +69,7 @@ namespace SmartAid.API.Controllers
         [HttpDelete("{id:int}")]
         public ActionResult Delete(int id)
         {
-            var currentUserId = GetCurrentUserId();
+            var currentUserId = User.GetUserId();
 
             if (currentUserId == null)
                 return Unauthorized();

@@ -1,14 +1,13 @@
-﻿
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using DTO;
 using BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using SmartAid.API.Services;
 using Microsoft.AspNetCore.SignalR;
 using SmartAid.API.Hubs;
+using SmartAid.API.Extensions;
 
 namespace SmartAid.API.Controllers
 {
@@ -74,13 +73,13 @@ namespace SmartAid.API.Controllers
         public async Task<ActionResult<IEnumerable<HelpRequestPreviewDto>>> GetOpenForVolunteer(
             CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
             var requests = await _helpRequestService.GetOpenForVolunteerAsync(
-                userId,
+                userId.Value,
                 cancellationToken);
 
             return Ok(requests);
@@ -89,23 +88,23 @@ namespace SmartAid.API.Controllers
         [HttpGet("my")]
         public IActionResult GetMyRequests()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out int userId))
+            if (userId == null)
                 return Unauthorized();
 
-            return Ok(_helpRequestService.GetByUserId(userId));
+            return Ok(_helpRequestService.GetByUserId(userId.Value));
         }
 
         [HttpGet("volunteer/my")]
         public IActionResult GetMyVolunteerRequests()
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
-            return Ok(_helpRequestService.GetByVolunteerId(userId));
+            return Ok(_helpRequestService.GetByVolunteerId(userId.Value));
         }
 
         [HttpGet("{id}")]
@@ -115,14 +114,16 @@ namespace SmartAid.API.Controllers
         {
             if (!User.IsInRole("Admin"))
             {
-                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var userId = User.GetUserId();
 
-                if (!int.TryParse(userIdClaim, out var userId))
+                if (userId == null)
                     return Unauthorized();
 
-                bool isOwner = _helpRequestService.IsOwner(id, userId);
+                bool isOwner =
+                    _helpRequestService.IsOwner(id, userId.Value);
+
                 bool isAssignedVolunteer =
-                    _helpRequestService.IsAssignedVolunteer(id, userId);
+                    _helpRequestService.IsAssignedVolunteer(id, userId.Value);
 
                 if (!isOwner && !isAssignedVolunteer)
                     return NotFound();
@@ -152,14 +153,14 @@ namespace SmartAid.API.Controllers
             [FromForm] HelpRequestPostDto helpRequestDto,
             CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
             var requestId = await _helpRequestService.Add(
                 helpRequestDto,
-                userId,
+                userId.Value,
                 cancellationToken);
 
             return Ok(new
@@ -174,12 +175,15 @@ namespace SmartAid.API.Controllers
             int id,
             [FromBody] HelpRequestUpdateDto helpRequestDto)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
-            var updated = _helpRequestService.Update(id, helpRequestDto, userId);
+            var updated = _helpRequestService.Update(
+                id,
+                helpRequestDto,
+                userId.Value);
 
             if (!updated)
             {
@@ -200,12 +204,12 @@ namespace SmartAid.API.Controllers
         {
             var requestBeforeDelete = _helpRequestService.GetById(id);
 
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
-            var deleted = _helpRequestService.Delete(id, userId);
+            var deleted = _helpRequestService.Delete(id, userId.Value);
 
             if (!deleted)
             {
@@ -229,12 +233,14 @@ namespace SmartAid.API.Controllers
         [HttpPost("{id}/accept")]
         public async Task<ActionResult> AcceptRequest(int id)
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
-            var accepted = _helpRequestService.TryAssignToVolunteer(id, userId);
+            var accepted = _helpRequestService.TryAssignToVolunteer(
+                id,
+                userId.Value);
 
             if (!accepted)
             {
@@ -255,12 +261,14 @@ namespace SmartAid.API.Controllers
         [HttpPost("{id}/arrive")]
         public async Task<ActionResult> MarkArrived(int id)
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
-            var marked = _helpRequestService.TryMarkInTreatment(id, userId);
+            var marked = _helpRequestService.TryMarkInTreatment(
+                id,
+                userId.Value);
 
             if (!marked)
             {
@@ -281,12 +289,14 @@ namespace SmartAid.API.Controllers
         [HttpPost("{id}/complete")]
         public async Task<ActionResult> CompleteRequest(int id)
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
-            var completed = _helpRequestService.TryCompleteRequest(id, userId);
+            var completed = _helpRequestService.TryCompleteRequest(
+                id,
+                userId.Value);
 
             if (!completed)
             {
@@ -309,14 +319,14 @@ namespace SmartAid.API.Controllers
             int id,
             [FromBody] RateHelpRequestDto ratingDto)
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
             var rated = _helpRequestService.TryRateCompletedRequest(
                 id,
-                userId,
+                userId.Value,
                 ratingDto.Rating);
 
             if (!rated)
@@ -338,15 +348,14 @@ namespace SmartAid.API.Controllers
         {
             var requestBeforeCancel = _helpRequestService.GetById(id);
 
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            var userId = User.GetUserId();
 
-            if (userIdClaim == null ||
-                !int.TryParse(userIdClaim.Value, out int userId))
-            {
+            if (userId == null)
                 return Unauthorized();
-            }
 
-            bool cancelled = _helpRequestService.TryCancelRequest(id, userId);
+            bool cancelled = _helpRequestService.TryCancelRequest(
+                id,
+                userId.Value);
 
             if (!cancelled)
             {

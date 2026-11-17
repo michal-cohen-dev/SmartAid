@@ -1,9 +1,8 @@
-﻿
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using DTO;
 using BLL.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
+using SmartAid.API.Extensions;
 
 namespace SmartAid.API.Controllers
 {
@@ -45,13 +44,12 @@ namespace SmartAid.API.Controllers
         [HttpGet("my-equipment")]
         public ActionResult<IEnumerable<VolunteerEquipmentDto>> GetMyEquipment()
         {
-            var userIdClaim =
-                User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = User.GetUserId();
 
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (userId == null)
                 return Unauthorized();
 
-            var volunteer = _volunteerService.GetByUserId(userId);
+            var volunteer = _volunteerService.GetByUserId(userId.Value);
 
             if (volunteer == null)
                 return NotFound(new
