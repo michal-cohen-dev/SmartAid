@@ -24,6 +24,7 @@ import ProtectedRoute from './routes/ProtectedRoute';
 
 import AdminLayout from './admin/AdminLayout';
 import AdminDashboard from './admin/AdminDashboard';
+import AdminUsers from './admin/AdminUsers';
 import AdminVolunteers from './admin/AdminVolunteers';
 import AdminRequests from './admin/AdminRequests';
 import AdminEquipment from './admin/AdminEquipment';
@@ -36,7 +37,7 @@ function App() {
       <Route path="/login" element={<LoginScreen />} />
       <Route path="/register" element={<RegistrationScreen />} />
 
-      {/* כל המסכים הפנימיים דורשים התחברות ומקבלים את התפריט העליון */}
+      {/* מסכים פנימיים */}
       <Route
         element={
           <ProtectedRoute>
@@ -100,67 +101,31 @@ function App() {
         />
 
         {/* מסכי משתמש */}
-        <Route
-          path="/volunteer-registration"
-          element={<VolunteerReg />}
-        />
-
-        <Route
-          path="/requester"
-          element={<RequesterHomeScreen />}
-        />
-
-        <Route
-          path="/request"
-          element={<CreateRequestScreen />}
-        />
-
-        <Route
-          path="/suggestions"
-          element={<AISuggestionsScreen />}
-        />
-
-        <Route
-          path="/suggestions/:id"
-          element={<AISuggestionsScreen />}
-        />
-
-        <Route
-          path="/request-tracking/:id"
-          element={<RequestTrackingScreen />}
-        />
-
-        <Route
-          path="/my-requests"
-          element={<MyRequestsScreen />}
-        />
-
-        <Route
-          path="/profile"
-          element={<ProfileScreen />}
-        />
+        <Route path="/volunteer-registration" element={<VolunteerReg />} />
+        <Route path="/requester" element={<RequesterHomeScreen />} />
+        <Route path="/request" element={<CreateRequestScreen />} />
+        <Route path="/suggestions" element={<AISuggestionsScreen />} />
+        <Route path="/suggestions/:id" element={<AISuggestionsScreen />} />
+        <Route path="/request-tracking/:id" element={<RequestTrackingScreen />} />
+        <Route path="/my-requests" element={<MyRequestsScreen />} />
+        <Route path="/profile" element={<ProfileScreen />} />
       </Route>
-<Route
-  path="/admin"
-  element={
-    <ProtectedRoute requireAdmin>
-      <AdminLayout />
-    </ProtectedRoute>
-  }
->
-  <Route index element={<AdminDashboard />} />
-  <Route
-    path="volunteers"
-    element={<AdminVolunteers />}
-  />
-  <Route
-    path="requests"
-    element={<AdminRequests />}
-  />
 
-  <Route path="equipment" element={<AdminEquipment />} />
-  
-</Route>
+      {/* מסכי מנהל */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="volunteers" element={<AdminVolunteers />} />
+        <Route path="requests" element={<AdminRequests />} />
+        <Route path="equipment" element={<AdminEquipment />} />
+      </Route>
 
       <Route path="*" element={<NotFound />} />
     </Routes>
