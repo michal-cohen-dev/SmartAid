@@ -23,8 +23,9 @@ public class ImageAnalysisService : IImageAnalysisService
         _helpTypeRepository = helpTypeRepository;
         _equipmentTypeRepository = equipmentTypeRepository;
     }
-
-    public async Task<ImageAnalysisResultDto> AnalyzeAsync(
+    //מנתחת תמונה ו/או תיאור של תקלה באמצעות Gemini, מזהה את סוג הבעיה ורמת הסיכון,
+    //ממליצה על ציוד וסיוע, ומאמתת את תוצאות ה-AI מול מסד הנתונים וכללי הבטיחות.
+    public async Task<ImageAnalysisResultDto> AnalyzeAsync(  
         string? description,
         IFormFile? image,
         CancellationToken cancellationToken = default)

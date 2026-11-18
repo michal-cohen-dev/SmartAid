@@ -39,7 +39,7 @@ namespace BLL.Services
             _logger = logger;
         }
 
-        public async Task<List<VolunteerMatchResult>> GetEligibleVolunteersAsync(
+        public async Task<List<VolunteerMatchResult>> GetEligibleVolunteersAsync(      //מאתרת מתנדבים מתאימים לקריאה, מסננת לפי תנאי התאמה ומיקום, מדרגת לפי מרחק ואמינות ומחזירה את התוצאות.
             int helpRequestId,
             CancellationToken cancellationToken = default)
         {
@@ -298,7 +298,7 @@ namespace BLL.Services
             }
         }
 
-        public Task<List<HelpRequestMatchResult>>
+        public Task<List<HelpRequestMatchResult>>    //מאתרת קריאות פתוחות שמתאימות למתנדב מסוים, מסננת לפי כישורים, ציוד ומרחק ומדרגת לפי ציון התאמה.
             GetEligibleRequestsForVolunteerAsync(
                 int volunteerId,
                 CancellationToken cancellationToken = default)
