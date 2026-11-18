@@ -1,9 +1,11 @@
 
 import { useNavigate } from 'react-router-dom';
 import './RequesterHomeScreen.css';
+import { useAuth } from "../context/AuthContext";
 
 function RequesterHomeScreen() {
   const navigate = useNavigate();
+  const { fullName } = useAuth();
 
   function handleCreateRequest() {
     navigate('/request');
@@ -14,7 +16,11 @@ function RequesterHomeScreen() {
     <div className="requester-home-page" dir="rtl">
       <main className="requester-home-container">
         <header className="requester-home-header">
-          <h1>שלום, ברוכים הבאים ל־SmartAid</h1>
+         <h1>
+  {fullName
+    ? `שלום, ${fullName}!`
+    : "שלום, ברוכים הבאים"} ל־SmartAid
+</h1>
 
           <p>
             צריכים עזרה? אנחנו כאן כדי לחבר אתכם לאנשים
