@@ -8,6 +8,7 @@ import {
 
 interface AuthContextType {
   token: string | null;
+  fullName: string | null;
   isAuthenticated: boolean;
   isVolunteer: boolean;
   login: (token: string) => void;
@@ -19,63 +20,58 @@ const AuthContext = createContext<AuthContextType | undefined>(
   undefined
 );
 
-function getVolunteerStatus(token: string | null): boolean {
-  if (!token) return false;
-
-  try {
-    const payload = token.split(".")[1];
-    if (!payload) return false;
-
-    const base64 = payload
-      .replace(/-/g, "+")
-      .replace(/_/g, "/")
-      .padEnd(Math.ceil(payload.length / 4) * 4, "=");
-
-    const binary = atob(base64);
-    const bytes = Uint8Array.from(
-      binary,
-      (character) => character.charCodeAt(0)
-    );
-
-    const decoded = JSON.parse(
-      new TextDecoder().decode(bytes)
-    );
-
-    return (
-      decoded.isVolunteer === true ||
-      String(decoded.isVolunteer).toLowerCase() === "true"
-    );
-  } catch {
-    return false;
-  }
-}
-
-function getUserRole(token: string | null): string | null {
+function decodeToken(token: string | null): any {
   if (!token) return null;
 
   try {
     const payload = token.split(".")[1];
+    if (!payload) return null;
+
     const base64 = payload
       .replace(/-/g, "+")
       .replace(/_/g, "/")
       .padEnd(Math.ceil(payload.length / 4) * 4, "=");
 
     const binary = atob(base64);
+
     const bytes = Uint8Array.from(
       binary,
       (character) => character.charCodeAt(0)
     );
 
-    const decoded = JSON.parse(
+    return JSON.parse(
       new TextDecoder().decode(bytes)
     );
-
-    return decoded.role ??
-      decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ??
-      null;
   } catch {
     return null;
   }
+}
+
+function getVolunteerStatus(token: string | null): boolean {
+  const decoded = decodeToken(token);
+
+  return (
+    decoded?.isVolunteer === true ||
+    String(decoded?.isVolunteer).toLowerCase() === "true"
+  );
+}
+
+function getUserRole(token: string | null): string | null {
+  const decoded = decodeToken(token);
+
+  return (
+    decoded?.role ??
+    decoded?.[
+      "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+    ] ??
+    null
+  );
+}
+
+function getFullName(token: string | null): string | null {
+  const decoded = decodeToken(token);
+
+  return decoded?.fullName || null;
 }
 
 export function AuthProvider({
@@ -99,6 +95,7 @@ export function AuthProvider({
 
   const value: AuthContextType = {
     token,
+    fullName: getFullName(token),
     isAuthenticated: !!token,
     isVolunteer: getVolunteerStatus(token),
     login,

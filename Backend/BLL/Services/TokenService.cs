@@ -61,11 +61,14 @@ namespace BLL.Services
                     user.Role),
 
                 new Claim(
+                    "fullName",
+                    user.FullName ?? string.Empty),
+
+                new Claim(
                     "isVolunteer",
                     isVolunteer.ToString())
             };
 
-            // אם המשתמש מתנדב, נוסיף גם את מזהה המתנדב
             if (volunteerId.HasValue)
             {
                 claims.Add(

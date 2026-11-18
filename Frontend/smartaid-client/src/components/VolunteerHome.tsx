@@ -24,8 +24,7 @@ interface VolunteerLocation {
 function VolunteerHome() {
   const availabilityUpdatePendingRef = useRef(false);
   const navigate = useNavigate();
-  const { token, isVolunteer } = useAuth();
-
+  const { token, isVolunteer, fullName } = useAuth();
   const [isAvailable, setIsAvailable] = useState(true);
   const [location, setLocation] =
     useState<VolunteerLocation | null>(null);
@@ -414,7 +413,7 @@ function VolunteerHome() {
       <header className="volunteer-header">
         <h1>SmartAid</h1>
         <p>
-          שלום, מתנדב! כאן תוכל לראות את בקשות העזרה הפתוחות.
+         שלום, {fullName || "מתנדב"}! כאן תוכל לראות את בקשות העזרה הפתוחות.
         </p>
       </header>
 

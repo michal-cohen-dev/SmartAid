@@ -13,7 +13,7 @@ const menuItems = [
 ];
 
 export default function AdminLayout() {
-  const { logout } = useAuth();
+  const { logout, fullName } = useAuth();
   const navigate = useNavigate();
 
   function handleLogout() {
@@ -46,7 +46,7 @@ export default function AdminLayout() {
 
       <main className="admin-main">
         <header className="admin-header">
-          <h1>שלום, מנהל 👋</h1>
+          <h1>שלום, {fullName || "מנהל"}</h1>
           <span>SmartAid | מערכת ניהול</span>
 
           <button
