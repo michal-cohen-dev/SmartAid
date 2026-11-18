@@ -1,7 +1,10 @@
-﻿using System.Net;
-using System.Net.Mail;
+﻿
 using BLL.Services.Interfaces;
+using MailKit;
+using MailKit.Net.Smtp;
+using MailKit.Security;
 using Microsoft.Extensions.Options;
+using MimeKit;
 using SmartAid.API.Settings;
 
 namespace SmartAid.API.Services
@@ -24,34 +27,53 @@ namespace SmartAid.API.Services
             if (string.IsNullOrWhiteSpace(recipientEmail))
                 return;
 
-            using var message = new MailMessage();
+            var message = new MimeMessage();
 
-            message.From = new MailAddress(_settings.From);
-            message.To.Add(recipientEmail);
+            message.From.Add(
+                MailboxAddress.Parse(_settings.From));
+
+            message.To.Add(
+                MailboxAddress.Parse(recipientEmail));
 
             message.Subject = "New help request available";
-            message.Body =
-                "A new help request matching your qualifications " +
-                "is available in SmartAid.\n\n" +
-                "Please sign in to the SmartAid application " +
-                "to view the request.";
 
-            message.IsBodyHtml = false;
-
-            using var client = new SmtpClient(
-                _settings.Host,
-                _settings.Port)
+            message.Body = new TextPart("plain")
             {
-                Credentials = new NetworkCredential(
-                    _settings.Username,
-                    _settings.Password),
-
-                EnableSsl = true
+                Text =
+                    "A new help request matching your qualifications " +
+                    "is available in SmartAid.\n\n" +
+                    "Please sign in to the SmartAid application " +
+                    "to view the request."
             };
 
-            await client.SendMailAsync(
-                message,
+            using var client = new SmtpClient();
+
+            await client.ConnectAsync(
+                _settings.Host,
+                _settings.Port,
+                SecureSocketOptions.SslOnConnect,
                 cancellationToken);
+
+            try
+            {
+                await client.AuthenticateAsync(
+                    _settings.Username,
+                    _settings.Password,
+                    cancellationToken);
+
+                await client.SendAsync(
+                    message,
+                    cancellationToken);
+            }
+            finally
+            {
+                if (client.IsConnected)
+                {
+                    await client.DisconnectAsync(
+                        true,
+                        cancellationToken);
+                }
+            }
         }
     }
 }
