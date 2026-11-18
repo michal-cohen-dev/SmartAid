@@ -17,8 +17,15 @@ using SmartAid.API.BackgroundServices;
 using SmartAid.API.Hubs;
 using System.Text;
 using SmartAid.API.Services;
+using SmartAid.API.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("Email"));
+
+builder.Services.AddScoped<
+    IEmailNotificationService,
+    ZohoEmailNotificationService>();
 builder.Logging.SetMinimumLevel(LogLevel.Information);
 // API Keys diagnostics
 Console.WriteLine(

@@ -36,6 +36,7 @@ namespace DAL.Repositories
         public Volunteer? GetByIdWithQualifications(int id)
         {
             return _context.Volunteers
+                .Include(v => v.User)
                 .Include(v => v.VolunteerHelpTypes)
                     .ThenInclude(vht => vht.HelpType)
                 .Include(v => v.VolunteerEquipments)
@@ -163,6 +164,7 @@ namespace DAL.Repositories
         public List<Volunteer> GetAllWithQualifications()
         {
             return _context.Volunteers
+                .Include(v => v.User)
                 .Include(v => v.VolunteerHelpTypes)
                 .Include(v => v.VolunteerEquipments)
                 .Where(v => v.IsActive)

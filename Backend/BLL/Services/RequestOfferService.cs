@@ -24,6 +24,7 @@ namespace BLL.Services
         private readonly IVolunteerMatchingService _volunteerMatchingService;
         private readonly IMapper _mapper;
         private readonly IVolunteerNotificationService _volunteerNotificationService;
+        private readonly IEmailNotificationService _emailNotificationService;
         private readonly ILogger<RequestOfferService> _logger;
 
         public RequestOfferService(
@@ -33,6 +34,7 @@ namespace BLL.Services
             IVolunteerMatchingService volunteerMatchingService,
             IMapper mapper,
             IVolunteerNotificationService volunteerNotificationService,
+            IEmailNotificationService emailNotificationService,
             ILogger<RequestOfferService> logger)
         {
             _requestOfferRepository = requestOfferRepository;
@@ -41,6 +43,7 @@ namespace BLL.Services
             _volunteerMatchingService = volunteerMatchingService;
             _mapper = mapper;
             _volunteerNotificationService = volunteerNotificationService;
+            _emailNotificationService = emailNotificationService;
             _logger = logger;
         }
 
@@ -139,7 +142,8 @@ namespace BLL.Services
                 helpRequest.AssignedVolunteerId != null)
                 return false;
 
-            var volunteer = _volunteerRepository.GetById(volunteerId);
+            var volunteer =
+                _volunteerRepository.GetByIdWithQualifications(volunteerId);
 
             if (volunteer == null)
                 throw new NotFoundException("Volunteer not found.");
@@ -163,6 +167,12 @@ namespace BLL.Services
             _volunteerRepository.IncrementTotalOffersReceived(volunteer.Id);
 
             await NotifyNewOfferSafelyAsync(
+                volunteer.Id,
+                helpRequest.Id,
+                cancellationToken);
+
+            await NotifyEmailSafelyAsync(
+                volunteer.User?.Email,
                 volunteer.Id,
                 helpRequest.Id,
                 cancellationToken);
@@ -242,8 +252,6 @@ namespace BLL.Services
                     helpRequestId,
                     cancellationToken);
 
-            // במחזור הרגיל של שתי דקות נשלח הצעות רק למתנדבים
-            // שלא קיבלו הצעה לקריאה הזאת בעבר.
             HashSet<int> previouslyOfferedVolunteerIds =
                 onlyNeverOffered
                     ? _requestOfferRepository
@@ -288,6 +296,12 @@ namespace BLL.Services
                     volunteerId,
                     helpRequestId,
                     cancellationToken);
+
+                await NotifyEmailSafelyAsync(
+                    match.Volunteer.User?.Email,
+                    volunteerId,
+                    helpRequestId,
+                    cancellationToken);
             }
 
             return createdOffers;
@@ -306,8 +320,6 @@ namespace BLL.Services
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            // ביטול כל ההצעות הממתינות של המתנדב,
-            // למעט ההצעה של הקריאה שאותה קיבל.
             var affectedRequestIds =
                 _requestOfferRepository.ExpirePendingOffersForVolunteerExceptRequest(
                     volunteerId,
@@ -363,6 +375,37 @@ namespace BLL.Services
                 _logger.LogError(
                     ex,
                     "Failed to send new offer notification. " +
+                    "VolunteerId: {VolunteerId}, HelpRequestId: {HelpRequestId}",
+                    volunteerId,
+                    helpRequestId);
+            }
+        }
+
+        private async Task NotifyEmailSafelyAsync(
+            string? email,
+            int volunteerId,
+            int helpRequestId,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return;
+
+            try
+            {
+                await _emailNotificationService.SendNewOfferAsync(
+                    email,
+                    cancellationToken);
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to send email notification. " +
                     "VolunteerId: {VolunteerId}, HelpRequestId: {HelpRequestId}",
                     volunteerId,
                     helpRequestId);
