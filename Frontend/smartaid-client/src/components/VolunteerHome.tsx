@@ -5,15 +5,8 @@ import { apiRequest } from '../services/api';
 import './VolunteerHome.css';
 import { useAuth } from '../context/AuthContext';
 import { createNotificationsConnection } from '../services/notifications';
-
-interface HelpRequest {
-  id: number;
-  title: string;
-  description: string;
-  createdAt: string;
-  requiredEquipmentTypeIds: number[];
-  requiredEquipmentNames: string[];
-}
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { fetchOpenRequests } from '../store/requests/requestsThunks';
 
 interface VolunteerLocation {
   latitude: number;
@@ -25,6 +18,15 @@ function VolunteerHome() {
   const availabilityUpdatePendingRef = useRef(false);
   const navigate = useNavigate();
   const { token, isVolunteer, fullName } = useAuth();
+
+  const dispatch = useAppDispatch();
+
+  const {
+    openRequests: requests,
+    loading: isLoading,
+    error: requestsError,
+  } = useAppSelector(state => state.requests);
+
   const [isAvailable, setIsAvailable] = useState(true);
   const [location, setLocation] =
     useState<VolunteerLocation | null>(null);
@@ -33,10 +35,7 @@ function VolunteerHome() {
   const [locationSaveError, setLocationSaveError] = useState('');
   const [isGettingLocation, setIsGettingLocation] = useState(false);
 
-  const [requests, setRequests] = useState<HelpRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-
   const [soundEnabled, setSoundEnabled] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -91,28 +90,9 @@ function VolunteerHome() {
       }
     };
 
-    const handleRequestUpdated = async () => {
-      try {
-        const data = await apiRequest<HelpRequest[]>(
-          '/api/HelpRequests/open'
-        );
-
-        if (isActive) {
-          const validRequests = data.filter(
-            request =>
-              request.title?.trim() &&
-              request.description?.trim()
-          );
-
-          setRequests(validRequests);
-        }
-      } catch (error) {
-        if (isActive) {
-          console.error(
-            'שגיאה ברענון הבקשות לאחר עדכון:',
-            error
-          );
-        }
+    const handleRequestUpdated = () => {
+      if (isActive) {
+        dispatch(fetchOpenRequests());
       }
     };
 
@@ -131,7 +111,7 @@ function VolunteerHome() {
       connection.off('RequestUpdated', handleRequestUpdated);
       void connection.stop();
     };
-  }, [token, isVolunteer, soundEnabled]);
+  }, [token, isVolunteer, soundEnabled, dispatch]);
 
   // הפעלת התראות קוליות לאחר לחיצה של המשתמש
   async function handleEnableSound() {
@@ -179,59 +159,18 @@ function VolunteerHome() {
     }
   }
 
-  // טעינת בקשות עזרה פתוחות ורענון אוטומטי
+  // טעינת בקשות עזרה פתוחות ורענון אוטומטי באמצעות Redux
   useEffect(() => {
-    let isMounted = true;
-
-    const loadRequests = async (showLoading = false) => {
-      try {
-        if (showLoading) {
-          setIsLoading(true);
-        }
-
-        setError('');
-
-        const data = await apiRequest<HelpRequest[]>(
-          '/api/HelpRequests/open'
-        );
-
-        if (isMounted) {
-          const validRequests = data.filter(
-            request =>
-              request.title?.trim() &&
-              request.description?.trim()
-          );
-
-          // רענון רשימת הבקשות בלבד.
-          // התראות קוליות מתקבלות דרך SignalR.
-          setRequests(validRequests);
-        }
-      } catch (error) {
-        if (isMounted) {
-          setError(
-            error instanceof Error
-              ? error.message
-              : 'אירעה שגיאה בטעינת בקשות העזרה.'
-          );
-        }
-      } finally {
-        if (isMounted && showLoading) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadRequests(true);
+    dispatch(fetchOpenRequests());
 
     const intervalId = window.setInterval(() => {
-      loadRequests();
+      dispatch(fetchOpenRequests());
     }, 15000);
 
     return () => {
-      isMounted = false;
       window.clearInterval(intervalId);
     };
-  }, []);
+  }, [dispatch]);
 
   // מעקב רציף אחר מיקום המתנדב ושליחתו לשרת
   useEffect(() => {
@@ -294,45 +233,36 @@ function VolunteerHome() {
             }
           )
             .then(async () => {
-    if (!isActive) return;
+              if (!isActive) return;
 
-    setLocationSaveError('');
+              setLocationSaveError('');
 
-    // לאחר שהמיקום נשמר, מעדכנים זמינות בשרת
-    if (availabilityUpdatePendingRef.current) {
-        await apiRequest<{ message: string }>(
-            '/api/Volunteers/me/availability',
-            {
-                method: 'PUT',
-                body: JSON.stringify({
-                    isAvailable: true
-                })
-            }
-        );
-
-        availabilityUpdatePendingRef.current = false;
-    }
-})
-.catch(error => {
-    if (!isActive) return;
-
-    availabilityUpdatePendingRef.current = false;
-    setIsAvailable(false);
-
-    setLocationSaveError(
-        error instanceof Error
-            ? error.message
-            : 'עדכון הזמינות נכשל'
-    );
-})
-            .catch(error => {
-              if (isActive) {
-                setLocationSaveError(
-                  error instanceof Error
-                    ? `המיקום זוהה, אך לא נשמר בשרת: ${error.message}`
-                    : 'לא הצלחנו לשמור את המיקום בשרת.'
+              // לאחר שהמיקום נשמר, מעדכנים זמינות בשרת
+              if (availabilityUpdatePendingRef.current) {
+                await apiRequest<{ message: string }>(
+                  '/api/Volunteers/me/availability',
+                  {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                      isAvailable: true,
+                    }),
+                  }
                 );
+
+                availabilityUpdatePendingRef.current = false;
               }
+            })
+            .catch(error => {
+              if (!isActive) return;
+
+              availabilityUpdatePendingRef.current = false;
+              setIsAvailable(false);
+
+              setLocationSaveError(
+                error instanceof Error
+                  ? error.message
+                  : 'עדכון הזמינות נכשל'
+              );
             })
             .finally(() => {
               isSavingLocation = false;
@@ -374,38 +304,36 @@ function VolunteerHome() {
     };
   }, []);
 
- async function handleToggle() {
+  async function handleToggle() {
     if (isAvailable) {
-        try {
-            await apiRequest<{ message: string }>(
-                '/api/Volunteers/me/availability',
-                {
-                    method: 'PUT',
-                    body: JSON.stringify({
-                        isAvailable: false
-                    })
-                }
-            );
+      try {
+        await apiRequest<{ message: string }>(
+          '/api/Volunteers/me/availability',
+          {
+            method: 'PUT',
+            body: JSON.stringify({
+              isAvailable: false,
+            }),
+          }
+        );
 
-            availabilityUpdatePendingRef.current = false;
-            setIsAvailable(false);
-            setLocation(null);
-            setLocationError('');
-            setLocationSaveError('');
-
-        } catch (error) {
-            setLocationSaveError(
-                error instanceof Error
-                    ? error.message
-                    : 'לא הצלחנו לעדכן זמינות'
-            );
-        }
-
+        availabilityUpdatePendingRef.current = false;
+        setIsAvailable(false);
+        setLocation(null);
+        setLocationError('');
+        setLocationSaveError('');
+      } catch (error) {
+        setLocationSaveError(
+          error instanceof Error
+            ? error.message
+            : 'לא הצלחנו לעדכן זמינות'
+        );
+      }
     } else {
-        availabilityUpdatePendingRef.current = true;
-        setIsAvailable(true);
+      availabilityUpdatePendingRef.current = true;
+      setIsAvailable(true);
     }
-}
+  }
 
   return (
     <div className="volunteer-page" dir="rtl">
@@ -413,7 +341,7 @@ function VolunteerHome() {
       <header className="volunteer-header">
         <h1>SmartAid</h1>
         <p>
-         שלום, {fullName || "מתנדב"}! כאן תוכל לראות את בקשות העזרה הפתוחות.
+          שלום, {fullName || 'מתנדב'}! כאן תוכל לראות את בקשות העזרה הפתוחות.
         </p>
       </header>
 
@@ -530,19 +458,25 @@ function VolunteerHome() {
           </p>
         )}
 
+        {requestsError && (
+          <p className="volunteer-message" role="alert">
+            {requestsError}
+          </p>
+        )}
+
         {error && (
           <p className="volunteer-message" role="alert">
             {error}
           </p>
         )}
 
-        {!isLoading && !error && requests.length === 0 && (
+        {!isLoading && !requestsError && !error && requests.length === 0 && (
           <p className="volunteer-message">
             אין כרגע בקשות עזרה פתוחות.
           </p>
         )}
 
-        {!isLoading && !error && requests.length > 0 && (
+        {!isLoading && !requestsError && !error && requests.length > 0 && (
           <div className="volunteer-requests-grid">
 
             {requests.map(request => (
@@ -594,7 +528,6 @@ function VolunteerHome() {
         )}
 
       </section>
-
 
     </div>
   );
